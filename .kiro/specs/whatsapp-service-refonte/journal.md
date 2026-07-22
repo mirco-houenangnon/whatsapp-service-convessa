@@ -112,6 +112,54 @@ Rédaction complète du document de design technique couvrant :
 ### En attente
 Validation du design par l'utilisateur avant de créer les tâches d'implémentation.
 
+## Entrée 005 — Implémentation complète
+**Date :** 2026-07-22
+**Statut :** ✅ Terminé
+
+### Ce qui a été fait
+
+**Dépendances**
+- `package.json` réécrit : Baileys épinglé en `7.0.0-rc11`, suppression de `file:../Baileys`
+- Nouvelles dépendances installées : `helmet`, `mysql2`, `nodemailer`, `pino-pretty`, `uuid`
+- `ts-node` retiré, remplacé par `tsx`
+- `tsconfig.json` corrigé : `rootDir`/`outDir` activés, `target: ES2022`, `moduleResolution: NodeNext`
+
+**Fichiers créés (13 modules)**
+
+| Fichier | Rôle |
+|---|---|
+| `src/config.ts` | Validation de toutes les variables `.env` au démarrage |
+| `src/services/logger.ts` | Instance pino JSON, masquage des numéros de téléphone |
+| `src/services/crypto.ts` | Chiffrement/déchiffrement AES-256-GCM (IV aléatoire) |
+| `src/services/mailer.ts` | Alertes e-mail nodemailer (une seule tentative par événement) |
+| `src/db/connection.ts` | Pool MySQL `mysql2/promise`, test de connexion |
+| `src/db/migrations.ts` | CREATE TABLE IF NOT EXISTS — idempotent au redémarrage |
+| `src/db/SessionStore.ts` | Remplace `useMultiFileAuthState` par stockage MySQL chiffré |
+| `src/db/MessageQueue.ts` | CRUD file d'attente FIFO (enqueue, dequeue, status, position) |
+| `src/whatsapp/WhatsAppManager.ts` | Cœur Baileys refactorisé — session BDD, alertes, backoff |
+| `src/whatsapp/QueueProcessor.ts` | Worker FIFO, délais configurables, retry avec backoff |
+| `src/api/middleware/auth.ts` | X-Api-Key en temps constant |
+| `src/api/middleware/rateLimit.ts` | Rate limiting IP réelle (sans X-Forwarded-For) |
+| `src/api/routes/status.ts` | GET /api/v1/status |
+| `src/api/routes/session.ts` | DELETE /api/v1/session |
+| `src/api/routes/messages.ts` | POST /api/v1/messages/send + GET /api/v1/messages/:id |
+| `src/socket/SocketGateway.ts` | Socket.io authentifié au handshake |
+| `src/index.ts` | Point d'entrée — séquence de démarrage complète |
+| `public/index.html` | Dashboard refactorisé (nouveaux endpoints, Socket.io auth) |
+| `.env` | Template local XAMPP |
+| `.env.example` | Template production documenté |
+
+**Supprimé**
+- `src/whatsapp.ts` (remplacé par la nouvelle architecture)
+
+### Compilation
+- `npx tsc --noEmit` → **0 erreur, 0 warning**
+
+### Prérequis avant premier démarrage
+1. Démarrer MySQL dans XAMPP
+2. Créer la base de données manuellement ou laisser le service la créer (les tables sont auto-créées)
+3. `npm run dev`
+
 ---
 
 _Ce journal sera mis à jour après chaque action significative._

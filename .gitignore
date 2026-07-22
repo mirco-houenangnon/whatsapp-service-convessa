@@ -1,16 +1,14 @@
-# ─── Sessions WhatsApp (JAMAIS sur Git) ──────────────────────────────────────
-# Contient les clés cryptographiques de la session WhatsApp
-auth/
-
-# ─── Variables d'environnement (JAMAIS sur Git) ───────────────────────────────
-# Peut contenir BRIDGE_API_KEY et autres secrets
+# ─── Secrets et données sensibles (JAMAIS sur Git) ───────────────────────────
 .env
 .env.local
 .env.production
 .env.staging
 .env.*.local
 
-# ─── Dépendances ──────────────────────────────────────────────────────────────
+# ─── Sessions WhatsApp — credentials cryptographiques ────────────────────────
+auth/
+
+# ─── Dépendances Node.js ──────────────────────────────────────────────────────
 node_modules/
 
 # ─── Build TypeScript ─────────────────────────────────────────────────────────
@@ -22,7 +20,29 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pino-*.log
+
+# ─── Éditeurs ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # ─── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── Kiro (outils de développement local) ────────────────────────────────────
+.kiro/
+
+# ─── Fichiers temporaires ─────────────────────────────────────────────────────
+*.tmp
+*.temp
+.cache/

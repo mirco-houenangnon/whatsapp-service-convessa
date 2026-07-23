@@ -5,12 +5,15 @@
 import { v4 as uuidv4 }    from 'uuid'
 import { getPool }          from './connection.js'
 import { logger, maskPhone } from '../services/logger.js'
+import { encrypt, decrypt } from '../services/crypto.js'
+import { config }           from '../config.js'
 import type mysql from 'mysql2/promise'
 
 export type TenantStatus = 'pending_qr' | 'connected' | 'disconnected' | 'revoked'
 
 export interface Tenant {
     id:          string
+    userUid:     string | null
     phone:       string
     name:        string | null
     apiKeyHash:  string | null
@@ -23,10 +26,14 @@ export interface Tenant {
 
 interface TenantRow {
     id:           string
+    user_uid:     string | null
     phone:        string
     name:         string | null
     api_key_hash: string | null
     api_key_hint: string | null
+    api_key_enc:  string | null
+    api_key_iv:   string | null
+    api_key_tag:  string | null
     webhook_url:  string | null
     status:       TenantStatus
     connected_at: Date | null
@@ -36,6 +43,7 @@ interface TenantRow {
 function rowToTenant(row: TenantRow): Tenant {
     return {
         id:          row.id,
+        userUid:     row.user_uid,
         phone:       row.phone,
         name:        row.name,
         apiKeyHash:  row.api_key_hash,
@@ -48,21 +56,37 @@ function rowToTenant(row: TenantRow): Tenant {
 }
 
 /**
- * Crée un nouveau tenant.
- * Retourne le tenant créé.
+ * Déchiffre et retourne la clé API complète d'un tenant.
+ * Retourne null si pas de clé ou si données de chiffrement absentes.
+ */
+export function decryptApiKey(row: TenantRow): string | null {
+    if (!row.api_key_enc || !row.api_key_iv || !row.api_key_tag) return null
+    try {
+        return decrypt(
+            { iv: row.api_key_iv, tag: row.api_key_tag, data: row.api_key_enc },
+            config.sessionEncryptionKey
+        )
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Crée un nouveau tenant lié optionnellement à un user Firebase.
  */
 export async function createTenant(data: {
-    phone:      string
-    name?:      string
+    phone:       string
+    name?:       string
     webhookUrl?: string
+    userUid?:    string   // FK vers auth_users.uid
 }): Promise<Tenant> {
     const pool = getPool()
     const id   = uuidv4()
 
     await pool.execute(
-        `INSERT INTO wa_tenants (id, phone, name, webhook_url, status)
-         VALUES (?, ?, ?, ?, 'pending_qr')`,
-        [id, data.phone, data.name ?? null, data.webhookUrl ?? null]
+        `INSERT INTO wa_tenants (id, phone, name, webhook_url, user_uid, status)
+         VALUES (?, ?, ?, ?, ?, 'pending_qr')`,
+        [id, data.phone, data.name ?? null, data.webhookUrl ?? null, data.userUid ?? null]
     )
 
     logger.info(
@@ -86,6 +110,21 @@ export async function getTenantById(id: string): Promise<Tenant | null> {
     )
     const row = rows[0]
     return row ? rowToTenant(row) : null
+}
+
+/**
+ * Récupère la clé API déchiffrée d'un tenant.
+ * Retourne null si le tenant n'existe pas ou n'a pas de clé.
+ */
+export async function getTenantApiKey(id: string): Promise<string | null> {
+    const pool   = getPool()
+    const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(
+        'SELECT api_key_enc, api_key_iv, api_key_tag FROM wa_tenants WHERE id = ?',
+        [id]
+    )
+    const row = rows[0]
+    if (!row) return null
+    return decryptApiKey(row)
 }
 
 /**
@@ -133,25 +172,34 @@ export async function updateTenantStatus(
 }
 
 /**
- * Enregistre la clé API d'un tenant (hash + hint, jamais le token brut).
+ * Enregistre la clé API d'un tenant.
+ * - Hash SHA-256 pour la vérification des requêtes
+ * - Chiffrement AES-256-GCM pour pouvoir la réafficher au tenant
+ * - Hint pour l'identification visuelle
  */
 export async function setTenantApiKey(
     id:      string,
     hash:    string,
-    hint:    string
+    hint:    string,
+    token:   string   // clé brute — sera chiffrée avant stockage
 ): Promise<void> {
-    const pool = getPool()
+    const pool    = getPool()
+    const payload = encrypt(token, config.sessionEncryptionKey)
+
     await pool.execute(
         `UPDATE wa_tenants
          SET api_key_hash = ?,
              api_key_hint = ?,
+             api_key_enc  = ?,
+             api_key_iv   = ?,
+             api_key_tag  = ?,
              status       = 'connected',
              connected_at = CURRENT_TIMESTAMP,
              updated_at   = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [hash, hint, id]
+        [hash, hint, payload.data, payload.iv, payload.tag, id]
     )
-    logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée')
+    logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée (chiffrée)')
 }
 
 /**

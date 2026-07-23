@@ -5,6 +5,12 @@
 .env.staging
 .env.*.local
 
+# ─── Firebase Service Account (credentials sensibles) ────────────────────────
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
 # ─── Sessions WhatsApp — credentials cryptographiques ────────────────────────
 auth/
 

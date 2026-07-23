@@ -169,49 +169,33 @@ export class TenantManager extends EventEmitter {
     private async _onFirstConnection(tenant: Tenant, session: TenantSession): Promise<void> {
         const { token, hash, hint } = generateApiKey()
 
-        await setTenantApiKey(tenant.id, hash, hint)
+        await setTenantApiKey(tenant.id, hash, hint, token)
 
         logger.info({ component: 'TenantManager', tenantId: tenant.id }, 'Clé API générée')
-
-        // Notification WhatsApp via le numéro admin
-        if (session.phone && this.adminManager.isReady()) {
-            const phone = session.phone.split('@')[0] ?? session.phone
-            const jid   = `${phone.replace(/[^\d]/g, '')}@s.whatsapp.net`
-
-            const welcomeMessage =
-                `✅ *Félicitations ! Votre compte WhatsApp Gateway est activé.*\n\n` +
-                `📱 Numéro lié : ${maskPhone(session.phone)}\n` +
-                `🔑 Votre clé API :\n\`${token}\`\n\n` +
-                `⚠️ *Conservez cette clé précieusement — elle ne sera plus affichée.*\n\n` +
-                `📖 Intégrez-la dans vos applications via le header :\n` +
-                `\`X-Api-Key: ${token}\`\n\n` +
-                `Bonne intégration ! 🚀`
-
-            try {
-                await this.adminManager.sendMessage(jid, welcomeMessage)
-                logger.info({ component: 'TenantManager', tenantId: tenant.id }, 'Message de bienvenue envoyé')
-            } catch (err) {
-                logger.error({ component: 'TenantManager', err }, 'Échec envoi message de bienvenue')
-            }
-        }
 
         // Notifier via webhook si configuré
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
-                event:    'tenant.connected',
-                tenantId: tenant.id,
-                phone:    maskPhone(session.phone ?? ''),
-                apiKey:   token,
-                apiKeyHint: hint,
+                event:       'tenant.connected',
+                tenantId:    tenant.id,
+                phone:       maskPhone(session.phone ?? ''),
+                apiKey:      token,
+                apiKeyHint:  hint,
                 connectedAt: new Date().toISOString(),
             })
         }
 
+        // Émettre via Socket.io — le frontend récupère la clé ici
         this.emit('connected', tenant.id, {
-            phone:    maskPhone(session.phone ?? ''),
-            apiKey:   token,
+            phone:      maskPhone(session.phone ?? ''),
+            apiKey:     token,
             apiKeyHint: hint,
         })
+
+        logger.info(
+            { component: 'TenantManager', tenantId: tenant.id, hint },
+            'Tenant activé — clé API transmise via Socket.io et webhook'
+        )
     }
 
     // ── Webhook ────────────────────────────────────────────────────────────────

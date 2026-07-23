@@ -18,6 +18,7 @@ import { rateLimit }     from '../middleware/rateLimit.js'
 import {
     createTenant,
     getTenantById,
+    getTenantApiKey,
     deleteTenant,
     listTenants,
 }                        from '../../db/TenantStore.js'
@@ -31,10 +32,11 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
     // ── POST /api/v1/tenants ──────────────────────────────────────────────────
     // Crée un tenant et démarre sa session WhatsApp (génère un QR)
     router.post('/tenants', rateLimit, requireApiKey, async (req, res) => {
-        const { phone, name, webhookUrl } = req.body as {
+        const { phone, name, webhookUrl, userUid } = req.body as {
             phone?:      unknown
             name?:       unknown
             webhookUrl?: unknown
+            userUid?:    unknown
         }
 
         if (!phone || typeof phone !== 'string' || !phone.trim()) {
@@ -55,6 +57,7 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
                 phone:      cleanPhone,
                 name:       typeof name === 'string' ? name.trim() : undefined,
                 webhookUrl: typeof webhookUrl === 'string' ? webhookUrl.trim() : undefined,
+                userUid:    typeof userUid === 'string' ? userUid.trim() : undefined,
             })
 
             // Démarrer la session WhatsApp pour ce tenant
@@ -126,9 +129,36 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         }
     })
 
+    // ── GET /api/v1/tenants/:id/api-key ──────────────────────────────────────
+    // Retourne la clé API complète déchiffrée — pour affichage dans le dashboard
+    router.get('/tenants/:id/api-key', requireApiKey, async (req, res) => {
+        const id = req.params['id'] as string
+
+        const tenant = await getTenantById(id)
+        if (!tenant) {
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant introuvable' } })
+            return
+        }
+
+        const apiKey = await getTenantApiKey(id)
+        if (!apiKey) {
+            res.status(404).json({
+                success: false,
+                error: { code: 'API_KEY_NOT_FOUND', message: 'Aucune clé API — le tenant n\'a pas encore scanné son QR code' },
+            })
+            return
+        }
+
+        res.json({
+            success:    true,
+            tenantId:   id,
+            apiKey,
+            apiKeyHint: tenant.apiKeyHint,
+        })
+    })
+
     // ── GET /api/v1/tenants/:id ───────────────────────────────────────────────
-    router.get('/tenants/:id', requireApiKey, async (req, res) => {
-        const tenant = await getTenantById(req.params['id'] as string)
+    router.get('/tenants/:id', requireApiKey, async (req, res) => {        const tenant = await getTenantById(req.params['id'] as string)
 
         if (!tenant) {
             res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant introuvable' } })

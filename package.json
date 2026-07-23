@@ -20,7 +20,7 @@
     "cors": "2.8.6",
     "dotenv": "17.4.2",
     "express": "5.2.1",
-    "firebase-admin": "^14.2.0",
+    "firebase-admin": "^12.6.0",
     "helmet": "^8.0.0",
     "mysql2": "^3.14.1",
     "nodemailer": "^6.10.1",

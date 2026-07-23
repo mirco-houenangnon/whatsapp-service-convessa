@@ -32,9 +32,25 @@ export class SocketGateway {
 
     setup(): void {
         // ── Authentification au handshake ────────────────────────────────────
+        // ── Authentification au handshake ────────────────────────────────────
+        // En production, l'authentification est obligatoire si BRIDGE_API_KEY est défini
+        // En développement avec dashboard activé, on autorise les connexions locales sans token
         this.io.use((socket, next) => {
+            // Si pas de clé API configurée, on laisse passer
             if (!config.bridgeApiKey) { next(); return }
+            
+            // En mode développement avec dashboard, on autorise les connexions sans token
+            const isDashboardRequest = config.enableDashboard && !config.isProd
+            
             const token = socket.handshake.auth['token'] as string | undefined
+            
+            // Si dashboard en dev, on accepte les connexions sans token
+            if (isDashboardRequest && !token) {
+                next()
+                return
+            }
+            
+            // Sinon, on vérifie le token
             if (!token || !timingSafeEqual(token, config.bridgeApiKey)) {
                 next(new Error('Authentification Socket.io invalide'))
                 return
@@ -53,13 +69,25 @@ export class SocketGateway {
             const cachedQr = this.waManager.getLastQr()
             if (cachedQr) {
                 try {
-                    socket.emit('qr', await qrcode.toDataURL(cachedQr))
-                } catch { /* ignoré */ }
+                    // Le QR peut être une URL (Baileys récent) ou une chaîne encodée
+                    const qrData = cachedQr.startsWith('http') ? cachedQr : cachedQr
+                    socket.emit('qr', await qrcode.toDataURL(qrData))
+                    logger.info({ component: 'Socket.io' }, 'QR code en cache envoyé au client')
+                } catch (err) { 
+                    logger.error({ component: 'Socket.io', err }, 'Erreur génération QR en cache')
+                }
             }
 
             // ── Listeners admin ──────────────────────────────────────────────
             const onQr = async (qr: string) => {
-                try { socket.emit('qr', await qrcode.toDataURL(qr)) } catch { /* ignoré */ }
+                try { 
+                    const qrData = qr.startsWith('http') ? qr : qr
+                    const qrImage = await qrcode.toDataURL(qrData)
+                    socket.emit('qr', qrImage)
+                    logger.info({ component: 'Socket.io' }, 'QR code envoyé au client')
+                } catch (err) { 
+                    logger.error({ component: 'Socket.io', err }, 'Erreur génération QR')
+                }
             }
             const onReady        = (status: unknown) => { socket.emit('ready', status); this.io.emit('status_update', status) }
             const onLoggedOut    = (data: unknown)   => { this.io.emit('logged_out', data); this.io.emit('status_update', this.waManager.getStatus()) }

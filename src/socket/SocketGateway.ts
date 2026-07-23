@@ -51,11 +51,24 @@ export class SocketGateway {
         })
 
         // ── Connexion client ─────────────────────────────────────────────────
-        this.io.on('connection', (socket: Socket) => {
+        this.io.on('connection', async (socket: Socket) => {
             logger.info({ component: 'Socket.io', socketId: socket.id }, 'Client connecté')
 
             // Envoyer l'état immédiatement
             socket.emit('status_update', this.waManager.getStatus())
+
+            // Si un QR est déjà en attente (généré avant la connexion du client),
+            // l'envoyer immédiatement sans attendre le prochain événement
+            const cachedQr = this.waManager.getLastQr()
+            if (cachedQr) {
+                try {
+                    const qrImage = await qrcode.toDataURL(cachedQr)
+                    socket.emit('qr', qrImage)
+                    logger.info({ component: 'Socket.io', socketId: socket.id }, 'QR en cache envoyé au nouveau client')
+                } catch (e) {
+                    logger.error({ component: 'Socket.io', e }, 'Erreur envoi QR en cache')
+                }
+            }
 
             // ── Listeners WhatsApp → ce client ──────────────────────────────
             const onQr = async (qr: string) => {

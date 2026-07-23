@@ -1,6 +1,6 @@
 /**
  * MessageQueue.ts — CRUD de la file d'attente des messages.
- * Toutes les opérations sont atomiques via des requêtes SQL préparées.
+ * Supporte les messages texte et les messages avec média (image, vidéo, audio, document).
  */
 
 import { v4 as uuidv4 } from 'uuid'
@@ -10,12 +10,28 @@ import { maskPhone }    from '../services/logger.js'
 import type mysql from 'mysql2/promise'
 
 export type MessageStatus = 'queued' | 'sending' | 'sent' | 'failed'
+export type MediaType     = 'image' | 'video' | 'audio' | 'document'
+
+export interface MediaPayload {
+    type:     MediaType
+    mime:     string        // ex: 'image/jpeg', 'application/pdf'
+    name?:    string        // nom du fichier (pour documents)
+    url?:     string        // URL publique accessible par Baileys
+    base64?:  string        // données brutes base64 (sans préfixe data:...)
+}
+
+export interface EnqueuePayload {
+    recipient: string
+    message?:  string
+    media?:    MediaPayload
+}
 
 export interface QueuedMessage {
     id:        string
     recipient: string
     jid:       string | null
-    message:   string
+    message:   string | null
+    media:     MediaPayload | null
     status:    MessageStatus
     attempts:  number
     lastError: string | null
@@ -27,7 +43,12 @@ interface MessageRow {
     id:         string
     recipient:  string
     jid:        string | null
-    message:    string
+    message:    string | null
+    media_type: MediaType | null
+    media_url:  string | null
+    media_b64:  string | null
+    media_mime: string | null
+    media_name: string | null
     status:     MessageStatus
     attempts:   number
     last_error: string | null
@@ -36,11 +57,22 @@ interface MessageRow {
 }
 
 function rowToMessage(row: MessageRow): QueuedMessage {
+    const media: MediaPayload | null = row.media_type
+        ? {
+            type:   row.media_type,
+            mime:   row.media_mime ?? 'application/octet-stream',
+            name:   row.media_name ?? undefined,
+            url:    row.media_url  ?? undefined,
+            base64: row.media_b64  ?? undefined,
+        }
+        : null
+
     return {
         id:        row.id,
         recipient: row.recipient,
         jid:       row.jid,
         message:   row.message,
+        media,
         status:    row.status,
         attempts:  row.attempts,
         lastError: row.last_error,
@@ -51,25 +83,40 @@ function rowToMessage(row: MessageRow): QueuedMessage {
 
 /**
  * Ajoute un message à la file d'attente.
- * Retourne l'UUID et la position dans la file.
  */
 export async function enqueue(
-    recipient: string,
-    message: string
+    payload: EnqueuePayload
 ): Promise<{ id: string; position: number }> {
     const pool = getPool()
     const id   = uuidv4()
 
     await pool.execute(
-        `INSERT INTO wa_message_queue (id, recipient, message, status)
-         VALUES (?, ?, ?, 'queued')`,
-        [id, recipient, message]
+        `INSERT INTO wa_message_queue
+            (id, recipient, message, media_type, media_url, media_b64, media_mime, media_name, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued')`,
+        [
+            id,
+            payload.recipient,
+            payload.message  ?? null,
+            payload.media?.type ?? null,
+            payload.media?.url  ?? null,
+            payload.media?.base64 ?? null,
+            payload.media?.mime ?? null,
+            payload.media?.name ?? null,
+        ]
     )
 
     const position = await getPosition(id)
 
     logger.info(
-        { component: 'MessageQueue', messageId: id, recipient: maskPhone(recipient), position },
+        {
+            component: 'MessageQueue',
+            messageId: id,
+            recipient: maskPhone(payload.recipient),
+            hasMedia:  !!payload.media,
+            mediaType: payload.media?.type ?? null,
+            position,
+        },
         'Message ajouté à la file'
     )
 
@@ -77,18 +124,16 @@ export async function enqueue(
 }
 
 /**
- * Récupère le prochain message à traiter (FIFO — le plus ancien 'queued').
- * Retourne null si la file est vide.
+ * Récupère le prochain message à traiter (FIFO).
  */
 export async function dequeueNext(): Promise<QueuedMessage | null> {
-    const pool  = getPool()
+    const pool   = getPool()
     const [rows] = await pool.execute<MessageRow[] & mysql.RowDataPacket[]>(
         `SELECT * FROM wa_message_queue
          WHERE status = 'queued'
          ORDER BY queued_at ASC
          LIMIT 1`
     )
-
     const row = rows[0]
     return row ? rowToMessage(row) : null
 }
@@ -113,9 +158,9 @@ export async function updateStatus(
          WHERE id = ?`,
         [
             status,
-            extra?.jid        ?? null,
-            extra?.lastError  ?? null,
-            extra?.sentAt     ?? null,
+            extra?.jid       ?? null,
+            extra?.lastError ?? null,
+            extra?.sentAt    ?? null,
             status,
             id,
         ]
@@ -123,17 +168,14 @@ export async function updateStatus(
 }
 
 /**
- * Remet un message en file avec un délai (pour les retries).
+ * Remet un message en file avec un délai pour les retries.
  */
 export async function requeueWithDelay(id: string, delayMs: number): Promise<void> {
-    const pool     = getPool()
-    const newTime  = new Date(Date.now() + delayMs)
+    const pool    = getPool()
+    const newTime = new Date(Date.now() + delayMs)
 
     await pool.execute(
-        `UPDATE wa_message_queue
-         SET status    = 'queued',
-             queued_at = ?
-         WHERE id = ?`,
+        `UPDATE wa_message_queue SET status = 'queued', queued_at = ? WHERE id = ?`,
         [newTime, id]
     )
 
@@ -154,18 +196,14 @@ export async function getById(id: string): Promise<QueuedMessage | null> {
 }
 
 /**
- * Retourne la position d'un message dans la file (1-indexé).
- * Position 0 = message non trouvé ou déjà traité.
+ * Position dans la file (1-indexé).
  */
 export async function getPosition(id: string): Promise<number> {
     const pool   = getPool()
     const [rows] = await pool.execute<mysql.RowDataPacket[]>(
-        `SELECT COUNT(*) AS pos
-         FROM wa_message_queue
+        `SELECT COUNT(*) AS pos FROM wa_message_queue
          WHERE status = 'queued'
-           AND queued_at <= (
-               SELECT queued_at FROM wa_message_queue WHERE id = ?
-           )`,
+           AND queued_at <= (SELECT queued_at FROM wa_message_queue WHERE id = ?)`,
         [id]
     )
     const row = rows[0] as { pos: number } | undefined
@@ -173,7 +211,7 @@ export async function getPosition(id: string): Promise<number> {
 }
 
 /**
- * Compte les messages en attente et en échec.
+ * Statistiques de la file.
  */
 export async function getQueueStats(): Promise<{ pending: number; failed: number }> {
     const pool   = getPool()

@@ -60,7 +60,8 @@ app.use(helmet({
 }))
 
 app.use(cors({ origin: config.corsOrigin }))
-app.use(express.json({ limit: '10kb' }))
+// Limite augmentée pour les médias base64 (document PDF jusqu'à 100MB = ~133MB base64)
+app.use(express.json({ limit: '150mb' }))
 app.disable('x-powered-by')
 
 // ── Dashboard HTML (désactivé en production par défaut) ───────────────────────

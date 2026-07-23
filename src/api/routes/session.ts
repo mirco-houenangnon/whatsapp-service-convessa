@@ -4,6 +4,7 @@
 
 import { Router }          from 'express'
 import { requireApiKey }   from '../middleware/auth.js'
+import { rateLimit }       from '../middleware/rateLimit.js'
 import { WhatsAppManager } from '../../whatsapp/WhatsAppManager.js'
 import { config }          from '../../config.js'
 import { logger }          from '../../services/logger.js'
@@ -11,7 +12,7 @@ import { logger }          from '../../services/logger.js'
 export function sessionRouter(waManager: WhatsAppManager): Router {
     const router = Router()
 
-    router.delete('/session', requireApiKey, async (_req, res) => {
+    router.delete('/session', rateLimit, requireApiKey, async (_req, res) => {
         try {
             await waManager.logout()
             res.json({

@@ -28,7 +28,12 @@ const TABLES = [
         id          VARCHAR(36)   NOT NULL,
         recipient   VARCHAR(30)   NOT NULL,
         jid         VARCHAR(50)   DEFAULT NULL,
-        message     TEXT          NOT NULL,
+        message     TEXT          DEFAULT NULL,
+        media_type  ENUM('image','video','audio','document') DEFAULT NULL,
+        media_url   TEXT          DEFAULT NULL,
+        media_b64   LONGTEXT      DEFAULT NULL,
+        media_mime  VARCHAR(100)  DEFAULT NULL,
+        media_name  VARCHAR(255)  DEFAULT NULL,
         status      ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued',
         attempts    TINYINT       NOT NULL DEFAULT 0,
         last_error  TEXT          DEFAULT NULL,
@@ -52,6 +57,18 @@ const TABLES = [
         INDEX idx_component  (component),
         INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Clés Signal Baileys ──────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS wa_session_keys (
+        session_id  VARCHAR(64)   NOT NULL,
+        key_type    VARCHAR(50)   NOT NULL,
+        key_id      VARCHAR(255)  NOT NULL,
+        key_value   MEDIUMTEXT    NOT NULL,
+        created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, key_type, key_id),
+        INDEX idx_session (session_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
 export async function runMigrations(): Promise<void> {
@@ -74,6 +91,14 @@ export async function runMigrations(): Promise<void> {
             `${affected} message(s) remis en file après redémarrage`
         )
     }
+
+    // Migration : rendre 'message' nullable et ajouter les colonnes média si absentes
+    await pool.execute(`ALTER TABLE wa_message_queue MODIFY COLUMN message TEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_type ENUM('image','video','audio','document') DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_b64 LONGTEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_mime VARCHAR(100) DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_name VARCHAR(255) DEFAULT NULL`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

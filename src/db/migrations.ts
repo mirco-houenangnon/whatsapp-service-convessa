@@ -8,6 +8,24 @@ import { logger }  from '../services/logger.js'
 
 const TABLES = [
 
+    // ── Tenants (clients du service) ─────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS wa_tenants (
+        id            VARCHAR(36)   NOT NULL,
+        phone         VARCHAR(30)   NOT NULL,
+        name          VARCHAR(100)  DEFAULT NULL,
+        api_key_hash  VARCHAR(64)   DEFAULT NULL,
+        api_key_hint  VARCHAR(16)   DEFAULT NULL,
+        webhook_url   VARCHAR(500)  DEFAULT NULL,
+        status        ENUM('pending_qr','connected','disconnected','revoked') NOT NULL DEFAULT 'pending_qr',
+        connected_at  DATETIME      DEFAULT NULL,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_phone (phone),
+        INDEX idx_status (status),
+        INDEX idx_api_key_hash (api_key_hash)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
     // ── Sessions WhatsApp ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_sessions (
         id            VARCHAR(64)   NOT NULL,
@@ -99,6 +117,9 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_b64 LONGTEXT DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_mime VARCHAR(100) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_name VARCHAR(255) DEFAULT NULL`).catch(() => {})
+
+    // Migration : ajouter tenant_id aux tables existantes
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36) DEFAULT NULL`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

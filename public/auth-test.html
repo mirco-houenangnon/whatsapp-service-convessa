@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auth Test — WhatsApp Service</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { color: #4ade80; margin-bottom: .25rem; font-size: 1.4rem; }
+    .subtitle { color: #888; font-size: .85rem; margin-bottom: 2rem; }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 1rem; color: #a3e635; margin-bottom: 1rem; }
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    button {
+      padding: .6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .875rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-google  { background: #4285F4; color: #fff; }
+    .btn-github  { background: #24292e; color: #fff; border: 1px solid #444; }
+    .btn-api     { background: #4ade80; color: #000; }
+    .btn-logout  { background: #ef4444; color: #fff; }
+    .btn-clear   { background: #333; color: #aaa; }
+    label { display: block; font-size: .8rem; color: #888; margin-bottom: .35rem; }
+    input, select {
+      width: 100%;
+      padding: .5rem .75rem;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: .85rem;
+      font-family: monospace;
+      margin-bottom: .75rem;
+    }
+    select { font-family: inherit; }
+    .status {
+      font-size: .8rem;
+      padding: .4rem .75rem;
+      border-radius: 5px;
+      margin-top: .5rem;
+      display: none;
+    }
+    .status.ok   { background: #14532d; color: #86efac; display: block; }
+    .status.err  { background: #450a0a; color: #fca5a5; display: block; }
+    .status.info { background: #1e3a5f; color: #93c5fd; display: block; }
+    pre {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 6px;
+      padding: 1rem;
+      font-size: .78rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: .75rem;
+    }
+    .token-box {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: .75rem;
+      font-family: monospace;
+      font-size: .7rem;
+      word-break: break-all;
+      color: #4ade80;
+      max-height: 80px;
+      overflow-y: auto;
+      margin-top: .5rem;
+    }
+    .user-info { display: flex; align-items: center; gap: 1rem; padding: .75rem; background: #111; border-radius: 8px; margin-top: .5rem; }
+    .user-info img { width: 40px; height: 40px; border-radius: 50%; }
+    .user-info .name { font-weight: 600; }
+    .user-info .email { font-size: .8rem; color: #888; }
+    .user-info .provider { font-size: .75rem; color: #4ade80; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    .tag { display: inline-block; padding: .15rem .5rem; border-radius: 4px; font-size: .7rem; font-weight: 700; margin-right: .4rem; }
+    .tag.post { background: #166534; color: #86efac; }
+    .tag.get  { background: #1e40af; color: #93c5fd; }
+    .tag.del  { background: #7f1d1d; color: #fca5a5; }
+    .endpoint { font-family: monospace; font-size: .8rem; }
+    .sep { border: none; border-top: 1px solid #2a2a2a; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+
+<h1>🔐 Auth Test — WhatsApp Service</h1>
+<p class="subtitle">Testez l'authentification Firebase (Google / GitHub) et toutes les routes API</p>
+
+<!-- ── Config ───────────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>⚙️ Configuration</h2>
+  <div class="grid">
+    <div>
+      <label>Firebase Web API Key</label>
+      <input id="firebaseApiKey" placeholder="AIzaSy..." />
+    </div>
+    <div>
+      <label>URL du serveur</label>
+      <input id="serverUrl" value="http://127.0.0.1:3005" />
+    </div>
+  </div>
+  <div>
+    <label>Bridge API Key (X-Api-Key) — laisser vide si non définie</label>
+    <input id="bridgeApiKey" placeholder="optionnel en dev" type="password" />
+  </div>
+  <div class="status info" id="configStatus">
+    ℹ️ Récupérez la Web API Key dans Firebase Console → Paramètres du projet → Général → "Clé API Web"
+  </div>
+</div>
+
+<!-- ── Connexion ─────────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>🚀 Connexion OAuth</h2>
+  <div class="row">
+    <button id="btnGoogle"   class="btn-google">🔵 Connexion Google</button>
+    <button id="btnGitHub"   class="btn-github">⚫ Connexion GitHub</button>
+    <button id="btnFbLogout" class="btn-logout">Déconnexion Firebase</button>
+  </div>
+
+  <div id="userInfo" style="display:none">
+    <div class="user-info">
+      <img id="userPhoto" src="" alt="avatar" />
+      <div>
+        <div class="name"     id="userName"></div>
+        <div class="email"    id="userEmail"></div>
+        <div class="provider" id="userProvider"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tokenSection" style="display:none; margin-top:1rem">
+    <label>ID Token Firebase (transmis automatiquement) :</label>
+    <div class="token-box" id="tokenDisplay"></div>
+    <div class="row" style="margin-top:.5rem">
+      <button id="btnCopyToken"    class="btn-clear">📋 Copier le token</button>
+      <button id="btnRefreshToken" class="btn-clear">🔄 Rafraîchir le token</button>
+    </div>
+  </div>
+
+  <div class="status" id="authStatus"></div>
+</div>
+
+<!-- ── Routes Auth ───────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>🔑 Routes Auth Firebase</h2>
+
+  <div>
+    <span class="tag post">POST</span><span class="endpoint">/api/v1/auth/verify</span>
+    <p style="font-size:.8rem;color:#888;margin:.4rem 0 .5rem">Vérifie le token + crée/met à jour le profil en base</p>
+    <button id="btnVerify" class="btn-api">Appeler /auth/verify</button>
+  </div>
+  <hr class="sep" />
+  <div>
+    <span class="tag get">GET</span><span class="endpoint">/api/v1/auth/me</span>
+    <p style="font-size:.8rem;color:#888;margin:.4rem 0 .5rem">Profil de l'utilisateur connecté</p>
+    <button id="btnMe" class="btn-api">Appeler /auth/me</button>
+  </div>
+  <hr class="sep" />
+  <div>
+    <span class="tag post">POST</span><span class="endpoint">/api/v1/auth/logout</span>
+    <p style="font-size:.8rem;color:#888;margin:.4rem 0 .5rem">Révoque les tokens Firebase côté serveur</p>
+    <button id="btnApiLogout" class="btn-logout">Appeler /auth/logout</button>
+  </div>
+  <pre id="authResult">// Le résultat apparaîtra ici</pre>
+</div>
+
+<!-- ── Routes Admin ──────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>🛡️ Routes Admin (X-Api-Key)</h2>
+  <div>
+    <span class="tag get">GET</span><span class="endpoint">/api/v1/auth/users</span>
+    <div class="row" style="margin-top:.5rem; align-items:center">
+      <input id="adminPage"  value="1"  style="width:80px;margin:0" placeholder="page" />
+      <input id="adminLimit" value="10" style="width:80px;margin:0" placeholder="limit" />
+      <select id="adminProvider" style="width:auto;margin:0;flex:none">
+        <option value="">Tous les providers</option>
+        <option value="google.com">google.com</option>
+        <option value="github.com">github.com</option>
+      </select>
+      <button id="btnListUsers" class="btn-api">Lister les utilisateurs</button>
+    </div>
+  </div>
+  <hr class="sep" />
+  <div>
+    <span class="tag del">DELETE</span><span class="endpoint">/api/v1/auth/users/:uid</span>
+    <p style="font-size:.8rem;color:#888;margin:.4rem 0 .5rem">Désactive un compte (Firebase UID)</p>
+    <div class="row">
+      <input id="deleteUid" placeholder="Firebase UID à désactiver" style="margin:0;flex:1" />
+      <button id="btnDeleteUser" class="btn-logout">Désactiver</button>
+    </div>
+  </div>
+  <pre id="adminResult">// Le résultat apparaîtra ici</pre>
+</div>
+
+<!-- ── Routes WhatsApp ───────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>📱 Routes WhatsApp</h2>
+  <div>
+    <span class="tag get">GET</span><span class="endpoint">/api/v1/status</span>
+    <div style="margin-top:.5rem">
+      <button id="btnStatus" class="btn-api">Statut WhatsApp</button>
+    </div>
+  </div>
+  <hr class="sep" />
+  <div>
+    <span class="tag post">POST</span><span class="endpoint">/api/v1/messages/send</span>
+    <div class="grid" style="margin-top:.5rem">
+      <div>
+        <label>Numéro (international, sans +)</label>
+        <input id="msgTo" placeholder="22960000000" />
+      </div>
+      <div>
+        <label>Message</label>
+        <input id="msgBody" placeholder="Bonjour !" />
+      </div>
+    </div>
+    <button id="btnSendMessage" class="btn-api">Envoyer en file</button>
+  </div>
+  <pre id="waResult">// Le résultat apparaîtra ici</pre>
+</div>
+
+<!-- ── Docs ──────────────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h2>📖 Documentation</h2>
+  <div class="row">
+    <button id="btnDocs"        class="btn-api">Ouvrir Swagger UI</button>
+    <button id="btnOpenApiJson" class="btn-clear">Télécharger openapi.json</button>
+  </div>
+</div>
+
+<!-- ── Firebase SDK (module — chargé depuis gstatic, autorisé par le CSP) ─── -->
+<script type="module">
+  import { initializeApp }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'
+  import { getAuth, GoogleAuthProvider, GithubAuthProvider,
+           signInWithPopup, signOut as fbSignOut, onAuthStateChanged }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+
+  // ── État global ──────────────────────────────────────────────────────────────
+  let fbApp, fbAuth, currentUser, currentToken
+
+  // ── Helpers UI ───────────────────────────────────────────────────────────────
+  const $  = (id) => document.getElementById(id)
+  const serverUrl    = () => $('serverUrl').value.trim().replace(/\/$/, '')
+  const bridgeKey    = () => $('bridgeApiKey').value.trim()
+  const bearerHdrs   = () => ({
+    'Content-Type':  'application/json',
+    'Authorization': `Bearer ${currentToken ?? ''}`,
+  })
+  const apiKeyHdrs = () => {
+    const h = { 'Content-Type': 'application/json' }
+    const k = bridgeKey(); if (k) h['X-Api-Key'] = k
+    return h
+  }
+
+  function setStatus(id, type, msg) {
+    const el = $(id)
+    el.className = `status ${type}`
+    el.textContent = msg
+  }
+
+  function render(elId, result) {
+    $(elId).textContent = `HTTP ${result.status}\n\n${JSON.stringify(result.data, null, 2)}`
+  }
+
+  async function apiCall(method, path, body, headers) {
+    const opts = { method, headers }
+    if (body) opts.body = JSON.stringify(body)
+    try {
+      const r   = await fetch(serverUrl() + path, opts)
+      const txt = await r.text()
+      try { return { status: r.status, data: JSON.parse(txt) }
+      } catch { return { status: r.status, data: txt } }
+    } catch (e) {
+      return { status: 0, data: { error: e.message } }
+    }
+  }
+
+  // ── Init Firebase ────────────────────────────────────────────────────────────
+  function initFirebase() {
+    const apiKey = $('firebaseApiKey').value.trim()
+    if (!apiKey) {
+      setStatus('authStatus', 'err', '❌ Renseignez la Firebase Web API Key')
+      return null
+    }
+    if (!fbApp) {
+      fbApp  = initializeApp({
+        apiKey,
+        authDomain: 'whatsappservice-50e51.firebaseapp.com',
+        projectId:  'whatsappservice-50e51',
+      })
+      fbAuth = getAuth(fbApp)
+      onAuthStateChanged(fbAuth, onUserChanged)
+    }
+    return fbAuth
+  }
+
+  async function onUserChanged(user) {
+    currentUser = user
+    if (user) {
+      currentToken = await user.getIdToken()
+      $('userInfo').style.display     = 'block'
+      $('tokenSection').style.display = 'block'
+      $('userPhoto').src              = user.photoURL ?? ''
+      $('userName').textContent       = user.displayName ?? '—'
+      $('userEmail').textContent      = user.email ?? '—'
+      $('userProvider').textContent   = `Provider : ${user.providerData[0]?.providerId ?? '—'}`
+      $('tokenDisplay').textContent   = currentToken
+      $('deleteUid').value            = user.uid
+      setStatus('authStatus', 'ok', `✅ Connecté — UID : ${user.uid}`)
+    } else {
+      currentToken = null
+      $('userInfo').style.display     = 'none'
+      $('tokenSection').style.display = 'none'
+      setStatus('authStatus', 'info', 'ℹ️ Non connecté')
+    }
+  }
+
+  // ── Boutons connexion ────────────────────────────────────────────────────────
+  $('btnGoogle').addEventListener('click', async () => {
+    const a = initFirebase(); if (!a) return
+    try { await signInWithPopup(a, new GoogleAuthProvider()) }
+    catch (e) { setStatus('authStatus', 'err', `❌ ${e.message}`) }
+  })
+
+  $('btnGitHub').addEventListener('click', async () => {
+    const a = initFirebase(); if (!a) return
+    try { await signInWithPopup(a, new GithubAuthProvider()) }
+    catch (e) { setStatus('authStatus', 'err', `❌ ${e.message}`) }
+  })
+
+  $('btnFbLogout').addEventListener('click', async () => {
+    if (!fbAuth) return
+    await fbSignOut(fbAuth)
+    setStatus('authStatus', 'info', 'Déconnecté de Firebase')
+  })
+
+  $('btnCopyToken').addEventListener('click', () => {
+    if (currentToken) navigator.clipboard.writeText(currentToken)
+      .then(() => alert('Token copié dans le presse-papiers !'))
+  })
+
+  $('btnRefreshToken').addEventListener('click', async () => {
+    if (!currentUser) return
+    currentToken = await currentUser.getIdToken(true)
+    $('tokenDisplay').textContent = currentToken
+    setStatus('authStatus', 'ok', '🔄 Token rafraîchi')
+  })
+
+  // ── Routes Auth ──────────────────────────────────────────────────────────────
+  $('btnVerify').addEventListener('click', async () => {
+    if (!currentToken) { alert("Connectez-vous d'abord"); return }
+    render('authResult', await apiCall('POST', '/api/v1/auth/verify', {}, bearerHdrs()))
+  })
+
+  $('btnMe').addEventListener('click', async () => {
+    if (!currentToken) { alert("Connectez-vous d'abord"); return }
+    render('authResult', await apiCall('GET', '/api/v1/auth/me', null, bearerHdrs()))
+  })
+
+  $('btnApiLogout').addEventListener('click', async () => {
+    if (!currentToken) { alert("Connectez-vous d'abord"); return }
+    const r = await apiCall('POST', '/api/v1/auth/logout', {}, bearerHdrs())
+    render('authResult', r)
+    if (r.status === 200 && fbAuth) await fbSignOut(fbAuth)
+  })
+
+  // ── Routes Admin ─────────────────────────────────────────────────────────────
+  $('btnListUsers').addEventListener('click', async () => {
+    const page     = $('adminPage').value  || '1'
+    const limit    = $('adminLimit').value || '10'
+    const provider = $('adminProvider').value
+    let   path     = `/api/v1/auth/users?page=${page}&limit=${limit}`
+    if (provider) path += `&provider=${encodeURIComponent(provider)}`
+    render('adminResult', await apiCall('GET', path, null, apiKeyHdrs()))
+  })
+
+  $('btnDeleteUser').addEventListener('click', async () => {
+    const uid = $('deleteUid').value.trim()
+    if (!uid) { alert('UID requis'); return }
+    if (!confirm(`Désactiver le compte ${uid} ?`)) return
+    render('adminResult', await apiCall('DELETE', `/api/v1/auth/users/${uid}`, null, apiKeyHdrs()))
+  })
+
+  // ── Routes WhatsApp ───────────────────────────────────────────────────────────
+  $('btnStatus').addEventListener('click', async () => {
+    render('waResult', await apiCall('GET', '/api/v1/status', null, apiKeyHdrs()))
+  })
+
+  $('btnSendMessage').addEventListener('click', async () => {
+    const to      = $('msgTo').value.trim()
+    const message = $('msgBody').value.trim()
+    if (!to || !message) { alert('Renseignez le numéro et le message'); return }
+    render('waResult', await apiCall('POST', '/api/v1/messages/send', { to, message }, apiKeyHdrs()))
+  })
+
+  // ── Docs ─────────────────────────────────────────────────────────────────────
+  $('btnDocs').addEventListener('click', () => {
+    window.open(serverUrl() + '/api/v1/docs', '_blank')
+  })
+  $('btnOpenApiJson').addEventListener('click', () => {
+    window.open(serverUrl() + '/api/v1/docs/openapi.json', '_blank')
+  })
+</script>
+</body>
+</html>

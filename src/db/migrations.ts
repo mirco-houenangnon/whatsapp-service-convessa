@@ -8,6 +8,22 @@ import { logger }  from '../services/logger.js'
 
 const TABLES = [
 
+    // ── Utilisateurs authentifiés (Firebase Auth) ────────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_users (
+        uid           VARCHAR(128)  NOT NULL,
+        email         VARCHAR(255)  DEFAULT NULL,
+        display_name  VARCHAR(255)  DEFAULT NULL,
+        photo_url     VARCHAR(2048) DEFAULT NULL,
+        provider      VARCHAR(50)   NOT NULL COMMENT 'google.com | github.com',
+        active        TINYINT(1)    NOT NULL DEFAULT 1,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_login_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (uid),
+        INDEX idx_email    (email),
+        INDEX idx_provider (provider),
+        INDEX idx_active   (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
     // ── Sessions WhatsApp ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_sessions (
         id            VARCHAR(64)   NOT NULL,

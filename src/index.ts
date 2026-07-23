@@ -29,6 +29,11 @@ import { SocketGateway }   from './socket/SocketGateway.js'
 import { statusRouter }    from './api/routes/status.js'
 import { sessionRouter }   from './api/routes/session.js'
 import { messagesRouter }  from './api/routes/messages.js'
+import { authRouter }      from './api/routes/auth.js'
+import { docsRouter }      from './api/routes/docs.js'
+
+// Initialise Firebase Admin SDK au démarrage
+import './services/firebase.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -48,12 +53,19 @@ app.use(helmet({
     contentSecurityPolicy: config.enableDashboard
         ? {
             directives: {
-                defaultSrc: ["'self'"],
-                scriptSrc:  ["'self'", "'unsafe-inline'", 'cdn.socket.io', 'unpkg.com', 'fonts.googleapis.com'],
-                styleSrc:   ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
-                fontSrc:    ["'self'", 'fonts.gstatic.com'],
-                imgSrc:     ["'self'", 'data:'],
-                connectSrc: ["'self'", 'ws:', 'wss:'],
+                defaultSrc:      ["'self'"],
+                // gstatic.com = Firebase JS SDK CDN | 'unsafe-hashes' = inline event handlers (onclick=...)
+                scriptSrc:       ["'self'", "'unsafe-inline'", "'unsafe-hashes'",
+                                  'cdn.socket.io', 'unpkg.com', 'fonts.googleapis.com',
+                                  'www.gstatic.com', 'apis.google.com'],
+                scriptSrcAttr:   ["'unsafe-inline'"],
+                styleSrc:        ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+                fontSrc:         ["'self'", 'fonts.gstatic.com'],
+                imgSrc:          ["'self'", 'data:', 'https:'],
+                connectSrc:      ["'self'", 'ws:', 'wss:', 'https://identitytoolkit.googleapis.com',
+                                  'https://securetoken.googleapis.com', 'https://*.firebaseio.com'],
+                frameSrc:        ["'self'", 'https://whatsappservice-50e51.firebaseapp.com',
+                                  'https://accounts.google.com'],
             },
         }
         : false,
@@ -82,6 +94,8 @@ const gateway   = new SocketGateway(io, waManager, processor)
 app.use('/api/v1', statusRouter(waManager))
 app.use('/api/v1', sessionRouter(waManager))
 app.use('/api/v1', messagesRouter(waManager))
+app.use('/api/v1', authRouter())
+app.use('/api/v1', docsRouter())
 
 // ── Route 404 ──────────────────────────────────────────────────────────────────
 

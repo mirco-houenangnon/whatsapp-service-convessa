@@ -22,24 +22,36 @@ const openApiSpec = {
 ## WhatsApp Gateway Service
 
 API REST générique pour envoyer des messages WhatsApp via Baileys,
-avec authentification multiplateforme Firebase (Google / GitHub).
+avec authentification multiplateforme (Google, GitHub, Téléphone OTP).
 
-### Authentification
+### Authentification — 3 modes
 
-Deux mécanismes coexistent :
+| Mode | Flow | En-tête |
+|------|------|---------|
+| **Google / GitHub** | Firebase OAuth → ID Token | \`Authorization: Bearer <idToken>\` |
+| **Téléphone OTP** | register → OTP WhatsApp → verify-otp → customToken | \`Authorization: Bearer <idToken>\` |
+| **Admin** | Clé API statique | \`X-Api-Key: <bridgeApiKey>\` |
 
-| Mécanisme | En-tête | Usage |
-|-----------|---------|-------|
-| **Firebase JWT** | \`Authorization: Bearer <idToken>\` | Endpoints utilisateur |
-| **API Key** | \`X-Api-Key: <bridgeApiKey>\` | Endpoints admin & WhatsApp |
-
-### Flux OAuth (Google / GitHub)
+### Flux Google / GitHub
 
 \`\`\`
 Client → Firebase SDK (OAuth) → Firebase Auth
        ← ID Token ←
 Client → POST /api/v1/auth/verify  (Bearer idToken)
-       ← Profil utilisateur + session ←
+       ← Profil utilisateur ←
+\`\`\`
+
+### Flux Téléphone OTP
+
+\`\`\`
+Client → POST /api/v1/auth/phone/register  { phone }
+       ← 202 Accepted ←
+WhatsApp reçoit → Code OTP 6 chiffres (valable 10 min)
+Client → POST /api/v1/auth/phone/verify-otp  { phone, code }
+       ← { customToken } ←
+Client → Firebase SDK signInWithCustomToken(customToken)
+       ← ID Token ←
+Client → POST /api/v1/auth/verify  (Bearer idToken) ou GET /api/v1/auth/me
 \`\`\`
         `.trim(),
         contact: {
@@ -162,11 +174,12 @@ Client → POST /api/v1/auth/verify  (Bearer idToken)
 
     // ── Tags ──────────────────────────────────────────────────────────────────
     tags: [
-        { name: 'Auth',        description: 'Authentification Firebase (Google / GitHub)' },
+        { name: 'Auth',         description: 'Authentification Firebase (Google / GitHub)' },
+        { name: 'Auth - Phone', description: 'Authentification par numéro de téléphone (OTP WhatsApp)' },
         { name: 'Auth - Admin', description: 'Gestion des comptes — nécessite la clé API' },
-        { name: 'WhatsApp',    description: 'Envoi et suivi des messages WhatsApp' },
-        { name: 'Status',      description: "État de la connexion WhatsApp et de la file d'attente" },
-        { name: 'Session',     description: 'Gestion de la session WhatsApp (QR code)' },
+        { name: 'WhatsApp',     description: 'Envoi et suivi des messages WhatsApp' },
+        { name: 'Status',       description: "État de la connexion WhatsApp et de la file d'attente" },
+        { name: 'Session',      description: 'Gestion de la session WhatsApp (QR code)' },
     ],
 
     // ── Paths ─────────────────────────────────────────────────────────────────
@@ -249,6 +262,144 @@ Révoque tous les refresh tokens de l'utilisateur côté Firebase.
                         },
                     },
                     401: { '$ref': '#/components/responses/Unauthorized' },
+                },
+            },
+        },
+
+        // ── Auth Téléphone OTP ─────────────────────────────────────────────────
+
+        '/api/v1/auth/phone/register': {
+            post: {
+                tags:    ['Auth - Phone'],
+                summary: 'Inscription par numéro de téléphone',
+                description: `
+**Étape 1/2 du flux OTP.**
+
+Vérifie que le numéro n'est pas déjà utilisé, génère un code OTP à 6 chiffres
+et l'envoie au numéro via WhatsApp.
+
+En mode \`development\`, le code est aussi retourné dans \`devOtp\` pour faciliter les tests.
+                `.trim(),
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['phone'],
+                                properties: {
+                                    phone:       { type: 'string', example: '22960000000', description: 'Numéro international sans + (indicatif inclus)' },
+                                    displayName: { type: 'string', example: 'Jean Dupont', description: 'Nom affiché (optionnel)' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    202: {
+                        description: 'OTP envoyé via WhatsApp',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean', example: true },
+                                        message: { type: 'string', example: 'Code envoyé au 229****000 via WhatsApp' },
+                                        devOtp:  { type: 'string', example: '482910', description: 'Uniquement en développement' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    400: { description: 'Format de numéro invalide' },
+                    409: { description: 'Numéro déjà enregistré — utilisez /auth/phone/login' },
+                    503: { description: 'WhatsApp non connecté (production uniquement)' },
+                },
+            },
+        },
+
+        '/api/v1/auth/phone/verify-otp': {
+            post: {
+                tags:    ['Auth - Phone'],
+                summary: 'Vérifier le code OTP et activer le compte',
+                description: `
+**Étape 2/2 du flux OTP.**
+
+Vérifie le code reçu par WhatsApp. En cas de succès :
+1. Crée le compte Firebase (provider \`phone\`)
+2. Sauvegarde le profil en base MySQL
+3. Retourne un **Custom Token Firebase**
+
+Le frontend doit ensuite appeler \`signInWithCustomToken(customToken)\` via le SDK Firebase
+pour obtenir un ID Token standard, utilisable sur tous les autres endpoints.
+
+**Limites de sécurité :** 5 tentatives max, expiration 10 minutes.
+                `.trim(),
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['phone', 'code'],
+                                properties: {
+                                    phone: { type: 'string', example: '22960000000' },
+                                    code:  { type: 'string', example: '482910', description: 'Code OTP à 6 chiffres' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: {
+                        description: 'OTP valide — compte activé',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success:     { type: 'boolean', example: true },
+                                        customToken: { type: 'string', description: 'Firebase Custom Token — à échanger via signInWithCustomToken()' },
+                                        user:        { '$ref': '#/components/schemas/AuthProfile' },
+                                        message:     { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    400: { description: 'Code incorrect ou invalide' },
+                    410: { description: 'Code expiré ou trop de tentatives' },
+                },
+            },
+        },
+
+        '/api/v1/auth/phone/login': {
+            post: {
+                tags:    ['Auth - Phone'],
+                summary: 'Connexion d\'un compte existant par téléphone',
+                description: `
+Envoie un nouveau code OTP au numéro si le compte existe déjà.
+Ensuite appeler \`POST /auth/phone/verify-otp\` avec le code reçu.
+                `.trim(),
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['phone'],
+                                properties: {
+                                    phone: { type: 'string', example: '22960000000' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    202: { description: 'Code OTP envoyé' },
+                    404: { description: 'Numéro non enregistré — utilisez /auth/phone/register' },
+                    403: { description: 'Compte désactivé' },
+                    503: { description: 'WhatsApp non connecté' },
                 },
             },
         },

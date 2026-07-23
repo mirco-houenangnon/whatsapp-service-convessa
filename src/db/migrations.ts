@@ -14,14 +14,28 @@ const TABLES = [
         email         VARCHAR(255)  DEFAULT NULL,
         display_name  VARCHAR(255)  DEFAULT NULL,
         photo_url     VARCHAR(2048) DEFAULT NULL,
-        provider      VARCHAR(50)   NOT NULL COMMENT 'google.com | github.com',
+        provider      VARCHAR(50)   NOT NULL COMMENT 'google.com | github.com | phone',
+        phone         VARCHAR(30)   DEFAULT NULL,
         active        TINYINT(1)    NOT NULL DEFAULT 1,
         created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_login_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (uid),
         INDEX idx_email    (email),
+        INDEX idx_phone    (phone),
         INDEX idx_provider (provider),
         INDEX idx_active   (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── OTP — codes de vérification téléphone ─────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_otp_codes (
+        phone       VARCHAR(30)   NOT NULL,
+        code_hash   VARCHAR(64)   NOT NULL COMMENT 'SHA-256 du code OTP',
+        expires_at  DATETIME      NOT NULL,
+        attempts    TINYINT       NOT NULL DEFAULT 0,
+        verified    TINYINT(1)    NOT NULL DEFAULT 0,
+        created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (phone),
+        INDEX idx_expires_at (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
     // ── Tenants (clients du service) ─────────────────────────────────────────

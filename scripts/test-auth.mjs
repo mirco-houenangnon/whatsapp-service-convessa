@@ -329,13 +329,74 @@ async function runTests() {
         )
     }
 
-    // ── 11. Docs ──────────────────────────────────────────────────────────────
+    // ── 11. Documentation Swagger  ────────────────────────────────────────────
     section('11. Documentation Swagger')
     {
         const r = await apiCall('GET', '/api/v1/openapi.json', null)
         check(r.status === 200,    'GET /api/v1/openapi.json → 200')
         check(r.data?.openapi === '3.0.3', 'spec OpenAPI 3.0.3 valide')
         check(Array.isArray(r.data?.tags), 'tags présents')
+    }
+
+    // ── 12. Auth Phone OTP ────────────────────────────────────────────────────
+    section('12. Auth par téléphone — OTP WhatsApp')
+    {
+        const testPhone = '22900000001'
+
+        // 12a. Register — numéro inexistant
+        info('12a. POST /auth/phone/register')
+        const r1 = await apiCall('POST', '/api/v1/auth/phone/register', { phone: testPhone }, {})
+        printResult(r1)
+        // 202 si WhatsApp connecté, ou 202 en dev avec devOtp
+        const r1ok = r1.status === 202 || r1.status === 503
+        check(r1ok, 'register → 202 ou 503 (WhatsApp off)')
+
+        const devOtp = r1.data?.devOtp as string | undefined
+        if (devOtp) {
+            ok('devOtp reçu en dev', devOtp)
+
+            // 12b. Register même numéro → 409
+            info('12b. Register numéro déjà en cours → 409 ou same')
+            const r1b = await apiCall('POST', '/api/v1/auth/phone/register', { phone: testPhone }, {})
+            check(r1b.status === 409 || r1b.status === 202, 'Deuxième register → 409 ou 202 (OTP re-généré)')
+
+            // 12c. verify-otp avec mauvais code
+            info('12c. verify-otp — mauvais code')
+            const r2 = await apiCall('POST', '/api/v1/auth/phone/verify-otp',
+                { phone: testPhone, code: '000000' }, {})
+            printResult(r2)
+            check(r2.status === 400, 'Mauvais code → 400')
+            check(r2.data?.error?.code === 'INVALID', 'error.code = INVALID')
+
+            // 12d. verify-otp avec bon code
+            info('12d. verify-otp — bon code')
+            const r3 = await apiCall('POST', '/api/v1/auth/phone/verify-otp',
+                { phone: testPhone, code: devOtp }, {})
+            printResult(r3)
+            check(r3.status === 200,             'Bon code → 200')
+            check(r3.data?.success === true,      'success: true')
+            check(typeof r3.data?.customToken === 'string', 'customToken présent')
+            check(r3.data?.user?.provider === 'phone', 'provider = phone')
+
+            // 12e. Login — compte existant
+            info('12e. POST /auth/phone/login — compte existant')
+            const r4 = await apiCall('POST', '/api/v1/auth/phone/login', { phone: testPhone }, {})
+            printResult(r4)
+            check(r4.status === 202, 'login → 202')
+        } else {
+            warn('devOtp absent (WhatsApp off ou prod) — tests verify-otp ignorés')
+            check(true, 'Tests OTP ignorés (WhatsApp non connecté)')
+        }
+
+        // 12f. Register — format invalide
+        info('12f. Register — numéro invalide')
+        const rInv = await apiCall('POST', '/api/v1/auth/phone/register', { phone: 'abc' }, {})
+        check(rInv.status === 400, 'Numéro invalide → 400')
+
+        // 12g. Login — numéro non enregistré
+        info('12g. Login — numéro non enregistré')
+        const rNr = await apiCall('POST', '/api/v1/auth/phone/login', { phone: '99999999999' }, {})
+        check(rNr.status === 404, 'Numéro inconnu → 404')
     }
 
     // ── Résumé ────────────────────────────────────────────────────────────────

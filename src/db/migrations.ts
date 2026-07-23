@@ -8,6 +8,36 @@ import { logger }  from '../services/logger.js'
 
 const TABLES = [
 
+    // ── Utilisateurs authentifiés (Firebase Auth) ────────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_users (
+        uid           VARCHAR(128)  NOT NULL,
+        email         VARCHAR(255)  DEFAULT NULL,
+        display_name  VARCHAR(255)  DEFAULT NULL,
+        photo_url     VARCHAR(2048) DEFAULT NULL,
+        provider      VARCHAR(50)   NOT NULL COMMENT 'google.com | github.com | phone',
+        phone         VARCHAR(30)   DEFAULT NULL,
+        active        TINYINT(1)    NOT NULL DEFAULT 1,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_login_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (uid),
+        INDEX idx_email    (email),
+        INDEX idx_phone    (phone),
+        INDEX idx_provider (provider),
+        INDEX idx_active   (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── OTP — codes de vérification téléphone ─────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_otp_codes (
+        phone       VARCHAR(30)   NOT NULL,
+        code_hash   VARCHAR(64)   NOT NULL COMMENT 'SHA-256 du code OTP',
+        expires_at  DATETIME      NOT NULL,
+        attempts    TINYINT       NOT NULL DEFAULT 0,
+        verified    TINYINT(1)    NOT NULL DEFAULT 0,
+        created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (phone),
+        INDEX idx_expires_at (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
     // ── Tenants (clients du service) ─────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_tenants (
         id            VARCHAR(36)   NOT NULL,
@@ -22,11 +52,11 @@ const TABLES = [
         updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY uq_phone (phone),
-        INDEX idx_status (status),
+        INDEX idx_status       (status),
         INDEX idx_api_key_hash (api_key_hash)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Sessions WhatsApp ────────────────────────────────────────────────────
+    // ── Sessions WhatsApp ─────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_sessions (
         id            VARCHAR(64)   NOT NULL,
         creds_iv      VARCHAR(32)   NOT NULL,
@@ -41,7 +71,7 @@ const TABLES = [
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── File d'attente des messages ──────────────────────────────────────────
+    // ── File d'attente des messages ───────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_message_queue (
         id          VARCHAR(36)   NOT NULL,
         recipient   VARCHAR(30)   NOT NULL,
@@ -52,17 +82,19 @@ const TABLES = [
         media_b64   LONGTEXT      DEFAULT NULL,
         media_mime  VARCHAR(100)  DEFAULT NULL,
         media_name  VARCHAR(255)  DEFAULT NULL,
+        tenant_id   VARCHAR(36)   DEFAULT NULL,
         status      ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued',
         attempts    TINYINT       NOT NULL DEFAULT 0,
         last_error  TEXT          DEFAULT NULL,
         queued_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
         sent_at     DATETIME      DEFAULT NULL,
         PRIMARY KEY (id),
-        INDEX idx_status   (status),
-        INDEX idx_queued_at (queued_at)
+        INDEX idx_status    (status),
+        INDEX idx_queued_at (queued_at),
+        INDEX idx_tenant_id (tenant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Journal d'activité ───────────────────────────────────────────────────
+    // ── Journal d'activité ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_logs (
         id          BIGINT        NOT NULL AUTO_INCREMENT,
         level       ENUM('debug','info','warn','error') NOT NULL,
@@ -76,7 +108,7 @@ const TABLES = [
         INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Clés Signal Baileys ──────────────────────────────────────────────────
+    // ── Clés Signal Baileys ───────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_session_keys (
         session_id  VARCHAR(64)   NOT NULL,
         key_type    VARCHAR(50)   NOT NULL,
@@ -110,16 +142,19 @@ export async function runMigrations(): Promise<void> {
         )
     }
 
-    // Migration : rendre 'message' nullable et ajouter les colonnes média si absentes
+    // ── Migrations ALTER TABLE (colonnes ajoutées progressivement) ────────────
+    // Média sur les messages existants
     await pool.execute(`ALTER TABLE wa_message_queue MODIFY COLUMN message TEXT DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_type ENUM('image','video','audio','document') DEFAULT NULL`).catch(() => {})
-    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT NULL`).catch(() => {})
-    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_b64 LONGTEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_url  TEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_b64  LONGTEXT DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_mime VARCHAR(100) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_name VARCHAR(255) DEFAULT NULL`).catch(() => {})
-
-    // Migration : ajouter tenant_id aux tables existantes
+    // Tenant ID sur les messages existants
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36) DEFAULT NULL`).catch(() => {})
+    // Colonne phone sur auth_users (ajoutée avec le provider phone)
+    await pool.execute(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE auth_users ADD INDEX IF NOT EXISTS idx_phone (phone)`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

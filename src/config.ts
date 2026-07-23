@@ -68,6 +68,18 @@ const alertConfig = alertEmail && smtpHost
     }
     : null
 
+// ── Firebase ──────────────────────────────────────────────────────────────────
+const firebaseServiceAccountJson = process.env['FIREBASE_SERVICE_ACCOUNT_JSON']?.trim() ?? ''
+const firebaseServiceAccountPath = process.env['FIREBASE_SERVICE_ACCOUNT_PATH']?.trim() ?? ''
+const firebaseProjectId          = process.env['FIREBASE_PROJECT_ID']?.trim() ?? ''
+
+if (IS_PROD && !firebaseServiceAccountJson && !firebaseServiceAccountPath) {
+    console.error(
+        '[Config] ❌ Firebase non configuré en production. Définissez FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_SERVICE_ACCOUNT_PATH'
+    )
+    process.exit(1)
+}
+
 export const config = {
     port:                  optionalInt('PORT', 3005),
     nodeEnv:               optional('NODE_ENV', 'development') as 'development' | 'production',
@@ -92,6 +104,16 @@ export const config = {
     },
 
     alert: alertConfig,
+
+    // ── Firebase Auth ──────────────────────────────────────────────────────────
+    firebase: {
+        /** Contenu JSON de la clé de service Firebase (prioritaire sur PATH) */
+        serviceAccountJson: firebaseServiceAccountJson,
+        /** Chemin local vers le fichier JSON de la clé de service */
+        serviceAccountPath: firebaseServiceAccountPath,
+        /** ID du projet Firebase (optionnel — déduit depuis la clé de service) */
+        projectId:          firebaseProjectId,
+    },
 
     logLevel: optional('LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error',
 } as const

@@ -78,6 +78,8 @@ export function authRouter(): Router {
      *       403:
      *         $ref: '#/components/responses/ForbiddenProvider'
      */
+
+    
     router.post(
         '/auth/verify',
         requireFirebaseAuth,
@@ -178,25 +180,7 @@ export function authRouter(): Router {
     )
 
     // ── POST /api/v1/auth/logout ──────────────────────────────────────────────
-    /**
-     * @swagger
-     * /api/v1/auth/logout:
-     *   post:
-     *     tags: [Auth]
-     *     summary: Déconnexion — révocation du token Firebase
-     *     description: |
-     *       Révoque tous les refresh tokens de l'utilisateur côté Firebase.
-     *       Les ID tokens existants restent valides jusqu'à leur expiration naturelle
-     *       (1h), mais les tentatives de rafraîchissement échoueront.
-     *       Pour une révocation immédiate, activez `checkRevoked: true` dans verifyIdToken.
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Déconnexion effectuée
-     *       401:
-     *         $ref: '#/components/responses/Unauthorized'
-     */
+  
     router.post(
         '/auth/logout',
         requireFirebaseAuth,
@@ -410,7 +394,7 @@ export function authRouter(): Router {
             await saveOtp(phone, otpCode)
 
             // ── Envoyer via WhatsApp (appel interne à messages/send) ────────────
-            const message = `🔐 Votre code de vérification : *${otpCode}*\n\nValable 10 minutes. Ne le partagez jamais.`
+            const message = `Votre code de vérification : *${otpCode}*\n\nValable 10 minutes. Ne le partagez jamais.`
             const sent    = await sendOtpViaWhatsApp(phone, message)
 
             if (!sent) {

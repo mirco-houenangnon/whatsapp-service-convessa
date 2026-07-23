@@ -124,6 +124,21 @@ const TABLES = [
         INDEX idx_component  (component),
         INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Administrateurs Convessa (backoffice) ─────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS convessa_admins (
+        id            INT           NOT NULL AUTO_INCREMENT,
+        email         VARCHAR(255)  NOT NULL,
+        display_name  VARCHAR(100)  DEFAULT NULL,
+        password_hash VARCHAR(200)  NOT NULL COMMENT 'scrypt salt:hash',
+        active        TINYINT(1)    NOT NULL DEFAULT 1,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        last_login_at DATETIME      DEFAULT NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_email (email),
+        INDEX idx_active (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
 export async function runMigrations(): Promise<void> {

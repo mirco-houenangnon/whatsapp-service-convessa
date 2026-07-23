@@ -1,11 +1,4 @@
-/**
- * WhatsAppManager.ts — Gestionnaire de connexion Baileys.
- *
- * - Session persistée en MySQL (chiffrée AES-256-GCM)
- * - Reconnexion automatique avec backoff exponentiel
- * - Détection déconnexion définitive → alerte e-mail
- * - Guard isInitializing contre les race conditions
- */
+
 
 import makeWASocket, {
     DisconnectReason,
@@ -183,7 +176,7 @@ export class WhatsAppManager extends EventEmitter {
                             phone:     maskPhone(this.connectedPhone ?? ''),
                             name:      this.connectedName,
                         },
-                        'WhatsApp connecté ✅'
+                        'WhatsApp connecté'
                     )
 
                     this.emit('ready', this.getStatus())

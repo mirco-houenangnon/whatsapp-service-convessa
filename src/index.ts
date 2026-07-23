@@ -35,6 +35,7 @@ import { messagesRouter }  from './api/routes/messages.js'
 import { tenantsRouter }   from './api/routes/tenants.js'
 import { authRouter }      from './api/routes/auth.js'
 import { docsRouter }      from './api/routes/docs.js'
+import { adminRouter }     from './api/routes/admin.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -87,7 +88,13 @@ app.disable('x-powered-by')
 if (!config.isProd || config.enableDashboard) {
     const publicDir = path.join(__dirname, '..', 'public')
     app.use(express.static(publicDir))
+
+    // Redirect /admin/ → /admin/index.html et /admin → /admin/login.html si pas de token
+    app.get('/admin', (_req, res) => res.redirect('/admin/login.html'))
+    app.get('/admin/', (_req, res) => res.redirect('/admin/index.html'))
+
     logger.info({ component: 'Server' }, `Dashboard disponible sur http://127.0.0.1:${config.port}`)
+    logger.info({ component: 'Server' }, `Admin backoffice sur http://127.0.0.1:${config.port}/admin/login.html`)
 }
 
 // ── Instances principales ─────────────────────────────────────────────────────
@@ -105,6 +112,7 @@ app.use('/api/v1', messagesRouter(waManager))
 app.use('/api/v1', tenantsRouter(tenantManager))
 app.use('/api/v1', authRouter())
 app.use('/api/v1', docsRouter())
+app.use('/api/admin', adminRouter())
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

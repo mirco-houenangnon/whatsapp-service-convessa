@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Convessa Backoffice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f7f8fa; color: #111b21; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── HEADER ── */
+    header { height: 56px; background: #25D366; display: flex; align-items: center; padding: 0 1.25rem; position: sticky; top: 0; z-index: 200; gap: 0.75rem; }
+    .header-brand { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+    .header-icon-box { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
+    .header-title { font-size: 1rem; font-weight: 700; color: #fff; line-height: 1; }
+    .header-sub { font-size: 0.67rem; color: rgba(255,255,255,0.7); font-weight: 400; margin-top: 2px; }
+    .header-nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+    .nav-tab { padding: 0.3rem 0.9rem; border-radius: 8px; border: none; background: rgba(255,255,255,0); color: rgba(255,255,255,0.75); font-size: 0.84rem; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .nav-tab:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .nav-tab.active { background: rgba(255,255,255,0.22); color: #fff; font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+    .admin-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .admin-name { font-size: 0.84rem; color: #fff; font-weight: 500; }
+    .btn-logout { padding: 0.28rem 0.75rem; background: rgba(220,53,69,0.18); border: 1px solid rgba(220,53,69,0.35); border-radius: 8px; color: #fff; font-size: 0.78rem; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .btn-logout:hover { background: #dc3545; border-color: #dc3545; color: #fff; }
+
+    /* ── MAIN ── */
+    main { flex: 1; padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+    /* ── VIEWS ── */
+    .view { display: none; }
+    .view.active { display: block; }
+    #view-panel { padding: 0; display: none; }
+    #view-panel.active { display: block; }
+
+    /* ── STATS GRID ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+    .stat-card { background: #fff; border: 1px solid #e4e6ea; border-radius: 10px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 1rem; }
+    .stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .stat-icon.green { background: #f0faf4; }
+    .stat-icon.blue { background: #eff6ff; }
+    .stat-icon.orange { background: #fffbeb; }
+    .stat-info { display: flex; flex-direction: column; gap: 0.15rem; }
+    .stat-number { font-size: 1.6rem; font-weight: 700; color: #111b21; line-height: 1; }
+    .stat-label { font-size: 0.76rem; color: #667781; font-weight: 400; }
+
+    /* SKELETON */
+    .skeleton { background: #e4e6ea; border-radius: 6px; animation: shimmer 1.4s infinite; }
+    .skeleton-num { width: 60px; height: 28px; }
+    .skeleton-lbl { width: 80px; height: 12px; margin-top: 4px; }
+    @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+    /* ── SECTION HEADER ── */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
+    .section-title { font-size: 0.95rem; font-weight: 700; color: #111b21; }
+    .btn-ghost { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem; border: 1px solid #e4e6ea; border-radius: 8px; background: #fff; color: #667781; font-size: 0.8rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .btn-ghost:hover { border-color: #25D366; color: #25D366; }
+
+    /* ── TABLE CARD ── */
+    .table-card { background: #fff; border: 1px solid #e4e6ea; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    thead th { background: #f7f8fa; padding: 0.6rem 1rem; text-align: left; font-size: 0.68rem; font-weight: 600; color: #667781; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e4e6ea; }
+    tbody tr { border-bottom: 1px solid #e4e6ea; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f7f8fa; }
+    tbody td { padding: 0.75rem 1rem; font-size: 0.85rem; color: #111b21; vertical-align: middle; }
+    .td-phone { font-family: 'Courier New', monospace; color: #667781; font-size: 0.82rem; }
+    .td-name { font-weight: 500; }
+
+    /* STATUS BADGE */
+    .badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; }
+    .badge-connected { background: #DCF8C6; color: #128C7E; }
+    .badge-pending { background: #fef9c3; color: #92400e; }
+    .badge-disconnected { background: #fee2e2; color: #991b1b; }
+    .badge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .badge-connected .badge-dot { background: #25D366; animation: pulse-green 1.5s infinite; }
+    .badge-pending .badge-dot { background: #f59e0b; }
+    .badge-disconnected .badge-dot { background: #dc3545; }
+    @keyframes pulse-green { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    /* SMALL BUTTONS */
+    .btn-sm { padding: 0.25rem 0.65rem; border-radius: 8px; font-size: 0.75rem; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; border: 1px solid #e4e6ea; background: #fff; color: #667781; transition: border-color 0.15s, color 0.15s; }
+    .btn-sm:hover { border-color: #25D366; color: #128C7E; }
+    .btn-sm.hidden { display: none; }
+
+    /* EMPTY STATE */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; padding: 3rem 1rem; color: #667781; font-size: 0.85rem; }
+
+    /* ACTION ROW */
+    .action-row { margin-top: 1rem; display: flex; gap: 0.75rem; }
+    .btn-outline-green { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1rem; border: 1px solid #25D366; border-radius: 8px; background: #fff; color: #25D366; font-size: 0.84rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s, color 0.15s; text-decoration: none; }
+    .btn-outline-green:hover { background: #f0faf4; }
+
+    /* ── ACCOUNT VIEW ── */
+    .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 700px) { .account-grid { grid-template-columns: 1fr; } }
+    .card { background: #fff; border: 1px solid #e4e6ea; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+    .card-header { background: #f7f8fa; border-bottom: 1px solid #e4e6ea; padding: 0.8rem 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .card-header-title { font-size: 0.88rem; font-weight: 700; color: #111b21; }
+    .card-body-pad { padding: 1.25rem; }
+    .profile-summary { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1.5rem 1.25rem 1.25rem; text-align: center; }
+    .profile-avatar { width: 52px; height: 52px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .profile-name { font-size: 0.95rem; font-weight: 700; color: #111b21; }
+    .profile-email { font-size: 0.82rem; color: #667781; }
+    .profile-last { display: flex; align-items: center; gap: 0.3rem; font-size: 0.76rem; color: #667781; margin-top: 0.2rem; }
+    .profile-divider { width: 100%; height: 1px; background: #e4e6ea; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+    .form-group:last-of-type { margin-bottom: 0; }
+    .form-group label { font-size: 0.8rem; font-weight: 500; color: #111b21; }
+    .form-group input { padding: 0.55rem 0.85rem; border: 1px solid #e4e6ea; border-radius: 10px; font-size: 0.87rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none; transition: border-color 0.15s; }
+    .form-group input:focus { border-color: #25D366; box-shadow: 0 0 0 3px rgba(37,211,102,0.12); }
+    .card-footer-pad { padding: 0.9rem 1.25rem; border-top: 1px solid #e4e6ea; background: #fff; display: flex; justify-content: flex-end; }
+    .btn-primary { padding: 0.5rem 1.2rem; background: #25D366; color: #fff; font-size: 0.84rem; font-weight: 600; font-family: 'Inter', sans-serif; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.15s; }
+    .btn-primary:hover { background: #128C7E; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── MODAL ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 12px; max-width: 440px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e4e6ea; }
+    .modal-title { font-size: 0.95rem; font-weight: 700; color: #111b21; }
+    .modal-close { background: none; border: none; cursor: pointer; color: #667781; display: flex; align-items: center; justify-content: center; border-radius: 6px; padding: 0.2rem; transition: color 0.15s; }
+    .modal-close:hover { color: #dc3545; }
+    .modal-body { padding: 1.25rem; font-size: 0.87rem; color: #667781; line-height: 1.6; }
+    .modal-body a { color: #25D366; font-weight: 600; text-decoration: none; }
+    .modal-body a:hover { text-decoration: underline; }
+    .modal-footer { padding: 0.9rem 1.25rem; border-top: 1px solid #e4e6ea; display: flex; justify-content: flex-end; }
+
+    /* ── TOAST ── */
+    .toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast { background: #fff; border: 1px solid #e4e6ea; border-radius: 10px; padding: 0.7rem 1rem; font-size: 0.84rem; color: #111b21; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.6rem; min-width: 240px; max-width: 340px; border-left-width: 4px; animation: toast-in 0.25s ease; }
+    .toast.success { border-left-color: #25D366; }
+    .toast.error { border-left-color: #dc3545; }
+    .toast.info { border-left-color: #3b82f6; }
+    .toast-msg { flex: 1; }
+    @keyframes toast-in { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ── SPINNER ── */
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FOOTER ── */
+    footer { height: 42px; background: #fff; border-top: 1px solid #e4e6ea; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; position: sticky; bottom: 0; z-index: 100; }
+    .footer-left { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; font-weight: 600; color: #128C7E; }
+    .footer-right { font-size: 0.75rem; color: #667781; }
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="header-brand">
+      <div class="header-icon-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <div class="header-title">Convessa</div>
+        <div class="header-sub">Backoffice</div>
+      </div>
+    </div>
+
+    <nav class="header-nav">
+      <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+      <button class="nav-tab" data-tab="account">Mon compte</button>
+      <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
+    </nav>
+
+    <div class="header-right">
+      <div class="admin-avatar" id="adminAvatar">A</div>
+      <span class="admin-name" id="adminName">Admin</span>
+      <button class="btn-logout" id="logoutBtn">Déconnexion</button>
+    </div>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <main id="mainContent">
+
+    <!-- VIEW 1: DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+
+      <!-- Stats row -->
+      <div class="stats-grid">
+        <!-- Total Tenants -->
+        <div class="stat-card">
+          <div class="stat-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="9" cy="7" r="4" stroke="#25D366" stroke-width="2"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number" id="statTotal"><span class="skeleton skeleton-num"></span></div>
+            <div class="stat-label">Total Tenants</div>
+          </div>
+        </div>
+        <!-- Connectés -->
+        <div class="stat-card">
+          <div class="stat-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.37 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 3 4.18 2 2 0 0 1 4.98 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.07 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="#25D366" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number" id="statConnected"><span class="skeleton skeleton-num"></span></div>
+            <div class="stat-label">Connectés</div>
+          </div>
+        </div>
+        <!-- Utilisateurs -->
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="12" cy="7" r="4" stroke="#3b82f6" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number" id="statUsers"><span class="skeleton skeleton-num"></span></div>
+            <div class="stat-label">Utilisateurs</div>
+          </div>
+        </div>
+        <!-- Messages -->
+        <div class="stat-card">
+          <div class="stat-icon orange">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <line x1="22" y1="2" x2="11" y2="13" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number" id="statMessages"><span class="skeleton skeleton-num"></span></div>
+            <div class="stat-label">Messages aujourd'hui</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tenants section -->
+      <div class="section-header">
+        <div class="section-title">Comptes WhatsApp</div>
+        <button class="btn-ghost" id="refreshBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Actualiser
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-wrap">
+          <table id="tenantsTable">
+            <thead>
+              <tr>
+                <th>Téléphone</th>
+                <th>Nom</th>
+                <th>Statut</th>
+                <th>Connecté le</th>
+                <th>Créé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tenantsBody">
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Chargement…
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-outline-green" id="openPanelBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#25D366"/>
+          </svg>
+          Ouvrir le panel WhatsApp
+        </button>
+      </div>
+    </div><!-- end view-dashboard -->
+
+    <!-- VIEW 2: MON COMPTE -->
+    <div class="view" id="view-account">
+      <div class="account-grid">
+
+        <!-- Left column -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+          <!-- Profile summary -->
+          <div class="card">
+            <div class="profile-summary">
+              <div class="profile-avatar" id="profileAvatar">A</div>
+              <div class="profile-name" id="profileName">—</div>
+              <div class="profile-email" id="profileEmail">—</div>
+              <div class="profile-last">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#667781" stroke-width="2"/>
+                  <path d="M12 6v6l4 2" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span id="profileLastLogin">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit profile form -->
+          <div class="card">
+            <div class="card-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#667781" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#667781" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="card-header-title">Modifier le profil</span>
+            </div>
+            <form id="profileForm">
+              <div class="card-body-pad">
+                <div class="form-group">
+                  <label for="editName">Nom d'affichage</label>
+                  <input type="text" id="editName" placeholder="Nom d'affichage" autocomplete="name" />
+                </div>
+                <div class="form-group">
+                  <label for="editEmail">Adresse e-mail</label>
+                  <input type="email" id="editEmail" placeholder="email@convessa.io" autocomplete="email" />
+                </div>
+              </div>
+              <div class="card-footer-pad">
+                <button type="submit" class="btn-primary" id="saveProfileBtn">
+                  <div class="spinner" id="spinnerProfile"></div>
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="11" width="14" height="10" rx="2" stroke="#667781" stroke-width="2"/>
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="card-header-title">Sécurité</span>
+            </div>
+            <form id="passwordForm">
+              <div class="card-body-pad">
+                <div class="form-group">
+                  <label for="currentPwd">Mot de passe actuel</label>
+                  <input type="password" id="currentPwd" placeholder="••••••••" autocomplete="current-password" />
+                </div>
+                <div class="form-group">
+                  <label for="newPwd">Nouveau mot de passe</label>
+                  <input type="password" id="newPwd" placeholder="••••••••" autocomplete="new-password" />
+                </div>
+                <div class="form-group">
+                  <label for="confirmPwd">Confirmer</label>
+                  <input type="password" id="confirmPwd" placeholder="••••••••" autocomplete="new-password" />
+                </div>
+              </div>
+              <div class="card-footer-pad">
+                <button type="submit" class="btn-primary" id="savePwdBtn">
+                  <div class="spinner" id="spinnerPwd"></div>
+                  Mettre à jour
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div><!-- end view-account -->
+
+    <!-- VIEW 3: PANEL WHATSAPP -->
+    <div class="view" id="view-panel" style="padding:0;margin:-1.5rem;">
+      <iframe src="/" style="width:100%;height:calc(100vh - 56px - 42px);border:none;display:block;" title="Panel WhatsApp"></iframe>
+    </div>
+
+  </main><!-- end main -->
+
+  <!-- ── MODAL QR ── -->
+  <div class="modal-overlay" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="modalTitle">Scanner le QR Code</span>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Pour connecter ce compte WhatsApp, rendez-vous sur le <a href="/" target="_blank">Panel WhatsApp</a>, puis scannez le QR code affiché avec votre téléphone.</p>
+        <br/>
+        <p style="color:#111b21;font-weight:500;">Comment faire :</p>
+        <ol style="margin:0.5rem 0 0 1.2rem;line-height:1.8;">
+          <li>Ouvrez WhatsApp sur votre téléphone</li>
+          <li>Allez dans <strong>Appareils connectés</strong></li>
+          <li>Appuyez sur <strong>Connecter un appareil</strong></li>
+          <li>Scannez le QR code sur le panel</li>
+        </ol>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="modalCloseFooter">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST CONTAINER ── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <div class="footer-left">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#128C7E"/>
+      </svg>
+      Convessa WhatsApp Gateway
+    </div>
+    <div class="footer-right">Backoffice v1.0 &bull; &copy; 2026 Convessa</div>
+  </footer>
+
+  <script>
+    // ── AUTH CHECK ──
+    const token = sessionStorage.getItem('admin_token');
+    if (!token) window.location.replace('/admin/login.html');
+
+    async function apiFetch(path, opts = {}) {
+      const res = await fetch(path, {
+        ...opts,
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+          ...(opts.headers || {})
+        },
+        credentials: 'same-origin'
+      });
+      if (res.status === 401) {
+        sessionStorage.removeItem('admin_token');
+        window.location.replace('/admin/login.html');
+        throw new Error('Unauthorized');
+      }
+      return res;
+    }
+
+    // ── HELPERS ──
+    function esc(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function initials(name) {
+      if (!name) return 'A';
+      return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleString('fr-FR', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch (_) { return '—'; }
+    }
+
+    function maskPhone(phone) {
+      if (!phone) return '—';
+      const s = String(phone).replace(/\D/g, '');
+      if (s.length <= 7) return s;
+      return s.slice(0, 4) + '****' + s.slice(-3);
+    }
+
+    // ── TOAST SYSTEM ──
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+
+      const icons = {
+        success: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#25D366" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        error:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="#dc3545" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="#dc3545" stroke-width="2" stroke-linecap="round"/></svg>',
+        info:    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#3b82f6" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#3b82f6"/></svg>'
+      };
+
+      toast.innerHTML = (icons[type] || icons.info) + '<span class="toast-msg">' + esc(msg) + '</span>';
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // ── LOAD PROFILE ──
+    async function loadProfile() {
+      try {
+        const res = await apiFetch('/api/admin/me');
+        const data = await res.json();
+        if (data.success && data.admin) {
+          const a = data.admin;
+          const name = esc(a.displayName || a.email || 'Admin');
+          const ini = initials(a.displayName || a.email);
+          // Header
+          document.getElementById('adminAvatar').textContent = ini;
+          document.getElementById('adminName').textContent = a.displayName || a.email || 'Admin';
+          // Profile card
+          document.getElementById('profileAvatar').textContent = ini;
+          document.getElementById('profileName').textContent = a.displayName || '—';
+          document.getElementById('profileEmail').textContent = a.email || '—';
+          document.getElementById('profileLastLogin').textContent =
+            a.lastLoginAt ? 'Dernière connexion : ' + formatDate(a.lastLoginAt) : 'Jamais connecté';
+          // Pre-fill form
+          document.getElementById('editName').value = a.displayName || '';
+          document.getElementById('editEmail').value = a.email || '';
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') console.error('loadProfile error', e);
+      }
+    }
+
+    // ── LOAD STATS ──
+    async function loadStats() {
+      try {
+        const res = await apiFetch('/api/admin/stats');
+        const data = await res.json();
+        if (data.success && data.stats) {
+          const s = data.stats;
+          document.getElementById('statTotal').textContent = s.tenants?.total ?? '0';
+          document.getElementById('statConnected').textContent = s.tenants?.connected ?? '0';
+          document.getElementById('statUsers').textContent = s.users?.total ?? '0';
+          document.getElementById('statMessages').textContent = s.messages?.today ?? '0';
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') {
+          ['statTotal','statConnected','statUsers','statMessages'].forEach(id => {
+            document.getElementById(id).textContent = '—';
+          });
+        }
+      }
+    }
+
+    // ── STATUS BADGE HTML ──
+    function statusBadge(status) {
+      const map = {
+        connected: { cls: 'badge-connected', label: 'Connecté' },
+        pending_qr: { cls: 'badge-pending', label: 'En attente QR' },
+        disconnected: { cls: 'badge-disconnected', label: 'Déconnecté' }
+      };
+      const s = map[status] || { cls: 'badge-disconnected', label: esc(status || 'Inconnu') };
+      return '<span class="badge ' + s.cls + '"><span class="badge-dot"></span>' + s.label + '</span>';
+    }
+
+    // ── LOAD TENANTS ──
+    async function loadTenants() {
+      const tbody = document.getElementById('tenantsBody');
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#e4e6ea" stroke-width="2"/></svg>Chargement…</div></td></tr>';
+      try {
+        const res = await apiFetch('/api/admin/tenants');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
+          tbody.innerHTML = data.tenants.map(t => {
+            const qrBtn = t.status === 'pending_qr'
+              ? '<button class="btn-sm" data-id="' + esc(t.id) + '" onclick="openQrModal(this)">Voir QR</button>'
+              : '<button class="btn-sm hidden">—</button>';
+            return '<tr>' +
+              '<td class="td-phone">' + esc(maskPhone(t.phone)) + '</td>' +
+              '<td class="td-name">' + esc(t.name || '—') + '</td>' +
+              '<td>' + statusBadge(t.status) + '</td>' +
+              '<td>' + esc(formatDate(t.connectedAt)) + '</td>' +
+              '<td>' + esc(formatDate(t.createdAt)) + '</td>' +
+              '<td>' + qrBtn + '</td>' +
+              '</tr>';
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">' +
+            '<svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            'Aucun compte WhatsApp trouvé.</div></td></tr>';
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') {
+          tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
+        }
+      }
+    }
+
+    // ── MODAL ──
+    function openQrModal(btn) {
+      document.getElementById('qrModal').classList.add('open');
+    }
+    function closeQrModal() {
+      document.getElementById('qrModal').classList.remove('open');
+    }
+    document.getElementById('modalCloseBtn').addEventListener('click', closeQrModal);
+    document.getElementById('modalCloseFooter').addEventListener('click', closeQrModal);
+    document.getElementById('qrModal').addEventListener('click', function(e) {
+      if (e.target === this) closeQrModal();
+    });
+
+    // ── TAB SWITCHING ──
+    const views = {
+      dashboard: document.getElementById('view-dashboard'),
+      account:   document.getElementById('view-account'),
+      panel:     document.getElementById('view-panel')
+    };
+    const mainContent = document.getElementById('mainContent');
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        const target = this.dataset.tab;
+
+        // Toggle main padding for panel view
+        if (target === 'panel') {
+          mainContent.style.padding = '0';
+          mainContent.style.maxWidth = '100%';
+        } else {
+          mainContent.style.padding = '1.5rem';
+          mainContent.style.maxWidth = '1200px';
+        }
+
+        Object.keys(views).forEach(key => {
+          views[key].classList.remove('active');
+        });
+        if (views[target]) views[target].classList.add('active');
+
+        if (target === 'account') loadProfile();
+      });
+    });
+
+    // ── OPEN PANEL BTN ──
+    document.getElementById('openPanelBtn').addEventListener('click', function() {
+      document.querySelectorAll('.nav-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === 'panel');
+      });
+      mainContent.style.padding = '0';
+      mainContent.style.maxWidth = '100%';
+      Object.keys(views).forEach(key => views[key].classList.remove('active'));
+      views.panel.classList.add('active');
+    });
+
+    // ── REFRESH BTN ──
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+      this.disabled = true;
+      Promise.all([loadStats(), loadTenants()]).finally(() => {
+        this.disabled = false;
+      });
+    });
+
+    // ── PROFILE FORM ──
+    document.getElementById('profileForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('saveProfileBtn');
+      const sp  = document.getElementById('spinnerProfile');
+      btn.disabled = true;
+      sp.classList.add('active');
+      try {
+        const res = await apiFetch('/api/admin/me', {
+          method: 'PUT',
+          body: JSON.stringify({
+            displayName: document.getElementById('editName').value.trim(),
+            email: document.getElementById('editEmail').value.trim()
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Profil mis à jour avec succès.', 'success');
+          await loadProfile();
+        } else {
+          showToast(data.message || 'Erreur lors de la mise à jour.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false;
+        sp.classList.remove('active');
+      }
+    });
+
+    // ── PASSWORD FORM ──
+    document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const currentPwd = document.getElementById('currentPwd').value;
+      const newPwd     = document.getElementById('newPwd').value;
+      const confirmPwd = document.getElementById('confirmPwd').value;
+
+      if (!currentPwd || !newPwd || !confirmPwd) {
+        showToast('Veuillez remplir tous les champs.', 'error'); return;
+      }
+      if (newPwd.length < 8) {
+        showToast('Le nouveau mot de passe doit contenir au moins 8 caractères.', 'error'); return;
+      }
+      if (newPwd !== confirmPwd) {
+        showToast('Les mots de passe ne correspondent pas.', 'error'); return;
+      }
+
+      const btn = document.getElementById('savePwdBtn');
+      const sp  = document.getElementById('spinnerPwd');
+      btn.disabled = true;
+      sp.classList.add('active');
+      try {
+        const res = await apiFetch('/api/admin/me/password', {
+          method: 'PUT',
+          body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Mot de passe mis à jour avec succès.', 'success');
+          document.getElementById('passwordForm').reset();
+        } else {
+          showToast(data.message || 'Erreur lors de la mise à jour.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false;
+        sp.classList.remove('active');
+      }
+    });
+
+    // ── LOGOUT ──
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
+      this.disabled = true;
+      try {
+        await apiFetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
+      } finally {
+        sessionStorage.removeItem('admin_token');
+        window.location.replace('/admin/login.html');
+      }
+    });
+
+    // ── INIT ──
+    (async function init() {
+      await loadProfile();
+      await Promise.all([loadStats(), loadTenants()]);
+    })();
+  </script>
+</body>
+</html>

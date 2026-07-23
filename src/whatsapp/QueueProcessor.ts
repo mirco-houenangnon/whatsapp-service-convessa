@@ -15,6 +15,7 @@ import {
     updateStatus,
     requeueWithDelay,
     getQueueStats,
+    type QueuedMessage,
 } from '../db/MessageQueue.js'
 
 const RETRY_DELAYS = [5_000, 15_000, 60_000] as const  // backoff retry : 5s, 15s, 60s
@@ -113,7 +114,7 @@ export class QueueProcessor {
 
             } else {
                 // Envoi du message
-                await this.waManager.sendMessage(found.jid, msg.message)
+                await this.waManager.sendMessage(found.jid, msg.message, msg.media ?? undefined)
 
                 await updateStatus(msg.id, 'sent', {
                     jid:    found.jid,

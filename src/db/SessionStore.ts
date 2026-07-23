@@ -1,52 +1,51 @@
 /**
  * SessionStore.ts — Persistance des sessions Baileys en MySQL.
  *
- * Remplace useMultiFileAuthState (stockage fichiers) par un stockage
- * chiffré en base de données. Les credentials sont chiffrés avec AES-256-GCM
- * avant insertion et déchiffrés à la lecture.
+ * Stratégie :
+ * - Les credentials (creds) sont stockés chiffrés en base — ils suffisent
+ *   pour restaurer une session existante après redémarrage.
+ * - Les clés Signal (pre-keys, sessions Signal) sont gérées en mémoire
+ *   par Baileys lui-même via un Map interne. Elles sont régénérées
+ *   automatiquement si absentes (premier démarrage ou session expirée).
+ * - Cette approche est identique à useMultiFileAuthState mais sans fichiers.
  */
 
 import type {
     AuthenticationCreds,
     AuthenticationState,
     SignalDataTypeMap,
+    SignalDataSet,
 } from '@whiskeysockets/baileys'
-import { initAuthCreds, BufferJSON, proto } from '@whiskeysockets/baileys'
-import { getPool }  from './connection.js'
-import { encrypt, decrypt } from '../services/crypto.js'
-import { config }   from '../config.js'
-import { logger }   from '../services/logger.js'
-import { maskPhone } from '../services/logger.js'
+import { initAuthCreds, BufferJSON, makeCacheableSignalKeyStore } from '@whiskeysockets/baileys'
+import { getPool }           from './connection.js'
+import { encrypt, decrypt }  from '../services/crypto.js'
+import { config }            from '../config.js'
+import { logger, maskPhone } from '../services/logger.js'
+import type mysql from 'mysql2/promise'
 
 export type SessionStatus = 'active' | 'disconnected' | 'revoked'
 
 export interface SessionMeta {
     phone?:       string
     displayName?: string
-    connectedAt?: Date
 }
 
 interface SessionRow {
-    id:           string
-    creds_iv:     string
-    creds_tag:    string
-    creds_data:   string
-    phone:        string | null
-    display_name: string | null
-    status:       SessionStatus
-    connected_at: Date | null
+    creds_iv:   string
+    creds_tag:  string
+    creds_data: string
+    status:     SessionStatus
 }
 
-/**
- * Retourne un objet AuthState compatible Baileys, qui lit/écrit en MySQL.
- */
+// ── Auth State compatible Baileys ──────────────────────────────────────────────
+
 export async function useDbAuthState(sessionId: string): Promise<{
     state:     AuthenticationState
     saveCreds: () => Promise<void>
 }> {
     const pool = getPool()
 
-    // ── Lecture initiale des credentials ──────────────────────────────────────
+    // ── Lecture des credentials ────────────────────────────────────────────────
     async function readCreds(): Promise<AuthenticationCreds> {
         const [rows] = await pool.execute<SessionRow[] & mysql.RowDataPacket[]>(
             'SELECT creds_iv, creds_tag, creds_data FROM wa_sessions WHERE id = ?',
@@ -64,14 +63,16 @@ export async function useDbAuthState(sessionId: string): Promise<{
                 { iv: row.creds_iv, tag: row.creds_tag, data: row.creds_data },
                 config.sessionEncryptionKey
             )
-            return JSON.parse(json, BufferJSON.reviver) as AuthenticationCreds
+            const creds = JSON.parse(json, BufferJSON.reviver) as AuthenticationCreds
+            logger.info({ component: 'SessionStore', sessionId, registered: creds.registered }, 'Session restaurée depuis la base')
+            return creds
         } catch (err) {
             logger.error({ component: 'SessionStore', err }, 'Credentials corrompus — réinitialisation')
             return initAuthCreds()
         }
     }
 
-    // ── Sauvegarde des credentials ────────────────────────────────────────────
+    // ── Sauvegarde des credentials ─────────────────────────────────────────────
     async function saveCreds(): Promise<void> {
         const json    = JSON.stringify(state.creds, BufferJSON.replacer)
         const payload = encrypt(json, config.sessionEncryptionKey)
@@ -88,49 +89,39 @@ export async function useDbAuthState(sessionId: string): Promise<{
         )
     }
 
-    // ── Keys store (clés de chiffrement Signal) ───────────────────────────────
-    // Baileys utilise un store de clés Signal pour le chiffrement de bout en bout.
-    // On stocke ces clés dans les credentials eux-mêmes (simplification acceptable
-    // pour un usage mono-session).
+    // ── Keys store — géré en mémoire (Map) ────────────────────────────────────
+    // Baileys régénère les pre-keys Signal automatiquement.
+    // On utilise un Map en mémoire exactement comme useMultiFileAuthState.
+    const KEY_MAP: Map<string, Record<string, unknown>> = new Map()
 
     const keys: AuthenticationState['keys'] = {
         get: async <T extends keyof SignalDataTypeMap>(
             type: T,
             ids: string[]
         ): Promise<{ [id: string]: SignalDataTypeMap[T] }> => {
-            const data = (state.creds as unknown as Record<string, unknown>)[`key_${type}`] as
-                | Record<string, unknown>
-                | undefined
-
+            const store = KEY_MAP.get(type) ?? {}
             const result: Record<string, SignalDataTypeMap[T]> = {}
-            if (data) {
-                for (const id of ids) {
-                    const val = data[id]
-                    if (val !== undefined) {
-                        // proto.Message n'a pas besoin de conversion spéciale ici
-                        result[id] = val as SignalDataTypeMap[T]
-                    }
+            for (const id of ids) {
+                const val = store[id]
+                if (val !== undefined) {
+                    result[id] = val as SignalDataTypeMap[T]
                 }
             }
             return result
         },
 
-        set: async (data: Record<string, unknown>) => {
-            const creds = state.creds as unknown as Record<string, unknown>
+        set: async (data: SignalDataSet) => {
             for (const [type, typeData] of Object.entries(data)) {
-                if (!creds[`key_${type}`]) {
-                    creds[`key_${type}`] = {}
-                }
-                const keyStore = creds[`key_${type}`] as Record<string, unknown>
+                const store = KEY_MAP.get(type) ?? {}
                 for (const [id, val] of Object.entries(typeData as Record<string, unknown>)) {
                     if (val !== null && val !== undefined) {
-                        keyStore[id] = val
+                        store[id] = val
                     } else {
-                        delete keyStore[id]
+                        delete store[id]
                     }
                 }
+                KEY_MAP.set(type, store)
             }
-            await saveCreds()
         },
     }
 
@@ -140,9 +131,8 @@ export async function useDbAuthState(sessionId: string): Promise<{
     return { state, saveCreds }
 }
 
-/**
- * Met à jour le statut et les métadonnées d'une session.
- */
+// ── Fonctions utilitaires ──────────────────────────────────────────────────────
+
 export async function updateSessionStatus(
     sessionId: string,
     status: SessionStatus,
@@ -169,25 +159,18 @@ export async function updateSessionStatus(
     }
 }
 
-/**
- * Supprime complètement une session de la base.
- */
 export async function deleteSession(sessionId: string): Promise<void> {
     const pool = getPool()
+    await pool.execute('DELETE FROM wa_session_keys WHERE session_id = ?', [sessionId])
     await pool.execute('DELETE FROM wa_sessions WHERE id = ?', [sessionId])
     logger.info({ component: 'SessionStore', sessionId }, 'Session supprimée')
 }
 
-/**
- * Vérifie si une session active existe en base.
- */
 export async function hasActiveSession(sessionId: string): Promise<boolean> {
-    const pool = getPool()
+    const pool   = getPool()
     const [rows] = await pool.execute<mysql.RowDataPacket[]>(
         "SELECT id FROM wa_sessions WHERE id = ? AND status = 'active' LIMIT 1",
         [sessionId]
     )
     return (rows as unknown[]).length > 0
 }
-
-import type mysql from 'mysql2/promise'

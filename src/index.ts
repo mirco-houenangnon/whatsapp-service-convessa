@@ -1,21 +1,23 @@
 /**
- * index.ts — Point d'entrée du service WhatsApp.
+ * index.ts — Point d'entrée du service WhatsApp Gateway.
  *
  * Séquence de démarrage :
  *   1. Valider la configuration (.env)
  *   2. Tester la connexion MySQL
  *   3. Exécuter les migrations (CREATE TABLE IF NOT EXISTS)
  *   4. Démarrer Express + Socket.io
- *   5. Initialiser WhatsAppManager (restauration session ou nouveau QR)
- *   6. Démarrer le QueueProcessor (worker FIFO)
+ *   5. Initialiser WhatsAppManager (numéro admin — fixe)
+ *   6. Initialiser TenantManager (sessions multi-tenant)
+ *   7. Démarrer le QueueProcessor (worker FIFO)
+ *   8. Firebase Admin SDK (auth multiplateforme)
  */
 
-import express          from 'express'
-import { createServer } from 'http'
-import { Server }       from 'socket.io'
-import cors             from 'cors'
-import helmet           from 'helmet'
-import path             from 'path'
+import express           from 'express'
+import { createServer }  from 'http'
+import { Server }        from 'socket.io'
+import cors              from 'cors'
+import helmet            from 'helmet'
+import path              from 'path'
 import { fileURLToPath } from 'url'
 
 import { config }          from './config.js'
@@ -24,11 +26,13 @@ import { testConnection }  from './db/connection.js'
 import { closePool }       from './db/connection.js'
 import { runMigrations }   from './db/migrations.js'
 import { WhatsAppManager } from './whatsapp/WhatsAppManager.js'
+import { TenantManager }   from './whatsapp/TenantManager.js'
 import { QueueProcessor }  from './whatsapp/QueueProcessor.js'
 import { SocketGateway }   from './socket/SocketGateway.js'
 import { statusRouter }    from './api/routes/status.js'
 import { sessionRouter }   from './api/routes/session.js'
 import { messagesRouter }  from './api/routes/messages.js'
+import { tenantsRouter }   from './api/routes/tenants.js'
 import { authRouter }      from './api/routes/auth.js'
 import { docsRouter }      from './api/routes/docs.js'
 
@@ -37,45 +41,48 @@ import './services/firebase.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// ── Application Express ────────────────────────────────────────────────────────
+// ── Application Express ───────────────────────────────────────────────────────
 
 const app        = express()
 const httpServer = createServer(app)
 
 const io = new Server(httpServer, {
-    cors:               { origin: config.corsOrigin },
-    maxHttpBufferSize:  1e5,   // 100 KB — protection DoS
+    cors:              { origin: config.corsOrigin },
+    maxHttpBufferSize: 1e5,
 })
 
-// ── Middlewares globaux ────────────────────────────────────────────────────────
+// ── Middlewares globaux ───────────────────────────────────────────────────────
 
 app.use(helmet({
     contentSecurityPolicy: config.enableDashboard
         ? {
             directives: {
-                defaultSrc:      ["'self'"],
-                // gstatic.com = Firebase JS SDK CDN | 'unsafe-hashes' = inline event handlers (onclick=...)
-                scriptSrc:       ["'self'", "'unsafe-inline'", "'unsafe-hashes'",
-                                  'cdn.socket.io', 'unpkg.com', 'fonts.googleapis.com',
-                                  'www.gstatic.com', 'apis.google.com'],
-                scriptSrcAttr:   ["'unsafe-inline'"],
-                styleSrc:        ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
-                fontSrc:         ["'self'", 'fonts.gstatic.com'],
-                imgSrc:          ["'self'", 'data:', 'https:'],
-                connectSrc:      ["'self'", 'ws:', 'wss:', 'https://identitytoolkit.googleapis.com',
-                                  'https://securetoken.googleapis.com', 'https://*.firebaseio.com'],
-                frameSrc:        ["'self'", 'https://whatsappservice-50e51.firebaseapp.com',
-                                  'https://accounts.google.com'],
+                defaultSrc:    ["'self'"],
+                scriptSrc:     ["'self'", "'unsafe-inline'", "'unsafe-hashes'",
+                                'cdn.socket.io', 'unpkg.com', 'fonts.googleapis.com',
+                                'www.gstatic.com', 'apis.google.com'],
+                scriptSrcAttr: ["'unsafe-inline'"],
+                styleSrc:      ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+                fontSrc:       ["'self'", 'fonts.gstatic.com'],
+                imgSrc:        ["'self'", 'data:', 'https:'],
+                connectSrc:    ["'self'", 'ws:', 'wss:',
+                                'https://identitytoolkit.googleapis.com',
+                                'https://securetoken.googleapis.com',
+                                'https://*.firebaseio.com'],
+                frameSrc:      ["'self'",
+                                'https://whatsappservice-50e51.firebaseapp.com',
+                                'https://accounts.google.com'],
             },
         }
         : false,
 }))
 
 app.use(cors({ origin: config.corsOrigin }))
-app.use(express.json({ limit: '10kb' }))
+// Limite augmentée pour les médias base64 (document PDF jusqu'à 100MB = ~133MB base64)
+app.use(express.json({ limit: '150mb' }))
 app.disable('x-powered-by')
 
-// ── Dashboard HTML (désactivé en production par défaut) ───────────────────────
+// ── Dashboard HTML ────────────────────────────────────────────────────────────
 
 if (!config.isProd || config.enableDashboard) {
     const publicDir = path.join(__dirname, '..', 'public')
@@ -83,21 +90,23 @@ if (!config.isProd || config.enableDashboard) {
     logger.info({ component: 'Server' }, `Dashboard disponible sur http://127.0.0.1:${config.port}`)
 }
 
-// ── Instances principales ──────────────────────────────────────────────────────
+// ── Instances principales ─────────────────────────────────────────────────────
 
-const waManager = new WhatsAppManager()
-const processor = new QueueProcessor(waManager)
-const gateway   = new SocketGateway(io, waManager, processor)
+const waManager     = new WhatsAppManager()
+const tenantManager = new TenantManager(waManager)
+const processor     = new QueueProcessor(waManager)
+const gateway       = new SocketGateway(io, waManager, tenantManager, processor)
 
-// ── Routes API ─────────────────────────────────────────────────────────────────
+// ── Routes API ────────────────────────────────────────────────────────────────
 
 app.use('/api/v1', statusRouter(waManager))
 app.use('/api/v1', sessionRouter(waManager))
 app.use('/api/v1', messagesRouter(waManager))
+app.use('/api/v1', tenantsRouter(tenantManager))
 app.use('/api/v1', authRouter())
 app.use('/api/v1', docsRouter())
 
-// ── Route 404 ──────────────────────────────────────────────────────────────────
+// ── Route 404 ─────────────────────────────────────────────────────────────────
 
 app.use((_req, res) => {
     res.status(404).json({
@@ -116,7 +125,7 @@ process.on('unhandledRejection', (reason) => {
     logger.error({ component: 'Process', reason }, 'Promise rejetée non gérée')
 })
 
-// ── Arrêt propre ───────────────────────────────────────────────────────────────
+// ── Arrêt propre ──────────────────────────────────────────────────────────────
 
 async function shutdown(): Promise<void> {
     logger.info({ component: 'Server' }, 'Arrêt du service...')
@@ -128,33 +137,25 @@ async function shutdown(): Promise<void> {
 process.on('SIGTERM', shutdown)
 process.on('SIGINT',  shutdown)
 
-// ── Démarrage ──────────────────────────────────────────────────────────────────
+// ── Démarrage ─────────────────────────────────────────────────────────────────
 
 async function bootstrap(): Promise<void> {
     try {
-        // 1. Vérifier la connexion MySQL
         await testConnection()
-
-        // 2. Migrations
         await runMigrations()
 
-        // 3. Socket.io
         gateway.setup()
 
-        // 4. Démarrage du serveur HTTP
         await new Promise<void>((resolve) => {
             httpServer.listen(config.port, '127.0.0.1', resolve)
         })
 
         logger.info(
             { component: 'Server', port: config.port, env: config.nodeEnv },
-            `WhatsApp Service démarré → http://127.0.0.1:${config.port}`
+            `WhatsApp Gateway démarré → http://127.0.0.1:${config.port}`
         )
 
-        // 5. Initialisation WhatsApp
         await waManager.init()
-
-        // 6. Démarrage du worker de file d'attente
         processor.start()
 
     } catch (err) {

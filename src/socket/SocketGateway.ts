@@ -1,18 +1,16 @@
 /**
  * SocketGateway.ts — Gestion Socket.io avec authentification au handshake.
- *
- * La connexion est refusée si le token fourni au handshake ne correspond
- * pas à BRIDGE_API_KEY. En mode développement sans clé définie, tout client
- * est accepté.
+ * Supporte les événements admin (numéro fixe) et tenant (multi-sessions).
  */
 
 import type { Server, Socket } from 'socket.io'
 import qrcode                  from 'qrcode'
 
-import { config }          from '../config.js'
-import { logger }          from '../services/logger.js'
-import { WhatsAppManager } from '../whatsapp/WhatsAppManager.js'
-import { QueueProcessor }  from '../whatsapp/QueueProcessor.js'
+import { config }           from '../config.js'
+import { logger }           from '../services/logger.js'
+import { WhatsAppManager }  from '../whatsapp/WhatsAppManager.js'
+import { TenantManager }    from '../whatsapp/TenantManager.js'
+import { QueueProcessor }   from '../whatsapp/QueueProcessor.js'
 
 function timingSafeEqual(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -26,70 +24,74 @@ function timingSafeEqual(a: string, b: string): boolean {
 export class SocketGateway {
 
     constructor(
-        private readonly io:         Server,
-        private readonly waManager:  WhatsAppManager,
-        private readonly processor:  QueueProcessor,
+        private readonly io:            Server,
+        private readonly waManager:     WhatsAppManager,
+        private readonly tenantManager: TenantManager,
+        private readonly processor:     QueueProcessor,
     ) {}
 
     setup(): void {
         // ── Authentification au handshake ────────────────────────────────────
         this.io.use((socket, next) => {
-            if (!config.bridgeApiKey) {
-                // Mode développement sans clé — tout le monde passe
-                next()
-                return
-            }
-
+            if (!config.bridgeApiKey) { next(); return }
             const token = socket.handshake.auth['token'] as string | undefined
-
             if (!token || !timingSafeEqual(token, config.bridgeApiKey)) {
                 next(new Error('Authentification Socket.io invalide'))
                 return
             }
-
             next()
         })
 
         // ── Connexion client ─────────────────────────────────────────────────
-        this.io.on('connection', (socket: Socket) => {
+        this.io.on('connection', async (socket: Socket) => {
             logger.info({ component: 'Socket.io', socketId: socket.id }, 'Client connecté')
 
-            // Envoyer l'état immédiatement
+            // État admin immédiat
             socket.emit('status_update', this.waManager.getStatus())
 
-            // ── Listeners WhatsApp → ce client ──────────────────────────────
-            const onQr = async (qr: string) => {
+            // QR admin en cache si disponible
+            const cachedQr = this.waManager.getLastQr()
+            if (cachedQr) {
                 try {
-                    const qrImage = await qrcode.toDataURL(qr)
-                    socket.emit('qr', qrImage)
-                } catch (e) {
-                    logger.error({ component: 'Socket.io', e }, 'Erreur génération QR')
-                }
+                    socket.emit('qr', await qrcode.toDataURL(cachedQr))
+                } catch { /* ignoré */ }
             }
 
-            const onReady = (status: unknown) => {
-                socket.emit('ready', status)
-                this.io.emit('status_update', status)
+            // ── Listeners admin ──────────────────────────────────────────────
+            const onQr = async (qr: string) => {
+                try { socket.emit('qr', await qrcode.toDataURL(qr)) } catch { /* ignoré */ }
             }
-
-            const onLoggedOut = (data: unknown) => {
-                this.io.emit('logged_out', data)
-                this.io.emit('status_update', this.waManager.getStatus())
-            }
-
-            const onStatusUpdate = (status: unknown) => {
-                this.io.emit('status_update', status)
-            }
-
-            const onMessage = (m: unknown) => {
-                socket.emit('message_received', m)
-            }
+            const onReady        = (status: unknown) => { socket.emit('ready', status); this.io.emit('status_update', status) }
+            const onLoggedOut    = (data: unknown)   => { this.io.emit('logged_out', data); this.io.emit('status_update', this.waManager.getStatus()) }
+            const onStatusUpdate = (status: unknown) => { this.io.emit('status_update', status) }
+            const onMessage      = (m: unknown)      => { socket.emit('message_received', m) }
 
             this.waManager.on('qr',           onQr)
             this.waManager.on('ready',         onReady)
             this.waManager.on('logged_out',    onLoggedOut)
             this.waManager.on('status_update', onStatusUpdate)
             this.waManager.on('message',       onMessage)
+
+            // ── Listeners tenant ─────────────────────────────────────────────
+            const onTenantQr = async (tenantId: string, qr: string) => {
+                try {
+                    const qrBase64 = await qrcode.toDataURL(qr)
+                    socket.emit('tenant_qr', { tenantId, qrCode: qrBase64 })
+                } catch { /* ignoré */ }
+            }
+
+            const onTenantConnected = (tenantId: string, data: unknown) => {
+                socket.emit('tenant_connected', { tenantId, ...( typeof data === 'object' ? data : {}) })
+                this.io.emit('tenant_status_update', { tenantId, status: 'connected', ...(typeof data === 'object' ? data : {}) })
+            }
+
+            const onTenantDisconnected = (tenantId: string, reason: string) => {
+                this.io.emit('tenant_status_update', { tenantId, status: 'disconnected', reason })
+            }
+
+            this.tenantManager.on('qr',          onTenantQr)
+            this.tenantManager.on('connected',    onTenantConnected)
+            this.tenantManager.on('disconnected', onTenantDisconnected)
 
             // ── Nettoyage à la déconnexion ───────────────────────────────────
             socket.on('disconnect', () => {
@@ -99,10 +101,12 @@ export class SocketGateway {
                 this.waManager.off('logged_out',   onLoggedOut)
                 this.waManager.off('status_update', onStatusUpdate)
                 this.waManager.off('message',      onMessage)
+                this.tenantManager.off('qr',          onTenantQr)
+                this.tenantManager.off('connected',    onTenantConnected)
+                this.tenantManager.off('disconnected', onTenantDisconnected)
             })
         })
 
-        // Attacher le QueueProcessor au Socket.io pour les mises à jour temps réel
         this.processor.attachIO(this.io)
     }
 

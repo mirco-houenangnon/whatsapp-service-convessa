@@ -152,6 +152,9 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_name VARCHAR(255) DEFAULT NULL`).catch(() => {})
     // Tenant ID sur les messages existants
     await pool.execute(`ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36) DEFAULT NULL`).catch(() => {})
+    // Colonne phone sur auth_users (ajoutée avec le provider phone)
+    await pool.execute(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE auth_users ADD INDEX IF NOT EXISTS idx_phone (phone)`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

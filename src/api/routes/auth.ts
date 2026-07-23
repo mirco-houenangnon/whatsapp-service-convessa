@@ -517,14 +517,37 @@ export function authRouter(): Router {
                 const fbUser = await firebaseAuth.getUserByPhoneNumber(`+${phone}`)
                 firebaseUid  = fbUser.uid
             } catch {
-                // Créer un nouveau compte Firebase
-                const fbUser = await firebaseAuth.createUser({
-                    phoneNumber:   `+${phone}`,
-                    displayName:   `User ${maskPhone(phone)}`,
-                    emailVerified: false,
-                    disabled:      false,
-                })
-                firebaseUid = fbUser.uid
+                try {
+                    // Créer un nouveau compte Firebase avec ce numéro
+                    const fbUser = await firebaseAuth.createUser({
+                        phoneNumber:   `+${phone}`,
+                        displayName:   `User ${maskPhone(phone)}`,
+                        emailVerified: false,
+                        disabled:      false,
+                    })
+                    firebaseUid = fbUser.uid
+                } catch (createErr: unknown) {
+                    // Firebase rejette les numéros invalides (ex: numéros de test courts)
+                    // En dev : créer un compte Firebase sans numéro et stocker le numéro uniquement en DB
+                    if (config.nodeEnv !== 'production') {
+                        const { createHash } = await import('crypto')
+                        const deterministicUid = 'phone_' + createHash('sha256').update(phone).digest('hex').slice(0, 20)
+                        try {
+                            await firebaseAuth.getUser(deterministicUid)
+                            firebaseUid = deterministicUid
+                        } catch {
+                            const fbUser = await firebaseAuth.createUser({
+                                uid:           deterministicUid,
+                                displayName:   `User ${maskPhone(phone)}`,
+                                emailVerified: false,
+                                disabled:      false,
+                            })
+                            firebaseUid = fbUser.uid
+                        }
+                    } else {
+                        throw createErr
+                    }
+                }
             }
 
             // ── Upsert profil en DB ─────────────────────────────────────────────

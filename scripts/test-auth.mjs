@@ -188,6 +188,7 @@ function assert(condition, label) {
 
 // ── TESTS ─────────────────────────────────────────────────────────────────────
 async function runTests() {
+    
     console.log(`\n${c.bold}${c.green}╔══════════════════════════════════════════╗`)
     console.log(`║   WhatsApp Service — Auth API Tests       ║`)
     console.log(`╚══════════════════════════════════════════╝${c.reset}\n`)
@@ -341,7 +342,7 @@ async function runTests() {
     // ── 12. Auth Phone OTP ────────────────────────────────────────────────────
     section('12. Auth par téléphone — OTP WhatsApp')
     {
-        const testPhone = '22900000001'
+        const testPhone = '22967000001'  // Bénin — format E.164 valide (+22967000001)
 
         // 12a. Register — numéro inexistant
         info('12a. POST /auth/phone/register')
@@ -351,14 +352,16 @@ async function runTests() {
         const r1ok = r1.status === 202 || r1.status === 503
         check(r1ok, 'register → 202 ou 503 (WhatsApp off)')
 
-        const devOtp = r1.data?.devOtp as string | undefined
+        const devOtp = r1.data?.devOtp
         if (devOtp) {
             ok('devOtp reçu en dev', devOtp)
 
-            // 12b. Register même numéro → 409
-            info('12b. Register numéro déjà en cours → 409 ou same')
+            // 12b. Register même numéro → re-génère un OTP (ON DUPLICATE KEY UPDATE)
+            info('12b. Register numéro déjà en cours → 409 ou 202 (OTP re-généré)')
             const r1b = await apiCall('POST', '/api/v1/auth/phone/register', { phone: testPhone }, {})
             check(r1b.status === 409 || r1b.status === 202, 'Deuxième register → 409 ou 202 (OTP re-généré)')
+            // Si 202, l'OTP a été re-généré — utiliser le nouveau code pour la suite
+            const activeOtp = (r1b.status === 202 && r1b.data?.devOtp) ? r1b.data.devOtp : devOtp
 
             // 12c. verify-otp avec mauvais code
             info('12c. verify-otp — mauvais code')
@@ -368,17 +371,17 @@ async function runTests() {
             check(r2.status === 400, 'Mauvais code → 400')
             check(r2.data?.error?.code === 'INVALID', 'error.code = INVALID')
 
-            // 12d. verify-otp avec bon code
+            // 12d. verify-otp avec le bon code actif
             info('12d. verify-otp — bon code')
             const r3 = await apiCall('POST', '/api/v1/auth/phone/verify-otp',
-                { phone: testPhone, code: devOtp }, {})
+                { phone: testPhone, code: activeOtp }, {})
             printResult(r3)
             check(r3.status === 200,             'Bon code → 200')
             check(r3.data?.success === true,      'success: true')
             check(typeof r3.data?.customToken === 'string', 'customToken présent')
             check(r3.data?.user?.provider === 'phone', 'provider = phone')
 
-            // 12e. Login — compte existant
+            // 12e. Login — compte existant (créé juste au-dessus)
             info('12e. POST /auth/phone/login — compte existant')
             const r4 = await apiCall('POST', '/api/v1/auth/phone/login', { phone: testPhone }, {})
             printResult(r4)

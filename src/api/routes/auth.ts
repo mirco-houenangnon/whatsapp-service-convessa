@@ -21,7 +21,7 @@ import { rateLimit }               from '../middleware/rateLimit.js'
 import { firebaseAuth }            from '../../services/firebase.js'
 import {
     createUser, loginUser, upsertUser,
-    getUserByUid, getUserByPhone,
+    getUserByUid, getUserByPhone, getUserByEmail,
     listUsers, deactivateUser, type UserRow,
 } from '../../db/UserStore.js'
 import { generateOtpCode, saveOtp, verifyOtp, deleteOtp } from '../../db/OtpStore.js'
@@ -65,46 +65,33 @@ export function authRouter(): Router {
         async (req, res) => {
             const decoded = req.firebaseUser!
 
-            // ── Device fingerprint ─────────────────────────────────────────────
-            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
+            // ── Device fingerprint — obligatoire, non contournable ─────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device']
             try {
-                const fp       = extractFingerprint(req)
-                const upserted = await upsertDevice(fp)
-                device         = upserted.device
+                const fp   = extractFingerprint(req)
+                const { device: d } = await upsertDevice(fp)
+                device = d
 
                 // 1. Bloquer si l'appareil est blacklisté
                 const blocked = await isDeviceBlocked(fp.fingerprintHash)
                 if (blocked.blocked) {
-                    logger.warn(
-                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12) },
-                        'Appareil bloqué — accès refusé'
-                    )
-                    res.status(403).json({
-                        success: false,
-                        error: { code: 'DEVICE_BLOCKED', message: blocked.reason ?? 'Cet appareil a été bloqué.' },
-                    })
+                    logger.warn({ component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12) }, 'Appareil bloqué')
+                    res.status(403).json({ success: false, error: { code: 'DEVICE_BLOCKED', message: blocked.reason ?? 'Cet appareil a été bloqué.' } })
                     return
                 }
 
-                // 2. Vérifier si l'appareil est déjà lié à un autre compte
+                // 2. Bloquer si l'appareil est déjà lié à un autre compte
                 const registeredUid = await getDeviceRegisteredUid(fp.fingerprintHash)
                 if (registeredUid !== null && registeredUid !== decoded.uid) {
-                    // L'appareil appartient à un autre compte — bloquer toute action
-                    logger.warn(
-                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12), registeredUid, requestedUid: decoded.uid },
-                        'Appareil lié à un autre compte — accès refusé'
-                    )
-                    res.status(409).json({
-                        success: false,
-                        error: {
-                            code:    'DEVICE_BOUND_TO_ANOTHER_ACCOUNT',
-                            message: 'Cet appareil est déjà lié à un autre compte.',
-                        },
-                    })
+                    logger.warn({ component: 'Auth', registeredUid, requestedUid: decoded.uid }, 'Appareil lié à un autre compte')
+                    res.status(409).json({ success: false, error: { code: 'DEVICE_BOUND_TO_ANOTHER_ACCOUNT', message: 'Cet appareil est déjà lié à un autre compte.' } })
                     return
                 }
             } catch (deviceErr) {
-                logger.warn({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+                // Si le device ne peut pas être traité → on bloque (fail-secure)
+                logger.error({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — accès refusé')
+                res.status(500).json({ success: false, error: { code: 'DEVICE_ERROR', message: 'Impossible de vérifier l\'appareil. Réessayez.' } })
+                return
             }
 
             try {
@@ -114,8 +101,29 @@ export function authRouter(): Router {
                     ? (decoded['provider'] as string)
                     : signInProvider
 
-                const existingUser = await getUserByUid(decoded.uid)
-                const isNewAccount = !existingUser
+                // Détecter si c'est une inscription ou une connexion
+                // On cherche par UID ET par email (cross-provider)
+                const existingByUid   = await getUserByUid(decoded.uid)
+                const existingByEmail = decoded.email ? await getUserByEmail(decoded.email) : null
+                const existingUser    = existingByUid ?? existingByEmail
+                const isNewAccount    = !existingUser
+
+                // Si un compte existe via l'email mais pas cet UID :
+                // → un autre provider (téléphone ou autre OAuth) a ce même email
+                // → vérifier que l'appareil courant est bien lié à CE compte et pas un autre
+                if (!existingByUid && existingByEmail && device) {
+                    const deviceUid = await getDeviceRegisteredUid(device.fingerprint_hash)
+                    if (deviceUid !== null && deviceUid !== existingByEmail.uid) {
+                        res.status(409).json({
+                            success: false,
+                            error: {
+                                code:    'DEVICE_BOUND_TO_ANOTHER_ACCOUNT',
+                                message: 'Cet appareil est déjà lié à un autre compte.',
+                            },
+                        })
+                        return
+                    }
+                }
 
                 const user = await upsertUser({
                     uid:         decoded.uid,
@@ -134,7 +142,6 @@ export function authRouter(): Router {
                             action:   isNewAccount ? 'register_success' : 'login_success',
                             provider,
                         })
-                        // Lier l'appareil à ce compte (idempotent si déjà lié au même UID)
                         await linkDeviceToUser(device.id, user.uid)
                     } catch (sessionErr) {
                         logger.warn({ component: 'Auth', err: sessionErr }, 'Erreur log session — ignorée')
@@ -358,7 +365,10 @@ export function authRouter(): Router {
                     return
                 }
             } catch (deviceErr) {
-                logger.warn({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+                // Fail-secure : si le device ne peut pas être vérifié → bloquer l'inscription
+                logger.error({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — inscription bloquée')
+                res.status(500).json({ success: false, error: { code: 'DEVICE_ERROR', message: 'Impossible de vérifier l\'appareil. Réessayez.' } })
+                return
             }
 
             // 6. Vérifier unicité du numéro
@@ -492,7 +502,9 @@ export function authRouter(): Router {
                     return
                 }
             } catch (deviceErr) {
-                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+                logger.error({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — bloqué fail-secure')
+                res.status(500).json({ success: false, error: { code: 'DEVICE_ERROR', message: 'Impossible de vérifier l\'appareil. Réessayez.' } })
+                return
             }
 
             // ── Vérifier l'OTP ──────────────────────────────────────────────────

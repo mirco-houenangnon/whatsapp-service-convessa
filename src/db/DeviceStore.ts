@@ -1,21 +1,8 @@
-/**
- * DeviceStore.ts — Collecte et gestion des empreintes d'appareils.
- *
- * À chaque tentative d'inscription ou de connexion, on collecte le maximum
- * d'informations sur le client (IP, User-Agent, fingerprint applicatif).
- *
- * Ces données servent à :
- *   1. Bloquer un appareil déjà inscrit (unicité d'appareil)
- *   2. Détecter des connexions suspectes
- *   3. Alimenter les logs de sécurité / backoffice admin
- *
- * Tables :
- *   auth_devices         — Appareils connus (empreinte canonique unique)
- *   auth_device_sessions — Historique de chaque session par appareil
- */
+
 
 import { getPool }  from './connection.js'
 import { logger }   from '../services/logger.js'
+import { createHash } from 'crypto'
 import type mysql   from 'mysql2/promise'
 import type { Request } from 'express'
 
@@ -66,7 +53,6 @@ export interface DeviceSessionRow {
  * Calcule un hash stable basé sur les champs les plus discriminants.
  */
 export function extractFingerprint(req: Request, extraClientData?: Record<string, string>): DeviceFingerprint {
-    const { createHash } = require('crypto') as typeof import('crypto')
 
     const ip            = getClientIp(req)
     const userAgent     = req.headers['user-agent']?.slice(0, 512)     ?? null

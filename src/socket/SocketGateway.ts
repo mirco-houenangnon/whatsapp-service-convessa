@@ -81,7 +81,9 @@ export class SocketGateway {
             }
 
             const onTenantConnected = (tenantId: string, data: unknown) => {
-                socket.emit('tenant_connected', { tenantId, ...( typeof data === 'object' ? data : {}) })
+                // Broadcast à TOUS les clients connectés (pas seulement le socket courant)
+                // Le frontend peut avoir changé de socket pendant le temps du scan QR
+                this.io.emit('tenant_connected', { tenantId, ...( typeof data === 'object' ? data : {}) })
                 this.io.emit('tenant_status_update', { tenantId, status: 'connected', ...(typeof data === 'object' ? data : {}) })
             }
 

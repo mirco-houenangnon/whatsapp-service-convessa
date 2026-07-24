@@ -36,6 +36,7 @@ import { tenantsRouter }   from './api/routes/tenants.js'
 import { authRouter }      from './api/routes/auth.js'
 import { docsRouter }      from './api/routes/docs.js'
 import { adminRouter }     from './api/routes/admin.js'
+import { sendRouter }      from './api/routes/send.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -117,6 +118,7 @@ app.use('/api/v1', tenantsRouter(tenantManager))
 app.use('/api/v1', authRouter())
 app.use('/api/v1', docsRouter())
 app.use('/api/admin', adminRouter())
+app.use('/api/v1', sendRouter(tenantManager))
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

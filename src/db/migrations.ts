@@ -45,7 +45,7 @@ const TABLES = [
         phone         VARCHAR(30)   NOT NULL,
         name          VARCHAR(100)  DEFAULT NULL,
         api_key_hash  VARCHAR(64)   DEFAULT NULL   COMMENT 'SHA-256 pour vérification',
-        api_key_hint  VARCHAR(20)   DEFAULT NULL   COMMENT 'Préfixe visible ex: wag_live_a3f8...',
+        api_key_hint  VARCHAR(40)   DEFAULT NULL   COMMENT 'Préfixe visible ex: wag_live_a3f8...',
         api_key_enc   TEXT          DEFAULT NULL   COMMENT 'Clé chiffrée AES-256-GCM pour affichage',
         api_key_iv    VARCHAR(32)   DEFAULT NULL   COMMENT 'IV du chiffrement',
         api_key_tag   VARCHAR(32)   DEFAULT NULL   COMMENT 'Tag GCM du chiffrement',
@@ -209,6 +209,8 @@ export async function runMigrations(): Promise<void> {
 
     // Agrandir le champ phone de wa_sessions pour les JID complets Baileys (ex: 2508479037570@s.whatsapp.net)
     await pool.execute(`ALTER TABLE wa_sessions MODIFY COLUMN phone VARCHAR(50) DEFAULT NULL`).catch(() => {})
+    // Agrandir api_key_hint (le hint réel dépasse VARCHAR(20))
+    await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN api_key_hint VARCHAR(40) DEFAULT NULL`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

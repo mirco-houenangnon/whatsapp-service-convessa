@@ -141,6 +141,48 @@ export async function getTenantByPhone(phone: string): Promise<Tenant | null> {
 }
 
 /**
+ * Récupère la session WhatsApp active (ou en attente) d'un utilisateur.
+ *
+ * Règle de sécurité : UN utilisateur ne peut avoir qu'UNE seule session
+ * WhatsApp (donc une seule clé API) à la fois.
+ */
+export async function getTenantByUserUid(userUid: string): Promise<Tenant | null> {
+    const pool   = getPool()
+    const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(
+        `SELECT * FROM wa_tenants
+         WHERE user_uid = ?
+           AND status IN ('pending_qr', 'connected')
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userUid]
+    )
+    const row = rows[0]
+    return row ? rowToTenant(row) : null
+}
+
+/**
+ * Vérifie si un numéro WhatsApp est déjà rattaché à un tenant appartenant
+ * à un AUTRE utilisateur que celui fourni.
+ *
+ * Règle de sécurité : UN numéro WhatsApp ne peut être utilisé que par UN
+ * seul utilisateur — il ne peut pas être réutilisé par un autre compte
+ * tant que le tenant existant est actif (pending_qr ou connected).
+ */
+export async function getTenantByPhoneForOtherUser(phone: string, userUid: string): Promise<Tenant | null> {
+    const pool   = getPool()
+    const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(
+        `SELECT * FROM wa_tenants
+         WHERE phone = ?
+           AND status IN ('pending_qr', 'connected')
+           AND (user_uid IS NULL OR user_uid != ?)
+         LIMIT 1`,
+        [phone, userUid]
+    )
+    const row = rows[0]
+    return row ? rowToTenant(row) : null
+}
+
+/**
  * Récupère un tenant par le hash de sa clé API.
  */
 export async function getTenantByApiKeyHash(hash: string): Promise<Tenant | null> {
@@ -200,6 +242,42 @@ export async function setTenantApiKey(
         [hash, hint, payload.data, payload.iv, payload.tag, id]
     )
     logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée (chiffrée)')
+}
+
+/**
+ * Vérifie si un numéro WhatsApp (JID ou numéro brut) est déjà actif sur un AUTRE tenant.
+ * Retourne le tenant qui l'utilise, ou null.
+ *
+ * @param jid       - JID Baileys (ex: "33612345678@s.whatsapp.net") ou numéro brut
+ * @param excludeId - tenantId à exclure de la recherche (le tenant courant)
+ */
+export async function getTenantByWhatsAppJid(jid: string, excludeId?: string): Promise<Tenant | null> {
+    const pool  = getPool()
+    const phone = jid.split('@')[0]?.replace(/[^0-9]/g, '') ?? ''
+    if (!phone) return null
+
+    const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(
+        `SELECT * FROM wa_tenants
+         WHERE phone = ?
+           AND status IN ('connected', 'pending_qr')
+           ${excludeId ? 'AND id != ?' : ''}
+         LIMIT 1`,
+        excludeId ? [phone, excludeId] : [phone]
+    )
+    const row = rows[0]
+    return row ? rowToTenant(row) : null
+}
+
+/**
+ * Met à jour le numéro WhatsApp réel d'un tenant après connexion.
+ * (Le numéro fourni lors de la création peut être fictif si OAuth)
+ */
+export async function updateTenantPhone(id: string, phone: string): Promise<void> {
+    const pool = getPool()
+    await pool.execute(
+        `UPDATE wa_tenants SET phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [phone, id]
+    )
 }
 
 /**

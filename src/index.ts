@@ -55,6 +55,10 @@ const io = new Server(httpServer, {
 // ── Middlewares globaux ───────────────────────────────────────────────────────
 
 app.use(helmet({
+    // Cross-Origin-Opener-Policy doit être 'unsafe-none' pour permettre aux
+    // popups Firebase OAuth (Google, GitHub) de communiquer avec la fenêtre parente.
+    crossOriginOpenerPolicy: { policy: 'unsafe-none' },
+
     contentSecurityPolicy: config.enableDashboard
         ? {
             directives: {

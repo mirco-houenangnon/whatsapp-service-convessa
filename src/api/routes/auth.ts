@@ -6,19 +6,11 @@
  *   - github.com  (Firebase OAuth)
  *   - phone       (OTP WhatsApp maison)
  *
- * Routes OAuth Firebase (Google / GitHub) :
- *   POST /api/v1/auth/verify   — Vérifier un ID Token Firebase
- *   POST /api/v1/auth/logout   — Révoquer le token Firebase
- *   GET  /api/v1/auth/me       — Profil de l'utilisateur connecté
- *
- * Routes Auth par téléphone (OTP) :
- *   POST /api/v1/auth/phone/register    — Vérif unicité + envoi OTP via WhatsApp
- *   POST /api/v1/auth/phone/verify-otp  — Vérif OTP → Firebase Custom Token → ID Token
- *   POST /api/v1/auth/phone/login       — Connexion (renvoi OTP si compte existant)
- *
- * Routes Admin (X-Api-Key) :
- *   GET    /api/v1/auth/users        — Lister les utilisateurs
- *   DELETE /api/v1/auth/users/:uid   — Désactiver un compte
+ * Règles métier fondamentales :
+ *   1. Un seul compte par identité — email, téléphone OU empreinte d'appareil
+ *   2. L'empreinte d'appareil est vérifiée à l'inscription — bloque si déjà liée
+ *   3. La connexion est toujours possible — l'appareil est loggué mais jamais bloqué
+ *   4. L'empreinte est collectée sur chaque requête (inscription + connexion)
  */
 
 import { Router }                  from 'express'
@@ -27,59 +19,45 @@ import { requireFirebaseAuth,
 import { requireApiKey }           from '../middleware/auth.js'
 import { rateLimit }               from '../middleware/rateLimit.js'
 import { firebaseAuth }            from '../../services/firebase.js'
-import { upsertUser,
-         getUserByUid,
-         getUserByPhone,
-         listUsers,
-         deactivateUser,
-         type UserRow }            from '../../db/UserStore.js'
-import { generateOtpCode,
-         saveOtp,
-         verifyOtp,
-         deleteOtp }               from '../../db/OtpStore.js'
-import { logger }                  from '../../services/logger.js'
-import { config }                  from '../../config.js'
+import {
+    createUser, loginUser, upsertUser,
+    getUserByUid, getUserByPhone,
+    listUsers, deactivateUser, type UserRow,
+} from '../../db/UserStore.js'
+import { generateOtpCode, saveOtp, verifyOtp, deleteOtp } from '../../db/OtpStore.js'
+import {
+    extractFingerprint, upsertDevice, linkDeviceToUser,
+    isDeviceBlocked, getDeviceRegisteredUid, logDeviceSession,
+} from '../../db/DeviceStore.js'
+import { logger }  from '../../services/logger.js'
+import { config }  from '../../config.js'
+
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const ALLOWED_PROVIDERS = ['google.com', 'github.com']
+const PHONE_REGEX       = /^\d{7,15}$/
 
-// Regex numéro international : chiffres uniquement, sans +, 7-15 chiffres
-const PHONE_REGEX = /^\d{7,15}$/
-
-function sanitizePhone(raw: string): string {
-    return raw.replace(/[\s\-().+]/g, '')
-}
+// ══════════════════════════════════════════════════════════════════════════════
+// Router
+// ══════════════════════════════════════════════════════════════════════════════
 
 export function authRouter(): Router {
     const router = Router()
 
     // ── POST /api/v1/auth/verify ──────────────────────────────────────────────
     /**
-     * @swagger
-     * /api/v1/auth/verify:
-     *   post:
-     *     tags: [Auth]
-     *     summary: Vérifier un Firebase ID Token et créer/mettre à jour le profil
-     *     description: |
-     *       Endpoint principal d'authentification. Le client envoie le ID Token
-     *       obtenu après connexion OAuth (Google ou GitHub) via le SDK Firebase.
-     *       Le serveur vérifie le token, crée ou met à jour le compte en base,
-     *       et retourne le profil utilisateur.
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Token valide — profil retourné
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/AuthProfile'
-     *       401:
-     *         $ref: '#/components/responses/Unauthorized'
-     *       403:
-     *         $ref: '#/components/responses/ForbiddenProvider'
+     * Authentification OAuth Firebase (Google / GitHub).
+     * Fonctionne aussi bien pour la première connexion (inscription) que pour
+     * les connexions suivantes (upsert).
+     *
+     * Logique :
+     *   1. Extraire l'empreinte de l'appareil
+     *   2. Upsert device
+     *   3. Bloquer si l'appareil est blacklisté
+     *   4. Upsert utilisateur (créé si absent, mis à jour si présent)
+     *   5. Logger la session (register_success ou login_success)
+     *   6. Lier l'appareil à l'utilisateur
      */
-
-    
     router.post(
         '/auth/verify',
         requireFirebaseAuth,
@@ -87,66 +65,99 @@ export function authRouter(): Router {
         async (req, res) => {
             const decoded = req.firebaseUser!
 
+            // ── Device fingerprint ─────────────────────────────────────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
             try {
-                // En dev avec Custom Token, lire le claim custom `provider`
+                const fp       = extractFingerprint(req)
+                const upserted = await upsertDevice(fp)
+                device         = upserted.device
+
+                // 1. Bloquer si l'appareil est blacklisté
+                const blocked = await isDeviceBlocked(fp.fingerprintHash)
+                if (blocked.blocked) {
+                    logger.warn(
+                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12) },
+                        'Appareil bloqué — accès refusé'
+                    )
+                    res.status(403).json({
+                        success: false,
+                        error: { code: 'DEVICE_BLOCKED', message: blocked.reason ?? 'Cet appareil a été bloqué.' },
+                    })
+                    return
+                }
+
+                // 2. Vérifier si l'appareil est déjà lié à un autre compte
+                const registeredUid = await getDeviceRegisteredUid(fp.fingerprintHash)
+                if (registeredUid !== null && registeredUid !== decoded.uid) {
+                    // L'appareil appartient à un autre compte — bloquer toute action
+                    logger.warn(
+                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12), registeredUid, requestedUid: decoded.uid },
+                        'Appareil lié à un autre compte — accès refusé'
+                    )
+                    res.status(409).json({
+                        success: false,
+                        error: {
+                            code:    'DEVICE_BOUND_TO_ANOTHER_ACCOUNT',
+                            message: 'Cet appareil est déjà lié à un autre compte.',
+                        },
+                    })
+                    return
+                }
+            } catch (deviceErr) {
+                logger.warn({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+            }
+
+            try {
                 const signInProvider = (decoded['firebase']?.['sign_in_provider'] as string) ?? 'unknown'
                 const isDev          = config.nodeEnv !== 'production'
                 const provider       = (isDev && signInProvider === 'custom' && decoded['provider'])
                     ? (decoded['provider'] as string)
                     : signInProvider
 
+                const existingUser = await getUserByUid(decoded.uid)
+                const isNewAccount = !existingUser
+
                 const user = await upsertUser({
-                    uid:          decoded.uid,
-                    email:        decoded.email ?? null,
-                    displayName:  decoded.name  ?? null,
-                    photoUrl:     decoded.picture ?? null,
+                    uid:         decoded.uid,
+                    email:       decoded.email     ?? null,
+                    displayName: decoded.name      ?? null,
+                    photoUrl:    decoded.picture   ?? null,
                     provider,
                 })
 
+                if (device) {
+                    try {
+                        await logDeviceSession({
+                            deviceId: device.id,
+                            userUid:  user.uid,
+                            ip:       device.first_ip,
+                            action:   isNewAccount ? 'register_success' : 'login_success',
+                            provider,
+                        })
+                        // Lier l'appareil à ce compte (idempotent si déjà lié au même UID)
+                        await linkDeviceToUser(device.id, user.uid)
+                    } catch (sessionErr) {
+                        logger.warn({ component: 'Auth', err: sessionErr }, 'Erreur log session — ignorée')
+                    }
+                }
+
                 logger.info(
-                    { component: 'Auth', uid: decoded.uid, provider },
-                    'Utilisateur authentifié'
+                    { component: 'Auth', uid: decoded.uid, provider, isNewAccount },
+                    isNewAccount ? 'Nouveau compte OAuth créé' : 'Connexion OAuth réussie'
                 )
 
-                res.json({
-                    success: true,
-                    user:    sanitizeUser(user),
-                })
+                res.json({ success: true, user: sanitizeUser(user), isNewAccount })
             } catch (err) {
                 logger.error({ component: 'Auth', err }, 'Erreur upsertUser')
                 res.status(500).json({
                     success: false,
-                    error: {
-                        code:    'INTERNAL_ERROR',
-                        message: config.isProd ? 'Erreur interne' : String(err),
-                    },
+                    error: { code: 'INTERNAL_ERROR', message: config.isProd ? 'Erreur interne' : String(err) },
                 })
             }
         }
     )
 
     // ── GET /api/v1/auth/me ───────────────────────────────────────────────────
-    /**
-     * @swagger
-     * /api/v1/auth/me:
-     *   get:
-     *     tags: [Auth]
-     *     summary: Profil de l'utilisateur connecté
-     *     description: Retourne le profil complet de l'utilisateur dont le token est fourni.
-     *     security:
-     *       - bearerAuth: []
-     *     responses:
-     *       200:
-     *         description: Profil utilisateur
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/AuthProfile'
-     *       401:
-     *         $ref: '#/components/responses/Unauthorized'
-     *       404:
-     *         description: Utilisateur non trouvé en base (appeler /verify d'abord)
-     */
     router.get(
         '/auth/me',
         requireFirebaseAuth,
@@ -180,64 +191,23 @@ export function authRouter(): Router {
     )
 
     // ── POST /api/v1/auth/logout ──────────────────────────────────────────────
-  
-    router.post(
-        '/auth/logout',
-        requireFirebaseAuth,
-        async (req, res) => {
-            const { uid } = req.firebaseUser!
+    router.post('/auth/logout', requireFirebaseAuth, async (req, res) => {
+        const { uid } = req.firebaseUser!
 
-            try {
-                // Révoque tous les refresh tokens Firebase de cet utilisateur
-                await firebaseAuth.revokeRefreshTokens(uid)
-
-                logger.info({ component: 'Auth', uid }, 'Tokens révoqués')
-
-                res.json({ success: true, message: 'Déconnexion effectuée' })
-            } catch (err) {
-                logger.error({ component: 'Auth', err }, 'Erreur logout')
-                res.status(500).json({
-                    success: false,
-                    error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' },
-                })
-            }
+        try {
+            await firebaseAuth.revokeRefreshTokens(uid)
+            logger.info({ component: 'Auth', uid }, 'Tokens révoqués')
+            res.json({ success: true, message: 'Déconnexion effectuée' })
+        } catch (err) {
+            logger.error({ component: 'Auth', err }, 'Erreur logout')
+            res.status(500).json({
+                success: false,
+                error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' },
+            })
         }
-    )
+    })
 
     // ── GET /api/v1/auth/users — Admin ────────────────────────────────────────
-    /**
-     * @swagger
-     * /api/v1/auth/users:
-     *   get:
-     *     tags: [Auth - Admin]
-     *     summary: Lister les utilisateurs enregistrés
-     *     description: Endpoint admin — nécessite la clé API Bridge.
-     *     security:
-     *       - apiKeyAuth: []
-     *     parameters:
-     *       - in: query
-     *         name: page
-     *         schema:
-     *           type: integer
-     *           default: 1
-     *       - in: query
-     *         name: limit
-     *         schema:
-     *           type: integer
-     *           default: 20
-     *           maximum: 100
-     *       - in: query
-     *         name: provider
-     *         schema:
-     *           type: string
-     *           enum: [google.com, github.com]
-     *         description: Filtrer par provider OAuth
-     *     responses:
-     *       200:
-     *         description: Liste paginée des utilisateurs
-     *       401:
-     *         $ref: '#/components/responses/Unauthorized'
-     */
     router.get('/auth/users', requireApiKey, async (req, res) => {
         const page     = Math.max(1, parseInt(req.query['page']  as string, 10) || 1)
         const limit    = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string, 10) || 20))
@@ -266,29 +236,6 @@ export function authRouter(): Router {
     })
 
     // ── DELETE /api/v1/auth/users/:uid — Admin ────────────────────────────────
-    /**
-     * @swagger
-     * /api/v1/auth/users/{uid}:
-     *   delete:
-     *     tags: [Auth - Admin]
-     *     summary: Désactiver un compte utilisateur
-     *     description: Désactive le compte en base ET révoque les tokens Firebase.
-     *     security:
-     *       - apiKeyAuth: []
-     *     parameters:
-     *       - in: path
-     *         name: uid
-     *         required: true
-     *         schema:
-     *           type: string
-     *     responses:
-     *       200:
-     *         description: Compte désactivé
-     *       404:
-     *         description: Utilisateur introuvable
-     *       401:
-     *         $ref: '#/components/responses/Unauthorized'
-     */
     router.delete('/auth/users/:uid', requireApiKey, async (req, res) => {
         const { uid } = req.params
 
@@ -310,7 +257,6 @@ export function authRouter(): Router {
                 return
             }
 
-            // Désactiver en base + révoquer les tokens Firebase en parallèle
             await Promise.all([
                 deactivateUser(uid),
                 firebaseAuth.revokeRefreshTokens(uid).catch(() => {
@@ -319,7 +265,6 @@ export function authRouter(): Router {
             ])
 
             logger.warn({ component: 'Auth', uid }, 'Compte désactivé par admin')
-
             res.json({ success: true, message: 'Compte désactivé' })
         } catch (err) {
             logger.error({ component: 'Auth', err }, 'Erreur deactivate user')
@@ -338,17 +283,14 @@ export function authRouter(): Router {
     /**
      * Inscription par numéro de téléphone.
      *
-     * 1. Valide le format du numéro
-     * 2. Vérifie que le numéro n'est pas déjà utilisé
-     * 3. Génère un OTP 6 chiffres, le stocke haché en DB
-     * 4. L'envoie via POST /api/v1/messages/send (WhatsApp interne)
-     *
-     * Body : { "phone": "22960000000", "displayName": "Jean" }
+     * Règles :
+     *   - Le numéro ne doit pas être déjà enregistré
+     *   - L'appareil ne doit pas être bloqué
+     *   - L'appareil ne doit pas être déjà lié à un compte
      */
     router.post('/auth/phone/register', rateLimit, async (req, res) => {
-        const { phone: rawPhone, displayName } = req.body as {
-            phone?: unknown
-            displayName?: unknown
+        const { phone: rawPhone } = req.body as {
+            phone?:       unknown
         }
 
         // ── Validation ─────────────────────────────────────────────────────────
@@ -373,10 +315,53 @@ export function authRouter(): Router {
             return
         }
 
-        const name = typeof displayName === 'string' ? displayName.trim().slice(0, 100) : null
-
         try {
-            // ── Vérifier unicité ────────────────────────────────────────────────
+            // ── Device fingerprint ─────────────────────────────────────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
+
+            try {
+                const fp       = extractFingerprint(req)
+                const upserted = await upsertDevice(fp)
+                device         = upserted.device
+
+                // Vérifier si l'appareil est bloqué
+                const blocked = await isDeviceBlocked(fp.fingerprintHash)
+                if (blocked.blocked) {
+                    logger.warn(
+                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12) },
+                        'Appareil bloqué — inscription refusée'
+                    )
+                    res.status(403).json({
+                        success: false,
+                        error: {
+                            code:    'DEVICE_BLOCKED',
+                            message: blocked.reason ?? 'Cet appareil a été bloqué.',
+                        },
+                    })
+                    return
+                }
+
+                // Vérifier si l'appareil est déjà lié à un compte
+                const registeredUid = await getDeviceRegisteredUid(fp.fingerprintHash)
+                if (registeredUid !== null) {
+                    logger.warn(
+                        { component: 'Auth', fingerprintHash: fp.fingerprintHash.slice(0, 12), registeredUid },
+                        'Appareil déjà enregistré — inscription bloquée'
+                    )
+                    res.status(409).json({
+                        success: false,
+                        error: {
+                            code:    'DEVICE_ALREADY_REGISTERED',
+                            message: 'Cet appareil a déjà un compte. Utilisez la connexion.',
+                        },
+                    })
+                    return
+                }
+            } catch (deviceErr) {
+                logger.warn({ component: 'Auth', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+            }
+
+            // 6. Vérifier unicité du numéro
             const existing = await getUserByPhone(phone)
             if (existing) {
                 res.status(409).json({
@@ -389,37 +374,51 @@ export function authRouter(): Router {
                 return
             }
 
-            // ── Générer et sauvegarder l'OTP ───────────────────────────────────
+            // 7. Logger la tentative
+            if (device) {
+                try {
+                    await logDeviceSession({
+                        deviceId: device.id,
+                        userUid:  null,
+                        ip:       device.first_ip,
+                        action:   'register_attempt',
+                        provider: 'phone',
+                        meta:     { phone: maskPhone(phone) },
+                    })
+                } catch (sessionErr) {
+                    logger.warn({ component: 'Auth', err: sessionErr }, 'Erreur log session — ignorée')
+                }
+            }
+
+            // 8. Générer et sauvegarder l'OTP
             const otpCode = generateOtpCode()
             await saveOtp(phone, otpCode)
 
-            // ── Envoyer via WhatsApp (appel interne à messages/send) ────────────
+            // 9. Envoyer via WhatsApp
             const message = `Votre code de vérification : *${otpCode}*\n\nValable 10 minutes. Ne le partagez jamais.`
             const sent    = await sendOtpViaWhatsApp(phone, message)
 
             if (!sent) {
                 logger.warn({ component: 'Auth/OTP', phone: maskPhone(phone) }, 'WhatsApp non connecté — OTP non envoyé')
-                // En dev on continue (le code est loggué), en prod on bloque
                 if (config.isProd) {
                     res.status(503).json({
                         success: false,
                         error: {
                             code:    'WHATSAPP_UNAVAILABLE',
-                            message: 'Impossible d\'envoyer le code — service WhatsApp non connecté',
+                            message: "Impossible d'envoyer le code — service WhatsApp non connecté",
                         },
                     })
                     return
                 }
-                // Dev : logger le code pour faciliter les tests
                 logger.info({ component: 'Auth/OTP', phone: maskPhone(phone), otpCode }, 'DEV — OTP généré (WhatsApp off)')
             }
 
-            logger.info({ component: 'Auth/OTP', phone: maskPhone(phone) }, 'OTP envoyé')
+            logger.info({ component: 'Auth/OTP', phone: maskPhone(phone) }, 'OTP inscription envoyé')
 
+            // 10. Répondre 202
             res.status(202).json({
                 success: true,
                 message: `Code de vérification envoyé au ${maskPhone(phone)} via WhatsApp`,
-                // En dev uniquement : exposer le code dans la réponse pour les tests
                 ...(config.nodeEnv === 'development' && { devOtp: otpCode }),
             })
 
@@ -434,14 +433,10 @@ export function authRouter(): Router {
 
     // ── POST /api/v1/auth/phone/verify-otp ───────────────────────────────────
     /**
-     * Vérification de l'OTP après inscription.
+     * Vérification OTP après inscription — crée le compte Firebase + profil DB.
      *
-     * 1. Vérifie le code OTP (expiration, tentatives, hash)
-     * 2. Crée le compte Firebase + profil en DB
-     * 3. Retourne un Firebase ID Token prêt à l'emploi
-     *    → le frontend peut appeler /auth/me directement avec ce token
-     *
-     * Body : { "phone": "22960000000", "code": "123456" }
+     * Utilise createUser (pas upsertUser) pour distinguer création vs existence.
+     * Si status === 'exists' → c'est en réalité une connexion.
      */
     router.post('/auth/phone/verify-otp', rateLimit, async (req, res) => {
         const { phone: rawPhone, code } = req.body as {
@@ -477,19 +472,42 @@ export function authRouter(): Router {
         }
 
         try {
-            // ── Vérifier l'OTP ──────────────────────────────────────────────────
-            const result = await verifyOtp(phone, codeTrim)
+            // ── Device fingerprint ─────────────────────────────────────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
 
-            if (result !== 'valid') {
+            try {
+                const fp       = extractFingerprint(req)
+                const upserted = await upsertDevice(fp)
+                device         = upserted.device
+
+                const blocked = await isDeviceBlocked(fp.fingerprintHash)
+                if (blocked.blocked) {
+                    res.status(403).json({
+                        success: false,
+                        error: {
+                            code:    'DEVICE_BLOCKED',
+                            message: blocked.reason ?? 'Cet appareil a été bloqué.',
+                        },
+                    })
+                    return
+                }
+            } catch (deviceErr) {
+                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+            }
+
+            // ── Vérifier l'OTP ──────────────────────────────────────────────────
+            const otpResult = await verifyOtp(phone, codeTrim)
+
+            if (otpResult !== 'valid') {
                 const messages: Record<string, string> = {
                     invalid:   'Code incorrect',
                     expired:   'Code expiré — demandez un nouveau code',
                     exceeded:  'Trop de tentatives — demandez un nouveau code',
                     not_found: 'Aucun code en attente pour ce numéro — commencez par /auth/phone/register',
                 }
-                res.status(result === 'invalid' ? 400 : 410).json({
+                res.status(otpResult === 'invalid' ? 400 : 410).json({
                     success: false,
-                    error: { code: result.toUpperCase(), message: messages[result] },
+                    error: { code: otpResult.toUpperCase(), message: messages[otpResult] },
                 })
                 return
             }
@@ -497,12 +515,10 @@ export function authRouter(): Router {
             // ── Créer ou récupérer l'utilisateur Firebase ───────────────────────
             let firebaseUid: string
             try {
-                // Tenter de récupérer un user Firebase existant avec ce numéro
                 const fbUser = await firebaseAuth.getUserByPhoneNumber(`+${phone}`)
                 firebaseUid  = fbUser.uid
             } catch {
                 try {
-                    // Créer un nouveau compte Firebase avec ce numéro
                     const fbUser = await firebaseAuth.createUser({
                         phoneNumber:   `+${phone}`,
                         displayName:   `User ${maskPhone(phone)}`,
@@ -511,8 +527,8 @@ export function authRouter(): Router {
                     })
                     firebaseUid = fbUser.uid
                 } catch (createErr: unknown) {
-                    // Firebase rejette les numéros invalides (ex: numéros de test courts)
-                    // En dev : créer un compte Firebase sans numéro et stocker le numéro uniquement en DB
+                    // Firebase rejette les numéros invalides / courts (ex : numéros de test)
+                    // En dev : UID déterministe basé sur SHA-256 du numéro
                     if (config.nodeEnv !== 'production') {
                         const { createHash } = await import('crypto')
                         const deterministicUid = 'phone_' + createHash('sha256').update(phone).digest('hex').slice(0, 20)
@@ -534,8 +550,8 @@ export function authRouter(): Router {
                 }
             }
 
-            // ── Upsert profil en DB ─────────────────────────────────────────────
-            const user = await upsertUser({
+            // ── createUser (inscription stricte) ───────────────────────────────
+            const { status, user } = await createUser({
                 uid:         firebaseUid,
                 email:       null,
                 displayName: null,
@@ -544,28 +560,74 @@ export function authRouter(): Router {
                 phone,
             })
 
-            // ── Générer un Custom Token → échangeable contre un ID Token ────────
+            let isNewAccount: boolean
+
+            if (status === 'exists') {
+                // Ce numéro est déjà enregistré → traiter comme une connexion
+                await loginUser(firebaseUid)
+                isNewAccount = false
+
+                if (device) {
+                    try {
+                        await logDeviceSession({
+                            deviceId: device.id,
+                            userUid:  user.uid,
+                            ip:       device.first_ip,
+                            action:   'login_success',
+                            provider: 'phone',
+                        })
+                    } catch (sessionErr) {
+                        logger.warn({ component: 'Auth/OTP', err: sessionErr }, 'Erreur log session — ignorée')
+                    }
+                }
+
+                logger.info(
+                    { component: 'Auth/OTP', uid: firebaseUid, phone: maskPhone(phone) },
+                    'Connexion OTP (compte existant)'
+                )
+            } else {
+                // Nouveau compte créé
+                isNewAccount = true
+
+                if (device) {
+                    try {
+                        // Lier l'appareil au nouvel utilisateur
+                        await linkDeviceToUser(device.id, firebaseUid)
+                        await logDeviceSession({
+                            deviceId: device.id,
+                            userUid:  user.uid,
+                            ip:       device.first_ip,
+                            action:   'register_success',
+                            provider: 'phone',
+                        })
+                    } catch (sessionErr) {
+                        logger.warn({ component: 'Auth/OTP', err: sessionErr }, 'Erreur log session — ignorée')
+                    }
+                }
+
+                logger.info(
+                    { component: 'Auth/OTP', uid: firebaseUid, phone: maskPhone(phone) },
+                    'Compte créé par OTP'
+                )
+            }
+
+            // ── Supprimer l'OTP utilisé ─────────────────────────────────────────
+            await deleteOtp(phone)
+
+            // ── Générer le custom token ─────────────────────────────────────────
             const customToken = await firebaseAuth.createCustomToken(firebaseUid, {
                 provider: 'phone',
             })
 
-            // Nettoyer l'OTP utilisé
-            await deleteOtp(phone)
-
-            logger.info(
-                { component: 'Auth/OTP', uid: firebaseUid, phone: maskPhone(phone) },
-                'Compte activé par OTP'
-            )
-
             res.json({
-                success:     true,
-                customToken,   // Le frontend échange ce token contre un ID Token via Firebase SDK
-                user:        sanitizeUser(user),
-                message:     'Compte activé. Échangez le customToken contre un ID Token via le SDK Firebase.',
+                success:      true,
+                customToken,
+                user:         sanitizeUser(user),
+                isNewAccount,
             })
 
         } catch (err) {
-            logger.error({ component: 'Auth/OTP', err }, 'Erreur verify-otp')
+            logger.error({ component: 'Auth/OTP', err }, 'Erreur verify-otp inscription')
             res.status(500).json({
                 success: false,
                 error: { code: 'INTERNAL_ERROR', message: config.isProd ? 'Erreur interne' : String(err) },
@@ -575,8 +637,8 @@ export function authRouter(): Router {
 
     // ── POST /api/v1/auth/phone/login ─────────────────────────────────────────
     /**
-     * Connexion d'un compte existant par numéro de téléphone.
-     * Renvoi d'un OTP si le compte existe déjà.
+     * Connexion d'un compte existant par téléphone.
+     * L'appareil est loggué mais jamais bloqué à cette étape.
      *
      * Body : { "phone": "22960000000" }
      */
@@ -602,28 +664,83 @@ export function authRouter(): Router {
         }
 
         try {
-            // Vérifier que le compte existe
+            // ── Device fingerprint ─────────────────────────────────────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
+            let deviceRegisteredUid: string | null = null
+
+            try {
+                const fp       = extractFingerprint(req)
+                const upserted = await upsertDevice(fp)
+                device         = upserted.device
+
+                // 1. Bloquer si l'appareil est blacklisté
+                const blocked = await isDeviceBlocked(fp.fingerprintHash)
+                if (blocked.blocked) {
+                    res.status(403).json({
+                        success: false,
+                        error: { code: 'DEVICE_BLOCKED', message: blocked.reason ?? 'Cet appareil a été bloqué.' },
+                    })
+                    return
+                }
+
+                // 2. Récupérer le compte lié à cet appareil (s'il existe)
+                deviceRegisteredUid = await getDeviceRegisteredUid(fp.fingerprintHash)
+            } catch (deviceErr) {
+                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+            }
+
+            // 3. Vérifier que le compte existe
             const existing = await getUserByPhone(phone)
             if (!existing) {
                 res.status(404).json({
                     success: false,
+                    error: { code: 'PHONE_NOT_REGISTERED', message: 'Aucun compte associé à ce numéro. Utilisez /auth/phone/register.' },
+                })
+                return
+            }
+
+            // 4. Vérifier que le compte est actif
+            if (!existing.active) {
+                res.status(403).json({
+                    success: false,
+                    error: { code: 'ACCOUNT_DISABLED', message: 'Ce compte est désactivé.' },
+                })
+                return
+            }
+
+            // 5. Vérifier la règle d'unicité appareil-compte :
+            //    Si l'appareil est déjà lié à un autre compte → interdire la connexion
+            if (deviceRegisteredUid !== null && deviceRegisteredUid !== existing.uid) {
+                logger.warn(
+                    { component: 'Auth/OTP', deviceRegisteredUid, requestedUid: existing.uid },
+                    'Tentative de connexion depuis un appareil lié à un autre compte'
+                )
+                res.status(409).json({
+                    success: false,
                     error: {
-                        code:    'PHONE_NOT_REGISTERED',
-                        message: 'Aucun compte associé à ce numéro. Utilisez /auth/phone/register.',
+                        code:    'DEVICE_BOUND_TO_ANOTHER_ACCOUNT',
+                        message: 'Cet appareil est déjà lié à un autre compte. Connexion refusée.',
                     },
                 })
                 return
             }
-
-            if (!existing.active) {
-                res.status(403).json({
-                    success: false,
-                    error: { code: 'ACCOUNT_DISABLED', message: 'Ce compte est désactivé' },
-                })
-                return
+            // 6. Logger la tentative de connexion
+            if (device) {
+                try {
+                    await logDeviceSession({
+                        deviceId: device.id,
+                        userUid:  existing.uid,
+                        ip:       device.first_ip,
+                        action:   'login_attempt',
+                        provider: 'phone',
+                        meta:     { phone: maskPhone(phone) },
+                    })
+                } catch (sessionErr) {
+                    logger.warn({ component: 'Auth/OTP', err: sessionErr }, 'Erreur log session — ignorée')
+                }
             }
 
-            // Générer et envoyer un OTP
+            // 7. Générer et envoyer l'OTP
             const otpCode = generateOtpCode()
             await saveOtp(phone, otpCode)
 
@@ -659,14 +776,165 @@ export function authRouter(): Router {
         }
     })
 
+    // ── POST /api/v1/auth/phone/login/verify-otp ─────────────────────────────
+    /**
+     * Vérification OTP pour la connexion (pas l'inscription).
+     * Le compte doit déjà exister.
+     *
+     * Body : { "phone": "22960000000", "code": "123456" }
+     */
+    router.post('/auth/phone/login/verify-otp', rateLimit, async (req, res) => {
+        const { phone: rawPhone, code } = req.body as {
+            phone?: unknown
+            code?:  unknown
+        }
+
+        // ── Validation ─────────────────────────────────────────────────────────
+        if (!rawPhone || typeof rawPhone !== 'string') {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: "Le champ 'phone' est requis" },
+            })
+            return
+        }
+        if (!code || typeof code !== 'string') {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: "Le champ 'code' est requis" },
+            })
+            return
+        }
+
+        const phone    = sanitizePhone(rawPhone)
+        const codeTrim = code.trim()
+
+        if (!/^\d{6}$/.test(codeTrim)) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Le code doit être composé de 6 chiffres' },
+            })
+            return
+        }
+
+        try {
+            // ── Device fingerprint ─────────────────────────────────────────────
+            let device: Awaited<ReturnType<typeof upsertDevice>>['device'] | null = null
+
+            try {
+                const fp       = extractFingerprint(req)
+                const upserted = await upsertDevice(fp)
+                device         = upserted.device
+
+                const blocked = await isDeviceBlocked(fp.fingerprintHash)
+                if (blocked.blocked) {
+                    res.status(403).json({
+                        success: false,
+                        error: {
+                            code:    'DEVICE_BLOCKED',
+                            message: blocked.reason ?? 'Cet appareil a été bloqué.',
+                        },
+                    })
+                    return
+                }
+            } catch (deviceErr) {
+                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+            }
+
+            // ── Vérifier l'OTP ──────────────────────────────────────────────────
+            const otpResult = await verifyOtp(phone, codeTrim)
+
+            if (otpResult !== 'valid') {
+                const messages: Record<string, string> = {
+                    invalid:   'Code incorrect',
+                    expired:   'Code expiré — demandez un nouveau code',
+                    exceeded:  'Trop de tentatives — demandez un nouveau code',
+                    not_found: 'Aucun code en attente pour ce numéro',
+                }
+                res.status(otpResult === 'invalid' ? 400 : 410).json({
+                    success: false,
+                    error: { code: otpResult.toUpperCase(), message: messages[otpResult] },
+                })
+                return
+            }
+
+            // ── Vérifier que le compte existe ───────────────────────────────────
+            const user = await getUserByPhone(phone)
+            if (!user) {
+                res.status(404).json({
+                    success: false,
+                    error: {
+                        code:    'PHONE_NOT_REGISTERED',
+                        message: 'Aucun compte associé à ce numéro.',
+                    },
+                })
+                return
+            }
+
+            // ── Vérifier que le compte est actif ────────────────────────────────
+            if (!user.active) {
+                res.status(403).json({
+                    success: false,
+                    error: { code: 'ACCOUNT_DISABLED', message: 'Ce compte est désactivé.' },
+                })
+                return
+            }
+
+            // ── Générer le custom token ─────────────────────────────────────────
+            const customToken = await firebaseAuth.createCustomToken(user.uid, {
+                provider: 'phone',
+            })
+
+            // ── Mettre à jour last_login_at ─────────────────────────────────────
+            await loginUser(user.uid)
+
+            // ── Logger la session ──────────────────────────────────────────────
+            if (device) {
+                try {
+                    await logDeviceSession({
+                        deviceId: device.id,
+                        userUid:  user.uid,
+                        ip:       device.first_ip,
+                        action:   'login_success',
+                        provider: 'phone',
+                    })
+                } catch (sessionErr) {
+                    logger.warn({ component: 'Auth/OTP', err: sessionErr }, 'Erreur log session — ignorée')
+                }
+            }
+
+            // ── Supprimer l'OTP ─────────────────────────────────────────────────
+            await deleteOtp(phone)
+
+            logger.info(
+                { component: 'Auth/OTP', uid: user.uid, phone: maskPhone(phone) },
+                'Connexion OTP réussie'
+            )
+
+            res.json({
+                success:     true,
+                customToken,
+                user:        sanitizeUser(user),
+            })
+
+        } catch (err) {
+            logger.error({ component: 'Auth/OTP', err }, 'Erreur login verify-otp')
+            res.status(500).json({
+                success: false,
+                error: { code: 'INTERNAL_ERROR', message: config.isProd ? 'Erreur interne' : String(err) },
+            })
+        }
+    })
+
     return router
 }
 
-// ── Helpers privés ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Helpers privés
+// ══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Envoie l'OTP via le endpoint interne /api/v1/messages/send.
- * Retourne true si mis en file, false si WhatsApp non connecté.
+ * Retourne true si mis en file d'attente, false si WhatsApp non connecté.
  */
 async function sendOtpViaWhatsApp(phone: string, message: string): Promise<boolean> {
     try {
@@ -687,15 +955,19 @@ async function sendOtpViaWhatsApp(phone: string, message: string): Promise<boole
     }
 }
 
-/** Masque un numéro pour les logs (ex: 229****000) */
+/** Masque un numéro pour les logs : 229****000 */
 function maskPhone(phone: string): string {
     if (phone.length <= 6) return '***'
     return phone.slice(0, 3) + '****' + phone.slice(-3)
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+/** Supprime les espaces, tirets, parenthèses et le signe + */
+function sanitizePhone(raw: string): string {
+    return raw.replace(/[\s\-().+]/g, '')
+}
 
-function sanitizeUser(user: UserRow) {
+/** Retourne un objet utilisateur sans champs sensibles */
+function sanitizeUser(user: UserRow): object {
     return {
         uid:         user.uid,
         email:       user.email,

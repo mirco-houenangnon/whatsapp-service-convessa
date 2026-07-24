@@ -67,7 +67,7 @@ const TABLES = [
         creds_iv      VARCHAR(32)   NOT NULL,
         creds_tag     VARCHAR(32)   NOT NULL,
         creds_data    LONGTEXT      NOT NULL,
-        phone         VARCHAR(20)   DEFAULT NULL,
+        phone         VARCHAR(50)   DEFAULT NULL,
         display_name  VARCHAR(100)  DEFAULT NULL,
         status        ENUM('active','disconnected','revoked') NOT NULL DEFAULT 'disconnected',
         connected_at  DATETIME      DEFAULT NULL,
@@ -125,6 +125,42 @@ const TABLES = [
         INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
+    // ── Appareils (empreintes clients) ───────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_devices (
+        id               INT           NOT NULL AUTO_INCREMENT,
+        fingerprint_hash VARCHAR(64)   NOT NULL COMMENT 'SHA-256 des champs stables du client',
+        first_ip         VARCHAR(45)   NOT NULL,
+        user_agent       VARCHAR(512)  DEFAULT NULL,
+        accept_language  VARCHAR(128)  DEFAULT NULL,
+        client_hints     JSON          DEFAULT NULL COMMENT 'Sec-CH-UA et autres hints navigateur',
+        first_seen_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        blocked          TINYINT(1)    NOT NULL DEFAULT 0,
+        blocked_reason   VARCHAR(255)  DEFAULT NULL,
+        registered_uid   VARCHAR(128)  DEFAULT NULL COMMENT 'FK auth_users.uid — null si pas encore inscrit',
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_fingerprint (fingerprint_hash),
+        INDEX idx_registered_uid (registered_uid),
+        INDEX idx_blocked        (blocked)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Sessions par appareil (journal de sécurité) ───────────────────────────
+    `CREATE TABLE IF NOT EXISTS auth_device_sessions (
+        id          BIGINT        NOT NULL AUTO_INCREMENT,
+        device_id   INT           NOT NULL,
+        user_uid    VARCHAR(128)  DEFAULT NULL,
+        ip          VARCHAR(45)   NOT NULL,
+        action      ENUM('register_attempt','register_success','login_attempt','login_success','login_blocked') NOT NULL,
+        provider    VARCHAR(50)   NOT NULL,
+        meta        JSON          DEFAULT NULL,
+        created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        INDEX idx_device_id  (device_id),
+        INDEX idx_user_uid   (user_uid),
+        INDEX idx_action     (action),
+        INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
     // ── Administrateurs Convessa (backoffice) ─────────────────────────────────
     `CREATE TABLE IF NOT EXISTS convessa_admins (
         id            INT           NOT NULL AUTO_INCREMENT,
@@ -170,6 +206,9 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_iv  VARCHAR(32) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_tag VARCHAR(32) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
+
+    // Agrandir le champ phone de wa_sessions pour les JID complets Baileys (ex: 2508479037570@s.whatsapp.net)
+    await pool.execute(`ALTER TABLE wa_sessions MODIFY COLUMN phone VARCHAR(50) DEFAULT NULL`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

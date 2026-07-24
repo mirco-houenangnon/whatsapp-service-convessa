@@ -1,43 +1,35 @@
 /**
  * apiKeyService.ts — Génération et vérification des clés API tenants.
  *
- * Format : wag_live_{32 bytes hex} (64 chars après le préfixe)
- * - Préfixe "wag_live_" identifie le service et l'environnement
- * - 32 bytes (256 bits) de crypto.randomBytes → 64 chars hex
- * - 256 bits d'entropie = impossible à bruteforcer
+ * Format : pk_convessa_{64 bytes hex} = 128 chars après le préfixe
+ * - Préfixe "pk_convessa_" identifie clairement Convessa
+ * - 64 bytes (512 bits) de crypto.randomBytes → 128 chars hex
  * - Stockage : SHA-256 du token en base (jamais le token brut)
- * - Hint : 8 premiers chars après le préfixe pour identification visuelle
- *
- * Référence : bonnes pratiques Stripe, GitHub, Zuplo (prefix + entropy + hash storage)
+ * - Durée de validité : 30 jours
  */
 
 import { randomBytes, createHash } from 'crypto'
 
-const PREFIX = 'wag_live_'
+const PREFIX       = 'pk_convessa_'
+const VALIDITY_MS  = 30 * 24 * 60 * 60 * 1000 // 30 jours
 
-/**
- * Génère une nouvelle clé API.
- * Retourne le token brut (à envoyer au client UNE SEULE FOIS) et le hash à stocker.
- */
 export function generateApiKey(): {
-    token:     string   // ex: wag_live_a3f8c2d1e9b4f7a0c5e2d8b1f6a3c9e4d7b0f2a5c8e1d4b7f0a3c6e9d2b5f8a1
+    token:     string   // ex: pk_convessa_a3f8c2d1...128chars
     hash:      string   // SHA-256 du token — à stocker en base
-    hint:      string   // ex: "wag_live_a3f8..." — pour affichage partiel
+    hint:      string   // ex: "pk_convessa_a3f8..." — pour affichage partiel
+    expiresAt: Date     // date d'expiration (maintenant + 30 jours)
 } {
-    const raw   = randomBytes(32).toString('hex')  // 64 chars
-    const token = `${PREFIX}${raw}`
-    const hash  = createHash('sha256').update(token).digest('hex')
-    const hint  = `${PREFIX}${raw.slice(0, 8)}...`
+    const raw      = randomBytes(64).toString('hex')  // 128 chars
+    const token    = `${PREFIX}${raw}`
+    const hash     = createHash('sha256').update(token).digest('hex')
+    const hint     = `${PREFIX}${raw.slice(0, 12)}...`
+    const expiresAt = new Date(Date.now() + VALIDITY_MS)
 
-    return { token, hash, hint }
+    return { token, hash, hint, expiresAt }
 }
 
-/**
- * Vérifie si un token fourni correspond au hash stocké.
- */
 export function verifyApiKey(token: string, storedHash: string): boolean {
     const hash = createHash('sha256').update(token).digest('hex')
-    // Comparaison en temps constant
     if (hash.length !== storedHash.length) return false
     let diff = 0
     for (let i = 0; i < hash.length; i++) {
@@ -46,10 +38,6 @@ export function verifyApiKey(token: string, storedHash: string): boolean {
     return diff === 0
 }
 
-/**
- * Extrait le tenantId depuis un token API.
- * Retourne null si le format est invalide.
- */
 export function isValidApiKeyFormat(token: string): boolean {
-    return token.startsWith(PREFIX) && token.length === PREFIX.length + 64
+    return token.startsWith(PREFIX) && token.length === PREFIX.length + 128
 }

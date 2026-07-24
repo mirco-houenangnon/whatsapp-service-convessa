@@ -24,7 +24,9 @@ import { generateApiKey }          from '../services/apiKeyService.js'
 import { useDbAuthState }          from '../db/SessionStore.js'
 import {
     getTenantById,
+    getTenantByWhatsAppJid,
     updateTenantStatus,
+    updateTenantPhone,
     setTenantApiKey,
     type Tenant,
 } from '../db/TenantStore.js'
@@ -135,22 +137,94 @@ export class TenantManager extends EventEmitter {
                     session.reconnects   = 0
                     session.phone        = sock.user?.id ?? null
 
+                    // Baileys JID format: "22990956919:19@s.whatsapp.net"
+                    // Le ":19" est le device ID — on doit l'ignorer pour avoir le vrai numéro
+                    const jidPart  = session.phone?.split('@')[0] ?? ''           // "22990956919:19"
+                    const rawPhone = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? null  // "22990956919"
+
                     logger.info(
-                        { component: 'TenantManager', tenantId, phone: maskPhone(session.phone ?? '') },
+                        { component: 'TenantManager', tenantId, phone: maskPhone(rawPhone ?? ''), jid: session.phone },
                         'Tenant connecté ✅'
                     )
 
-                    await updateTenantStatus(tenantId, 'connected')
+                    try {
+                        // ── Vérifier que ce numéro WhatsApp n'est pas déjà utilisé par un autre tenant ──
+                        if (rawPhone) {
+                            const existingTenant = await getTenantByWhatsAppJid(session.phone ?? '', tenantId)
+                            if (existingTenant) {
+                                logger.warn(
+                                    { component: 'TenantManager', tenantId, conflictTenantId: existingTenant.id, phone: maskPhone(rawPhone) },
+                                    'Numéro WhatsApp déjà actif sur un autre tenant — connexion refusée'
+                                )
+                                try { sock.end(undefined) } catch { /* ignoré */ }
+                                session.isConnected = false
+                                await updateTenantStatus(tenantId, 'disconnected')
+                                this.emit('error', tenantId, {
+                                    code:    'PHONE_ALREADY_IN_USE',
+                                    message: 'Ce numéro WhatsApp est déjà associé à un autre compte.',
+                                })
+                                return
+                            }
 
-                    // Générer la clé API
-                    const tenant = await getTenantById(tenantId)
-                    if (!tenant) return
+                            // ── Vérifier que le numéro scanné correspond au numéro attendu ──
+                            const tenantForCheck = await getTenantById(tenantId)
+                            if (tenantForCheck) {
+                                const expectedPhone = tenantForCheck.phone.replace(/[^0-9]/g, '')
 
-                    // Si première connexion (pas encore de clé API)
-                    if (!tenant.apiKeyHash) {
-                        await this._onFirstConnection(tenant, session)
-                    } else {
-                        this.emit('connected', tenantId, { phone: maskPhone(session.phone ?? '') })
+                                // Normalisation : comparer les N derniers chiffres significatifs
+                                // pour gérer les variations d'indicatif (229 vs 00229 vs +229)
+                                // On prend les 8 derniers chiffres — suffisamment discriminants
+                                // mais on s'assure que les deux ont au moins 8 chiffres
+                                const sigLen = Math.min(rawPhone.length, expectedPhone.length, 8)
+
+                                if (sigLen >= 6) {  // vérifier seulement si les deux ont au moins 6 chiffres
+                                    const scannedSuffix  = rawPhone.slice(-sigLen)
+                                    const expectedSuffix = expectedPhone.slice(-sigLen)
+
+                                    if (scannedSuffix !== expectedSuffix) {
+                                        logger.warn(
+                                            {
+                                                component:    'TenantManager',
+                                                tenantId,
+                                                expected:     maskPhone(expectedPhone),
+                                                scanned:      maskPhone(rawPhone),
+                                                scannedSuffix,
+                                                expectedSuffix,
+                                            },
+                                            'Numéro WhatsApp scanné ne correspond pas au numéro attendu — connexion refusée'
+                                        )
+                                        try { sock.end(undefined) } catch { /* ignoré */ }
+                                        session.isConnected = false
+                                        await updateTenantStatus(tenantId, 'disconnected')
+                                        this.emit('error', tenantId, {
+                                            code:    'PHONE_MISMATCH',
+                                            message: `Le compte WhatsApp scanné (${rawPhone}) ne correspond pas au numéro attendu (${expectedPhone}). Scannez le bon compte.`,
+                                        })
+                                        return
+                                    }
+                                }
+                            }
+
+                            // Mettre à jour le numéro réel du tenant
+                            await updateTenantPhone(tenantId, rawPhone)
+                        }
+
+                        await updateTenantStatus(tenantId, 'connected')
+
+                        const tenant = await getTenantById(tenantId)
+                        if (!tenant) {
+                            logger.error({ component: 'TenantManager', tenantId }, 'Tenant introuvable après connexion')
+                            return
+                        }
+
+                        if (!tenant.apiKeyHash) {
+                            await this._onFirstConnection(tenant, session)
+                        } else {
+                            this.emit('connected', tenantId, { phone: maskPhone(rawPhone ?? '') })
+                        }
+                    } catch (openErr) {
+                        logger.error({ component: 'TenantManager', tenantId, err: openErr }, 'Erreur lors du traitement connection=open')
+                        this.emit('error', tenantId, { code: 'INTERNAL_ERROR', message: 'Erreur lors de la finalisation de la connexion' })
                     }
                 }
             })
@@ -167,13 +241,15 @@ export class TenantManager extends EventEmitter {
     // ── Première connexion — génération clé API + notifications ───────────────
 
     private async _onFirstConnection(tenant: Tenant, session: TenantSession): Promise<void> {
-        const { token, hash, hint } = generateApiKey()
+        const { token, hash, hint, expiresAt } = generateApiKey()
 
-        await setTenantApiKey(tenant.id, hash, hint, token)
+        await setTenantApiKey(tenant.id, hash, hint, token, expiresAt)
 
-        logger.info({ component: 'TenantManager', tenantId: tenant.id }, 'Clé API générée')
+        logger.info(
+            { component: 'TenantManager', tenantId: tenant.id, expiresAt },
+            'Clé API pk_convessa générée'
+        )
 
-        // Notifier via webhook si configuré
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
                 event:       'tenant.connected',
@@ -181,20 +257,21 @@ export class TenantManager extends EventEmitter {
                 phone:       maskPhone(session.phone ?? ''),
                 apiKey:      token,
                 apiKeyHint:  hint,
+                expiresAt:   expiresAt.toISOString(),
                 connectedAt: new Date().toISOString(),
             })
         }
 
-        // Émettre via Socket.io — le frontend récupère la clé ici
         this.emit('connected', tenant.id, {
             phone:      maskPhone(session.phone ?? ''),
             apiKey:     token,
             apiKeyHint: hint,
+            expiresAt:  expiresAt.toISOString(),
         })
 
         logger.info(
             { component: 'TenantManager', tenantId: tenant.id, hint },
-            'Tenant activé — clé API transmise via Socket.io et webhook'
+            'Tenant activé — clé API transmise'
         )
     }
 
@@ -245,9 +322,57 @@ export class TenantManager extends EventEmitter {
         timeoutMs = 15_000
     ): Promise<void> {
         const session = this.sessions.get(tenantId)
-        if (!session?.isConnected) throw new Error('Session tenant non connectée')
+        if (!session?.isConnected || !session.sock) {
+            throw new Error('Session tenant non connectée')
+        }
 
-        await this.adminManager.sendMessage(remoteJid, text, media, timeoutMs)
+        // Envoyer depuis la session propre du tenant (pas le manager admin)
+        let sendPromise: Promise<unknown>
+
+        if (media) {
+            sendPromise = this._sendTenantMedia(session.sock, remoteJid, text, media)
+        } else if (text) {
+            sendPromise = session.sock.sendMessage(remoteJid, { text })
+        } else {
+            throw new Error('Le message doit contenir du texte ou un média')
+        }
+
+        const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout après ${timeoutMs}ms`)), timeoutMs)
+        )
+
+        await Promise.race([sendPromise, timeout])
+    }
+
+    private async _sendTenantMedia(
+        sock:      import('@whiskeysockets/baileys').WASocket,
+        remoteJid: string,
+        caption:   string | null,
+        media:     MediaPayload
+    ): Promise<unknown> {
+        let mediaData: Buffer | { url: string }
+        if (media.url) {
+            mediaData = { url: media.url }
+        } else if (media.base64) {
+            mediaData = Buffer.from(media.base64, 'base64')
+        } else {
+            throw new Error('Média sans source')
+        }
+
+        const commonOpts = caption ? { caption } : {}
+
+        switch (media.type) {
+            case 'image':
+                return sock.sendMessage(remoteJid, { image: mediaData, mimetype: media.mime, ...commonOpts })
+            case 'video':
+                return sock.sendMessage(remoteJid, { video: mediaData, mimetype: media.mime, ...commonOpts })
+            case 'audio':
+                return sock.sendMessage(remoteJid, { audio: mediaData, mimetype: media.mime, ptt: false })
+            case 'document':
+                return sock.sendMessage(remoteJid, { document: mediaData, mimetype: media.mime, fileName: media.name ?? 'fichier', ...commonOpts })
+            default:
+                throw new Error(`Type de média non supporté : ${media.type}`)
+        }
     }
 
     // ── Getters ────────────────────────────────────────────────────────────────

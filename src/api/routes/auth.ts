@@ -698,7 +698,9 @@ export function authRouter(): Router {
                 // 2. Récupérer le compte lié à cet appareil (s'il existe)
                 deviceRegisteredUid = await getDeviceRegisteredUid(fp.fingerprintHash)
             } catch (deviceErr) {
-                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+                logger.error({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — login bloqué fail-secure')
+                res.status(500).json({ success: false, error: { code: 'DEVICE_ERROR', message: 'Impossible de vérifier l\'appareil. Réessayez.' } })
+                return
             }
 
             // 3. Vérifier que le compte existe
@@ -849,7 +851,9 @@ export function authRouter(): Router {
                     return
                 }
             } catch (deviceErr) {
-                logger.warn({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — ignorée')
+                logger.error({ component: 'Auth/OTP', err: deviceErr }, 'Erreur device fingerprint — login/verify bloqué fail-secure')
+                res.status(500).json({ success: false, error: { code: 'DEVICE_ERROR', message: 'Impossible de vérifier l\'appareil. Réessayez.' } })
+                return
             }
 
             // ── Vérifier l'OTP ──────────────────────────────────────────────────

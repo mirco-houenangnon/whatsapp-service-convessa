@@ -109,7 +109,9 @@ export class SocketGateway {
             }
 
             const onTenantConnected = (tenantId: string, data: unknown) => {
-                socket.emit('tenant_connected', { tenantId, ...( typeof data === 'object' ? data : {}) })
+                // Broadcast à TOUS les clients connectés (pas seulement le socket courant)
+                // Le frontend peut avoir changé de socket pendant le temps du scan QR
+                this.io.emit('tenant_connected', { tenantId, ...( typeof data === 'object' ? data : {}) })
                 this.io.emit('tenant_status_update', { tenantId, status: 'connected', ...(typeof data === 'object' ? data : {}) })
             }
 
@@ -117,9 +119,14 @@ export class SocketGateway {
                 this.io.emit('tenant_status_update', { tenantId, status: 'disconnected', reason })
             }
 
+            const onTenantError = (tenantId: string, data: unknown) => {
+                this.io.emit('tenant_error', { tenantId, ...(typeof data === 'object' ? data : {}) })
+            }
+
             this.tenantManager.on('qr',          onTenantQr)
             this.tenantManager.on('connected',    onTenantConnected)
             this.tenantManager.on('disconnected', onTenantDisconnected)
+            this.tenantManager.on('error',        onTenantError)
 
             // ── Nettoyage à la déconnexion ───────────────────────────────────
             socket.on('disconnect', () => {
@@ -132,6 +139,7 @@ export class SocketGateway {
                 this.tenantManager.off('qr',          onTenantQr)
                 this.tenantManager.off('connected',    onTenantConnected)
                 this.tenantManager.off('disconnected', onTenantDisconnected)
+                this.tenantManager.off('error',        onTenantError)
             })
         })
 

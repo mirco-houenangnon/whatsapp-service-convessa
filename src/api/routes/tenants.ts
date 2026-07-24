@@ -1,16 +1,3 @@
-/**
- * tenants.ts — Routes de gestion des tenants.
- *
- * Toutes ces routes sont protégées par BRIDGE_API_KEY (clé admin).
- * Ce sont les routes que l'autre service (backend plateforme) appelle.
- *
- * POST   /api/v1/tenants                  → Créer un tenant + démarrer session QR
- * GET    /api/v1/tenants/:id              → Statut d'un tenant
- * GET    /api/v1/tenants/:id/qr           → QR code courant (base64 PNG)
- * DELETE /api/v1/tenants/:id              → Supprimer un tenant
- * GET    /api/v1/tenants                  → Lister tous les tenants (admin)
- */
-
 import { Router }        from 'express'
 import qrcode            from 'qrcode'
 import { requireApiKey } from '../middleware/auth.js'
@@ -19,6 +6,8 @@ import {
     createTenant,
     getTenantById,
     getTenantApiKey,
+    getTenantByUserUid,
+    getTenantByPhoneForOtherUser,
     deleteTenant,
     listTenants,
 }                        from '../../db/TenantStore.js'
@@ -52,12 +41,44 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             return
         }
 
+        const cleanUserUid = typeof userUid === 'string' && userUid.trim() ? userUid.trim() : undefined
+
         try {
+            // ── Règle : un utilisateur = une seule session WhatsApp ────────────────
+            if (cleanUserUid) {
+                const existingForUser = await getTenantByUserUid(cleanUserUid)
+                if (existingForUser) {
+                    res.status(409).json({
+                        success: false,
+                        error: {
+                            code:    'USER_ALREADY_HAS_SESSION',
+                            message: "Cet utilisateur possède déjà une session WhatsApp. Supprimez-la avant d'en créer une nouvelle.",
+                        },
+                        tenantId: existingForUser.id,
+                        status:   existingForUser.status,
+                    })
+                    return
+                }
+
+                // ── Règle : un numéro WhatsApp = un seul utilisateur ────────────────
+                const usedByOtherUser = await getTenantByPhoneForOtherUser(cleanPhone, cleanUserUid)
+                if (usedByOtherUser) {
+                    res.status(409).json({
+                        success: false,
+                        error: {
+                            code:    'PHONE_ALREADY_USED',
+                            message: 'Ce numéro WhatsApp est déjà utilisé par un autre compte.',
+                        },
+                    })
+                    return
+                }
+            }
+
             const tenant = await createTenant({
                 phone:      cleanPhone,
                 name:       typeof name === 'string' ? name.trim() : undefined,
                 webhookUrl: typeof webhookUrl === 'string' ? webhookUrl.trim() : undefined,
-                userUid:    typeof userUid === 'string' ? userUid.trim() : undefined,
+                userUid:    cleanUserUid,
             })
 
             // Démarrer la session WhatsApp pour ce tenant
@@ -204,13 +225,15 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             success: true,
             count:   tenants.length,
             tenants: tenants.map(t => ({
-                tenantId:    t.id,
-                phone:       maskPhone(t.phone),
-                name:        t.name,
-                status:      t.status,
-                apiKeyHint:  t.apiKeyHint,
-                connectedAt: t.connectedAt,
-                createdAt:   t.createdAt,
+                tenantId:          t.id,
+                userUid:           t.userUid,
+                phone:             t.phone,
+                name:              t.name,
+                status:            t.status,
+                apiKeyHint:        t.apiKeyHint,
+                apiKeyExpiresAt:   t.apiKeyExpiresAt,
+                connectedAt:       t.connectedAt,
+                createdAt:         t.createdAt,
             })),
         })
     })

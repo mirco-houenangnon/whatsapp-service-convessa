@@ -1,12 +1,4 @@
-/**
- * apiKeyService.ts — Génération et vérification des clés API tenants.
- *
- * Format : pk_convessa_{64 bytes hex} = 128 chars après le préfixe
- * - Préfixe "pk_convessa_" identifie clairement Convessa
- * - 64 bytes (512 bits) de crypto.randomBytes → 128 chars hex
- * - Stockage : SHA-256 du token en base (jamais le token brut)
- * - Durée de validité : 30 jours
- */
+
 
 import { randomBytes, createHash } from 'crypto'
 
@@ -39,5 +31,7 @@ export function verifyApiKey(token: string, storedHash: string): boolean {
 }
 
 export function isValidApiKeyFormat(token: string): boolean {
-    return token.startsWith(PREFIX) && token.length === PREFIX.length + 128
+    // Accepte pk_convessa_ (128 chars après préfixe) et wag_live_ (64 chars, legacy)
+    return (token.startsWith('pk_convessa_') && token.length === 'pk_convessa_'.length + 128)
+        || (token.startsWith('wag_live_')    && token.length === 'wag_live_'.length + 64)
 }

@@ -12,46 +12,49 @@ import type mysql from 'mysql2/promise'
 export type TenantStatus = 'pending_qr' | 'connected' | 'disconnected' | 'revoked'
 
 export interface Tenant {
-    id:          string
-    userUid:     string | null
-    phone:       string
-    name:        string | null
-    apiKeyHash:  string | null
-    apiKeyHint:  string | null
-    webhookUrl:  string | null
-    status:      TenantStatus
-    connectedAt: Date | null
-    createdAt:   Date
+    id:             string
+    userUid:        string | null
+    phone:          string
+    name:           string | null
+    apiKeyHash:     string | null
+    apiKeyHint:     string | null
+    webhookUrl:     string | null
+    status:         TenantStatus
+    connectedAt:    Date | null
+    createdAt:      Date
+    apiKeyExpiresAt: Date | null
 }
 
 interface TenantRow {
-    id:           string
-    user_uid:     string | null
-    phone:        string
-    name:         string | null
-    api_key_hash: string | null
-    api_key_hint: string | null
-    api_key_enc:  string | null
-    api_key_iv:   string | null
-    api_key_tag:  string | null
-    webhook_url:  string | null
-    status:       TenantStatus
-    connected_at: Date | null
-    created_at:   Date
+    id:                string
+    user_uid:          string | null
+    phone:             string
+    name:              string | null
+    api_key_hash:      string | null
+    api_key_hint:      string | null
+    api_key_enc:       string | null
+    api_key_iv:        string | null
+    api_key_tag:       string | null
+    webhook_url:       string | null
+    status:            TenantStatus
+    connected_at:      Date | null
+    created_at:        Date
+    api_key_expires_at: Date | null
 }
 
 function rowToTenant(row: TenantRow): Tenant {
     return {
-        id:          row.id,
-        userUid:     row.user_uid,
-        phone:       row.phone,
-        name:        row.name,
-        apiKeyHash:  row.api_key_hash,
-        apiKeyHint:  row.api_key_hint,
-        webhookUrl:  row.webhook_url,
-        status:      row.status,
-        connectedAt: row.connected_at,
-        createdAt:   row.created_at,
+        id:              row.id,
+        userUid:         row.user_uid,
+        phone:           row.phone,
+        name:            row.name,
+        apiKeyHash:      row.api_key_hash,
+        apiKeyHint:      row.api_key_hint,
+        webhookUrl:      row.webhook_url,
+        status:          row.status,
+        connectedAt:     row.connected_at,
+        createdAt:       row.created_at,
+        apiKeyExpiresAt: row.api_key_expires_at,
     }
 }
 
@@ -220,28 +223,30 @@ export async function updateTenantStatus(
  * - Hint pour l'identification visuelle
  */
 export async function setTenantApiKey(
-    id:      string,
-    hash:    string,
-    hint:    string,
-    token:   string   // clé brute — sera chiffrée avant stockage
+    id:        string,
+    hash:      string,
+    hint:      string,
+    token:     string,
+    expiresAt: Date
 ): Promise<void> {
     const pool    = getPool()
     const payload = encrypt(token, config.sessionEncryptionKey)
 
     await pool.execute(
         `UPDATE wa_tenants
-         SET api_key_hash = ?,
-             api_key_hint = ?,
-             api_key_enc  = ?,
-             api_key_iv   = ?,
-             api_key_tag  = ?,
-             status       = 'connected',
-             connected_at = CURRENT_TIMESTAMP,
-             updated_at   = CURRENT_TIMESTAMP
+         SET api_key_hash       = ?,
+             api_key_hint       = ?,
+             api_key_enc        = ?,
+             api_key_iv         = ?,
+             api_key_tag        = ?,
+             api_key_expires_at = ?,
+             status             = 'connected',
+             connected_at       = CURRENT_TIMESTAMP,
+             updated_at         = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [hash, hint, payload.data, payload.iv, payload.tag, id]
+        [hash, hint, payload.data, payload.iv, payload.tag, expiresAt, id]
     )
-    logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée (chiffrée)')
+    logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée (chiffrée, expire dans 30 jours)')
 }
 
 /**
@@ -253,7 +258,10 @@ export async function setTenantApiKey(
  */
 export async function getTenantByWhatsAppJid(jid: string, excludeId?: string): Promise<Tenant | null> {
     const pool  = getPool()
-    const phone = jid.split('@')[0]?.replace(/[^0-9]/g, '') ?? ''
+    // Baileys JID format: "22990956919:19@s.whatsapp.net"
+    // Le ":19" est le device ID — on doit l'ignorer pour avoir le vrai numéro
+    const jidPart = jid.split('@')[0]                          // "22990956919:19"
+    const phone   = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? ''  // "22990956919"
     if (!phone) return null
 
     const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(

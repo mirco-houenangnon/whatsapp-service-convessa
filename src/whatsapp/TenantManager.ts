@@ -137,47 +137,94 @@ export class TenantManager extends EventEmitter {
                     session.reconnects   = 0
                     session.phone        = sock.user?.id ?? null
 
-                    const rawPhone = session.phone?.split('@')[0]?.replace(/[^0-9]/g, '') ?? null
+                    // Baileys JID format: "22990956919:19@s.whatsapp.net"
+                    // Le ":19" est le device ID — on doit l'ignorer pour avoir le vrai numéro
+                    const jidPart  = session.phone?.split('@')[0] ?? ''           // "22990956919:19"
+                    const rawPhone = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? null  // "22990956919"
 
                     logger.info(
-                        { component: 'TenantManager', tenantId, phone: maskPhone(rawPhone ?? '') },
+                        { component: 'TenantManager', tenantId, phone: maskPhone(rawPhone ?? ''), jid: session.phone },
                         'Tenant connecté ✅'
                     )
 
-                    // ── Vérifier que ce numéro WhatsApp n'est pas déjà utilisé par un autre tenant ──
-                    if (rawPhone) {
-                        const existingTenant = await getTenantByWhatsAppJid(session.phone ?? '', tenantId)
-                        if (existingTenant) {
-                            logger.warn(
-                                { component: 'TenantManager', tenantId, conflictTenantId: existingTenant.id, phone: maskPhone(rawPhone) },
-                                'Numéro WhatsApp déjà actif sur un autre tenant — connexion refusée'
-                            )
-                            // Fermer la session immédiatement et marquer comme révoquée
-                            try { sock.end(undefined) } catch { /* ignoré */ }
-                            session.isConnected = false
-                            await updateTenantStatus(tenantId, 'disconnected')
-                            this.emit('error', tenantId, {
-                                code:    'PHONE_ALREADY_IN_USE',
-                                message: 'Ce numéro WhatsApp est déjà associé à un autre compte.',
-                            })
+                    try {
+                        // ── Vérifier que ce numéro WhatsApp n'est pas déjà utilisé par un autre tenant ──
+                        if (rawPhone) {
+                            const existingTenant = await getTenantByWhatsAppJid(session.phone ?? '', tenantId)
+                            if (existingTenant) {
+                                logger.warn(
+                                    { component: 'TenantManager', tenantId, conflictTenantId: existingTenant.id, phone: maskPhone(rawPhone) },
+                                    'Numéro WhatsApp déjà actif sur un autre tenant — connexion refusée'
+                                )
+                                try { sock.end(undefined) } catch { /* ignoré */ }
+                                session.isConnected = false
+                                await updateTenantStatus(tenantId, 'disconnected')
+                                this.emit('error', tenantId, {
+                                    code:    'PHONE_ALREADY_IN_USE',
+                                    message: 'Ce numéro WhatsApp est déjà associé à un autre compte.',
+                                })
+                                return
+                            }
+
+                            // ── Vérifier que le numéro scanné correspond au numéro attendu ──
+                            const tenantForCheck = await getTenantById(tenantId)
+                            if (tenantForCheck) {
+                                const expectedPhone = tenantForCheck.phone.replace(/[^0-9]/g, '')
+
+                                // Normalisation : comparer les N derniers chiffres significatifs
+                                // pour gérer les variations d'indicatif (229 vs 00229 vs +229)
+                                // On prend les 8 derniers chiffres — suffisamment discriminants
+                                // mais on s'assure que les deux ont au moins 8 chiffres
+                                const sigLen = Math.min(rawPhone.length, expectedPhone.length, 8)
+
+                                if (sigLen >= 6) {  // vérifier seulement si les deux ont au moins 6 chiffres
+                                    const scannedSuffix  = rawPhone.slice(-sigLen)
+                                    const expectedSuffix = expectedPhone.slice(-sigLen)
+
+                                    if (scannedSuffix !== expectedSuffix) {
+                                        logger.warn(
+                                            {
+                                                component:    'TenantManager',
+                                                tenantId,
+                                                expected:     maskPhone(expectedPhone),
+                                                scanned:      maskPhone(rawPhone),
+                                                scannedSuffix,
+                                                expectedSuffix,
+                                            },
+                                            'Numéro WhatsApp scanné ne correspond pas au numéro attendu — connexion refusée'
+                                        )
+                                        try { sock.end(undefined) } catch { /* ignoré */ }
+                                        session.isConnected = false
+                                        await updateTenantStatus(tenantId, 'disconnected')
+                                        this.emit('error', tenantId, {
+                                            code:    'PHONE_MISMATCH',
+                                            message: `Le compte WhatsApp scanné (${rawPhone}) ne correspond pas au numéro attendu (${expectedPhone}). Scannez le bon compte.`,
+                                        })
+                                        return
+                                    }
+                                }
+                            }
+
+                            // Mettre à jour le numéro réel du tenant
+                            await updateTenantPhone(tenantId, rawPhone)
+                        }
+
+                        await updateTenantStatus(tenantId, 'connected')
+
+                        const tenant = await getTenantById(tenantId)
+                        if (!tenant) {
+                            logger.error({ component: 'TenantManager', tenantId }, 'Tenant introuvable après connexion')
                             return
                         }
 
-                        // Mettre à jour le numéro réel du tenant (peut différer si création sans phone)
-                        await updateTenantPhone(tenantId, rawPhone)
-                    }
-
-                    await updateTenantStatus(tenantId, 'connected')
-
-                    // Générer la clé API
-                    const tenant = await getTenantById(tenantId)
-                    if (!tenant) return
-
-                    // Si première connexion (pas encore de clé API)
-                    if (!tenant.apiKeyHash) {
-                        await this._onFirstConnection(tenant, session)
-                    } else {
-                        this.emit('connected', tenantId, { phone: maskPhone(rawPhone ?? '') })
+                        if (!tenant.apiKeyHash) {
+                            await this._onFirstConnection(tenant, session)
+                        } else {
+                            this.emit('connected', tenantId, { phone: maskPhone(rawPhone ?? '') })
+                        }
+                    } catch (openErr) {
+                        logger.error({ component: 'TenantManager', tenantId, err: openErr }, 'Erreur lors du traitement connection=open')
+                        this.emit('error', tenantId, { code: 'INTERNAL_ERROR', message: 'Erreur lors de la finalisation de la connexion' })
                     }
                 }
             })
@@ -194,13 +241,15 @@ export class TenantManager extends EventEmitter {
     // ── Première connexion — génération clé API + notifications ───────────────
 
     private async _onFirstConnection(tenant: Tenant, session: TenantSession): Promise<void> {
-        const { token, hash, hint } = generateApiKey()
+        const { token, hash, hint, expiresAt } = generateApiKey()
 
-        await setTenantApiKey(tenant.id, hash, hint, token)
+        await setTenantApiKey(tenant.id, hash, hint, token, expiresAt)
 
-        logger.info({ component: 'TenantManager', tenantId: tenant.id }, 'Clé API générée')
+        logger.info(
+            { component: 'TenantManager', tenantId: tenant.id, expiresAt },
+            'Clé API pk_convessa générée'
+        )
 
-        // Notifier via webhook si configuré
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
                 event:       'tenant.connected',
@@ -208,20 +257,21 @@ export class TenantManager extends EventEmitter {
                 phone:       maskPhone(session.phone ?? ''),
                 apiKey:      token,
                 apiKeyHint:  hint,
+                expiresAt:   expiresAt.toISOString(),
                 connectedAt: new Date().toISOString(),
             })
         }
 
-        // Émettre via Socket.io — le frontend récupère la clé ici
         this.emit('connected', tenant.id, {
             phone:      maskPhone(session.phone ?? ''),
             apiKey:     token,
             apiKeyHint: hint,
+            expiresAt:  expiresAt.toISOString(),
         })
 
         logger.info(
             { component: 'TenantManager', tenantId: tenant.id, hint },
-            'Tenant activé — clé API transmise via Socket.io et webhook'
+            'Tenant activé — clé API transmise'
         )
     }
 

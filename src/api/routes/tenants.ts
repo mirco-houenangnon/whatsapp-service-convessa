@@ -1,5 +1,3 @@
-
-
 import { Router }        from 'express'
 import qrcode            from 'qrcode'
 import { requireApiKey } from '../middleware/auth.js'
@@ -227,14 +225,15 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             success: true,
             count:   tenants.length,
             tenants: tenants.map(t => ({
-                tenantId:    t.id,
-                userUid:     t.userUid,
-                phone:       maskPhone(t.phone),
-                name:        t.name,
-                status:      t.status,
-                apiKeyHint:  t.apiKeyHint,
-                connectedAt: t.connectedAt,
-                createdAt:   t.createdAt,
+                tenantId:          t.id,
+                userUid:           t.userUid,
+                phone:             t.phone,
+                name:              t.name,
+                status:            t.status,
+                apiKeyHint:        t.apiKeyHint,
+                apiKeyExpiresAt:   t.apiKeyExpiresAt,
+                connectedAt:       t.connectedAt,
+                createdAt:         t.createdAt,
             })),
         })
     })

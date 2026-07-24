@@ -1,5 +1,5 @@
 /**
- * tenantAuth.ts — Authentification par clé API tenant (wag_live_...).
+ * tenantAuth.ts — Authentification par clé API tenant (pk_convessa_...).
  *
  * Le développeur inclut sa clé dans le header X-Api-Key.
  * On vérifie le hash SHA-256 contre la table wa_tenants.
@@ -19,6 +19,9 @@ declare global {
     }
 }
 
+// Préfixes valides — on accepte pk_convessa_ (nouveau) et wag_live_ (legacy)
+const VALID_PREFIXES = ['pk_convessa_', 'wag_live_']
+
 export const requireTenantApiKey: RequestHandler = async (req, res, next) => {
     const raw = (req.headers['x-api-key'] as string | undefined)?.trim()
 
@@ -30,11 +33,12 @@ export const requireTenantApiKey: RequestHandler = async (req, res, next) => {
         return
     }
 
-    // Format de base : doit commencer par "wag_live_"
-    if (!raw.startsWith('wag_live_')) {
+    // Vérifier le format : doit commencer par un préfixe connu
+    const hasValidPrefix = VALID_PREFIXES.some(prefix => raw.startsWith(prefix))
+    if (!hasValidPrefix) {
         res.status(401).json({
             success: false,
-            error: { code: 'INVALID_API_KEY_FORMAT', message: 'Format de clé API invalide' },
+            error: { code: 'INVALID_API_KEY_FORMAT', message: 'Format de clé API invalide. La clé doit commencer par pk_convessa_' },
         })
         return
     }

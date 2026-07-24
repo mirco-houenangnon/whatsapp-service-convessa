@@ -160,6 +160,13 @@ async function bootstrap(): Promise<void> {
 
         gateway.setup()
 
+        // Reconnecter les sessions WhatsApp tenant qui étaient actives avant
+        // ce redémarrage (le Map en mémoire de TenantManager repart à zéro,
+        // pas les credentials Baileys persistées en base).
+        tenantManager.restoreSessions().catch((err) => {
+            logger.error({ component: 'Server', err }, 'Erreur lors de la restauration des sessions tenant')
+        })
+
         await new Promise<void>((resolve) => {
             httpServer.listen(config.port, '127.0.0.1', resolve)
         })

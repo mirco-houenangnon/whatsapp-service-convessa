@@ -116,6 +116,9 @@ export const config = {
     },
 
     logLevel: optional('LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error',
+
+    // ── Admin Backoffice ───────────────────────────────────────────────────────
+    adminJwtSecret: optional('ADMIN_JWT_SECRET', 'convessa-admin-dev-secret-change-in-prod'),
 } as const
 
 export type AppConfig = typeof config

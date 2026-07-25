@@ -1,17 +1,3 @@
-/**
- * admin.ts — Routes du backoffice administrateur Convessa.
- *
- * POST   /api/admin/login           — Connexion (email + password → JWT)
- * POST   /api/admin/logout          — Déconnexion (invalide le cookie)
- * GET    /api/admin/me              — Profil de l'admin connecté
- * PUT    /api/admin/me              — Mettre à jour son profil
- * PUT    /api/admin/me/password     — Changer son mot de passe
- *
- * GET    /api/admin/stats           — Statistiques globales
- * GET    /api/admin/tenants         — Liste des tenants
- * GET    /api/admin/users           — Liste des utilisateurs Firebase
- */
-
 import { Router }            from 'express'
 import { requireAdminAuth }  from '../middleware/adminAuth.js'
 import {
@@ -29,6 +15,17 @@ import { listUsers }         from '../../db/UserStore.js'
 import { getPool }           from '../../db/connection.js'
 import { logger }            from '../../services/logger.js'
 import { config }            from '../../config.js'
+import {
+    createReferralCode,
+    getReferralCodeByCode,
+    listReferralCodes,
+    type UsageType as ReferralUsageType,
+}                            from '../../db/ReferralCodeStore.js'
+import {
+    createSubscriptionPlan,
+    listSubscriptionPlans,
+    type UsageType as PlanUsageType,
+}                            from '../../db/SubscriptionPlanStore.js'
 
 // Durée du cookie : 24h
 const COOKIE_MAX_AGE = 24 * 60 * 60 * 1000
@@ -274,6 +271,153 @@ export function adminRouter(): Router {
             })
         } catch (err) {
             logger.error({ component: 'Admin', err }, 'Erreur list users')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── Validation commune "usage" (durée en jours OU nombre de requêtes) ──────
+    function parseUsage(body: Record<string, unknown>): {
+        ok: true
+        unlimited:  boolean
+        usageType:  'duration' | 'requests' | null
+        usageValue: number | null
+    } | { ok: false; message: string } {
+        const unlimited = body['unlimited']
+        if (typeof unlimited !== 'boolean') {
+            return { ok: false, message: 'Le champ "usage indéterminé" (Oui/Non) est requis' }
+        }
+
+        if (unlimited) {
+            return { ok: true, unlimited: true, usageType: null, usageValue: null }
+        }
+
+        const usageType = body['usageType']
+        if (usageType !== 'duration' && usageType !== 'requests') {
+            return { ok: false, message: 'Le type d\'usage doit être "duration" ou "requests"' }
+        }
+
+        const usageValueRaw = body['usageValue']
+        const usageValue = typeof usageValueRaw === 'number' ? usageValueRaw : Number(usageValueRaw)
+        if (!Number.isInteger(usageValue) || usageValue < 1) {
+            return {
+                ok: false,
+                message: usageType === 'duration'
+                    ? 'La durée (en jours) doit être un nombre entier positif'
+                    : 'Le nombre de requêtes doit être un nombre entier positif',
+            }
+        }
+
+        return { ok: true, unlimited: false, usageType, usageValue }
+    }
+
+    // ── GET /api/admin/referral-codes ─────────────────────────────────────────
+    router.get('/referral-codes', requireAdminAuth, async (_req, res) => {
+        try {
+            const codes = await listReferralCodes()
+            res.json({ success: true, count: codes.length, codes })
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur list referral codes')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── POST /api/admin/referral-codes ────────────────────────────────────────
+    router.post('/referral-codes', requireAdminAuth, async (req, res) => {
+        const body = req.body as Record<string, unknown>
+        const codeRaw = body['code']
+
+        if (typeof codeRaw !== 'string' || codeRaw.trim().length < 4 || codeRaw.trim().length > 12) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Le code doit contenir entre 4 et 12 caractères' },
+            })
+            return
+        }
+        const code = codeRaw.trim()
+
+        const usage = parseUsage(body)
+        if (!usage.ok) {
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: usage.message } })
+            return
+        }
+
+        try {
+            const existing = await getReferralCodeByCode(code)
+            if (existing) {
+                res.status(409).json({
+                    success: false,
+                    error: { code: 'CONFLICT', message: 'Ce code de parrainage existe déjà' },
+                })
+                return
+            }
+
+            const created = await createReferralCode({
+                code,
+                unlimited:  usage.unlimited,
+                usageType:  usage.usageType as ReferralUsageType | null,
+                usageValue: usage.usageValue,
+            })
+
+            res.status(201).json({ success: true, code: created })
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur création code de parrainage')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── GET /api/admin/plans ──────────────────────────────────────────────────
+    router.get('/plans', requireAdminAuth, async (_req, res) => {
+        try {
+            const plans = await listSubscriptionPlans()
+            res.json({ success: true, count: plans.length, plans })
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur list plans')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── POST /api/admin/plans ─────────────────────────────────────────────────
+    router.post('/plans', requireAdminAuth, async (req, res) => {
+        const body    = req.body as Record<string, unknown>
+        const nameRaw = body['name']
+
+        if (typeof nameRaw !== 'string' || nameRaw.trim().length < 1 || nameRaw.trim().length > 100) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Le nom du plan est requis (100 caractères max)' },
+            })
+            return
+        }
+        const name = nameRaw.trim()
+
+        const priceRaw = body['price']
+        const price = typeof priceRaw === 'number' ? priceRaw : Number(priceRaw)
+        if (!Number.isInteger(price) || price < 0 || price > 1000000) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Le prix doit être compris entre 0 et 1 000 000 Frs CFA' },
+            })
+            return
+        }
+
+        const usage = parseUsage(body)
+        if (!usage.ok) {
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: usage.message } })
+            return
+        }
+
+        try {
+            const created = await createSubscriptionPlan({
+                name,
+                price,
+                unlimited:  usage.unlimited,
+                usageType:  usage.usageType as PlanUsageType | null,
+                usageValue: usage.usageValue,
+            })
+
+            res.status(201).json({ success: true, plan: created })
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur création plan')
             res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
         }
     })

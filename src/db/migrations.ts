@@ -176,6 +176,30 @@ const TABLES = [
         UNIQUE KEY uq_email (email),
         INDEX idx_active (active)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Codes de parrainage ────────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS referral_codes (
+        id            VARCHAR(36)   NOT NULL,
+        code          VARCHAR(12)   NOT NULL,
+        unlimited     TINYINT(1)    NOT NULL DEFAULT 0,
+        usage_type    ENUM('duration','requests') DEFAULT NULL,
+        usage_value   INT           DEFAULT NULL,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_code (code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Plans d'abonnement ─────────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS subscription_plans (
+        id            VARCHAR(36)   NOT NULL,
+        name          VARCHAR(100)  NOT NULL,
+        price         INT           NOT NULL DEFAULT 0,
+        unlimited     TINYINT(1)    NOT NULL DEFAULT 0,
+        usage_type    ENUM('duration','requests') DEFAULT NULL,
+        usage_value   INT           DEFAULT NULL,
+        created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
 export async function runMigrations(): Promise<void> {

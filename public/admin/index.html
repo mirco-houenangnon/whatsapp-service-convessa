@@ -133,6 +133,19 @@
     .modal-body a:hover { text-decoration: underline; }
     .modal-footer { padding: 0.9rem 1.25rem; border-top: 1px solid #e4e6ea; display: flex; justify-content: flex-end; }
 
+    /* ── RADIO GROUP (Oui/Non, Durée/Requêtes) ── */
+    .radio-group { display: flex; gap: 1.25rem; }
+    .radio-option { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #111b21; cursor: pointer; }
+    .radio-option input { accent-color: #25D366; cursor: pointer; width: 15px; height: 15px; }
+    .conditional-fields { display: none; flex-direction: column; gap: 1rem; padding-top: 0.85rem; margin-top: 0.15rem; border-top: 1px dashed #e4e6ea; }
+    .conditional-fields.visible { display: flex; }
+    .field-hint { font-size: 0.72rem; color: #667781; }
+    .form-group select { padding: 0.55rem 0.85rem; border: 1px solid #e4e6ea; border-radius: 10px; font-size: 0.87rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none; }
+
+    /* ── USAGE BADGE ── */
+    .badge-usage { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; }
+    .badge-usage.unlimited { background: #f0faf4; color: #128C7E; }
+
     /* ── TOAST ── */
     .toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
     .toast { background: #fff; border: 1px solid #e4e6ea; border-radius: 10px; padding: 0.7rem 1rem; font-size: 0.84rem; color: #111b21; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.6rem; min-width: 240px; max-width: 340px; border-left-width: 4px; animation: toast-in 0.25s ease; }
@@ -172,6 +185,8 @@
     <nav class="header-nav">
       <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="nav-tab" data-tab="account">Mon compte</button>
+      <button class="nav-tab" data-tab="referrals">Codes de parrainage</button>
+      <button class="nav-tab" data-tab="plans">Plans d'abonnements</button>
       <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
     </nav>
 
@@ -387,6 +402,77 @@
       </div>
     </div><!-- end view-account -->
 
+    <!-- VIEW: CODES DE PARRAINAGE -->
+    <div class="view" id="view-referrals">
+      <div class="section-header">
+        <div class="section-title">Codes de parrainage</div>
+        <button class="btn-outline-green" id="newCodeBtn" style="padding:0.4rem 0.9rem;font-size:0.8rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Nouveau code
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-wrap">
+          <table id="referralCodesTable">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Usage</th>
+                <th>Créé le</th>
+              </tr>
+            </thead>
+            <tbody id="referralCodesBody">
+              <tr>
+                <td colspan="3">
+                  <div class="empty-state">Chargement…</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- end view-referrals -->
+
+    <!-- VIEW: PLANS D'ABONNEMENTS -->
+    <div class="view" id="view-plans">
+      <div class="section-header">
+        <div class="section-title">Plans d'abonnements</div>
+        <button class="btn-outline-green" id="newPlanBtn" style="padding:0.4rem 0.9rem;font-size:0.8rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="#25D366" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Nouveau plan
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-wrap">
+          <table id="plansTable">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Prix</th>
+                <th>Usage</th>
+                <th>Créé le</th>
+              </tr>
+            </thead>
+            <tbody id="plansBody">
+              <tr>
+                <td colspan="4">
+                  <div class="empty-state">Chargement…</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- end view-plans -->
+
     <!-- VIEW 3: PANEL WHATSAPP -->
     <div class="view" id="view-panel" style="padding:0;margin:-1.5rem;">
       <iframe src="/" style="width:100%;height:calc(100vh - 56px - 42px);border:none;display:block;" title="Panel WhatsApp"></iframe>
@@ -420,6 +506,115 @@
       <div class="modal-footer">
         <button class="btn-primary" id="modalCloseFooter">Fermer</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL NOUVEAU CODE DE PARRAINAGE ── -->
+  <div class="modal-overlay" id="newCodeModal" role="dialog" aria-modal="true" aria-labelledby="newCodeModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="newCodeModalTitle">Nouveau code de parrainage</span>
+        <button class="modal-close" id="newCodeCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <form id="newCodeForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="codeInput">Code</label>
+            <input type="text" id="codeInput" placeholder="ex: BIENVENUE10" minlength="4" maxlength="12" required />
+            <span class="field-hint">Entre 4 et 12 caractères.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Est-ce un code à usage indéterminé ?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="codeUnlimited" value="yes" checked /> Oui</label>
+              <label class="radio-option"><input type="radio" name="codeUnlimited" value="no" /> Non</label>
+            </div>
+          </div>
+
+          <div class="conditional-fields" id="codeUsageFields">
+            <div class="form-group">
+              <label>Utilisation</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="duration" checked /> Durée</label>
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="requests" /> Nombre de requêtes</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="codeUsageValue" id="codeUsageValueLabel">Durée (en jours)</label>
+              <input type="number" id="codeUsageValue" min="1" step="1" placeholder="ex: 30" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary" id="saveCodeBtn">
+            <div class="spinner" id="spinnerCode"></div>
+            Créer le code
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL NOUVEAU PLAN D'ABONNEMENT ── -->
+  <div class="modal-overlay" id="newPlanModal" role="dialog" aria-modal="true" aria-labelledby="newPlanModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="newPlanModalTitle">Nouveau plan d'abonnement</span>
+        <button class="modal-close" id="newPlanCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <form id="newPlanForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="planNameInput">Nom du plan</label>
+            <input type="text" id="planNameInput" placeholder="ex: Gratuit, Professionnel…" maxlength="100" required />
+          </div>
+
+          <div class="form-group">
+            <label for="planPriceInput">Prix (Frs CFA)</label>
+            <input type="number" id="planPriceInput" min="0" max="1000000" step="1" placeholder="ex: 5000" required />
+            <span class="field-hint">Entre 0 et 1 000 000 Frs CFA.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Est-ce un plan à usage indéterminé ?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="planUnlimited" value="yes" checked /> Oui</label>
+              <label class="radio-option"><input type="radio" name="planUnlimited" value="no" /> Non</label>
+            </div>
+          </div>
+
+          <div class="conditional-fields" id="planUsageFields">
+            <div class="form-group">
+              <label>Utilisation</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="planUsageType" value="duration" checked /> Durée</label>
+                <label class="radio-option"><input type="radio" name="planUsageType" value="requests" /> Nombre de requêtes</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="planUsageValue" id="planUsageValueLabel">Durée (en jours)</label>
+              <input type="number" id="planUsageValue" min="1" step="1" placeholder="ex: 30" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary" id="savePlanBtn">
+            <div class="spinner" id="spinnerPlan"></div>
+            Créer le plan
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -620,10 +815,236 @@
       if (e.target === this) closeQrModal();
     });
 
+    // ── USAGE BADGE HTML (codes de parrainage / plans) ──
+    function usageBadge(item) {
+      if (item.unlimited) {
+        return '<span class="badge-usage unlimited">Illimité</span>';
+      }
+      if (item.usageType === 'duration') {
+        return '<span class="badge-usage">' + esc(item.usageValue) + ' jour(s)</span>';
+      }
+      if (item.usageType === 'requests') {
+        return '<span class="badge-usage">' + esc(item.usageValue) + ' requête(s)</span>';
+      }
+      return '<span class="badge-usage">—</span>';
+    }
+
+    function formatPrice(price) {
+      return Number(price || 0).toLocaleString('fr-FR') + ' Frs CFA';
+    }
+
+    // ── LOAD REFERRAL CODES ──
+    async function loadReferralCodes() {
+      const tbody = document.getElementById('referralCodesBody');
+      tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Chargement…</div></td></tr>';
+      try {
+        const res = await apiFetch('/api/admin/referral-codes');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.codes) && data.codes.length > 0) {
+          tbody.innerHTML = data.codes.map(c =>
+            '<tr>' +
+            '<td class="td-name">' + esc(c.code) + '</td>' +
+            '<td>' + usageBadge(c) + '</td>' +
+            '<td>' + esc(formatDate(c.createdAt)) + '</td>' +
+            '</tr>'
+          ).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Aucun code de parrainage trouvé.</div></td></tr>';
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') {
+          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
+        }
+      }
+    }
+
+    // ── LOAD PLANS ──
+    async function loadPlans() {
+      const tbody = document.getElementById('plansBody');
+      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Chargement…</div></td></tr>';
+      try {
+        const res = await apiFetch('/api/admin/plans');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.plans) && data.plans.length > 0) {
+          tbody.innerHTML = data.plans.map(p =>
+            '<tr>' +
+            '<td class="td-name">' + esc(p.name) + '</td>' +
+            '<td>' + esc(formatPrice(p.price)) + '</td>' +
+            '<td>' + usageBadge(p) + '</td>' +
+            '<td>' + esc(formatDate(p.createdAt)) + '</td>' +
+            '</tr>'
+          ).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Aucun plan trouvé.</div></td></tr>';
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') {
+          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
+        }
+      }
+    }
+
+    // ── MODAL: NOUVEAU CODE DE PARRAINAGE ──
+    const newCodeModal      = document.getElementById('newCodeModal');
+    const newCodeForm       = document.getElementById('newCodeForm');
+    const codeUsageFields   = document.getElementById('codeUsageFields');
+    const codeUsageValue    = document.getElementById('codeUsageValue');
+    const codeUsageValueLbl = document.getElementById('codeUsageValueLabel');
+
+    function openNewCodeModal() {
+      newCodeForm.reset();
+      codeUsageFields.classList.remove('visible');
+      codeUsageValueLbl.textContent = 'Durée (en jours)';
+      newCodeModal.classList.add('open');
+    }
+    function closeNewCodeModal() { newCodeModal.classList.remove('open'); }
+
+    document.getElementById('newCodeBtn').addEventListener('click', openNewCodeModal);
+    document.getElementById('newCodeCloseBtn').addEventListener('click', closeNewCodeModal);
+    newCodeModal.addEventListener('click', (e) => { if (e.target === newCodeModal) closeNewCodeModal(); });
+
+    document.getElementsByName('codeUnlimited').forEach(radio => {
+      radio.addEventListener('change', function() {
+        codeUsageFields.classList.toggle('visible', this.value === 'no');
+      });
+    });
+    document.getElementsByName('codeUsageType').forEach(radio => {
+      radio.addEventListener('change', function() {
+        codeUsageValueLbl.textContent = this.value === 'duration' ? 'Durée (en jours)' : 'Nombre de requêtes';
+      });
+    });
+
+    newCodeForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const code      = document.getElementById('codeInput').value.trim();
+      const unlimited = document.querySelector('input[name="codeUnlimited"]:checked').value === 'yes';
+
+      if (code.length < 4 || code.length > 12) {
+        showToast('Le code doit contenir entre 4 et 12 caractères.', 'error');
+        return;
+      }
+
+      const payload = { code, unlimited };
+      if (!unlimited) {
+        const usageType = document.querySelector('input[name="codeUsageType"]:checked').value;
+        const value = parseInt(codeUsageValue.value, 10);
+        if (!Number.isInteger(value) || value < 1) {
+          showToast('Veuillez préciser une valeur valide (nombre entier positif).', 'error');
+          return;
+        }
+        payload.usageType  = usageType;
+        payload.usageValue = value;
+      }
+
+      const btn = document.getElementById('saveCodeBtn');
+      const sp  = document.getElementById('spinnerCode');
+      btn.disabled = true;
+      sp.classList.add('active');
+      try {
+        const res  = await apiFetch('/api/admin/referral-codes', { method: 'POST', body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Code de parrainage créé avec succès.', 'success');
+          closeNewCodeModal();
+          await loadReferralCodes();
+        } else {
+          showToast(data.error?.message || 'Erreur lors de la création du code.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false;
+        sp.classList.remove('active');
+      }
+    });
+
+    // ── MODAL: NOUVEAU PLAN D'ABONNEMENT ──
+    const newPlanModal      = document.getElementById('newPlanModal');
+    const newPlanForm       = document.getElementById('newPlanForm');
+    const planUsageFields   = document.getElementById('planUsageFields');
+    const planUsageValue    = document.getElementById('planUsageValue');
+    const planUsageValueLbl = document.getElementById('planUsageValueLabel');
+
+    function openNewPlanModal() {
+      newPlanForm.reset();
+      planUsageFields.classList.remove('visible');
+      planUsageValueLbl.textContent = 'Durée (en jours)';
+      newPlanModal.classList.add('open');
+    }
+    function closeNewPlanModal() { newPlanModal.classList.remove('open'); }
+
+    document.getElementById('newPlanBtn').addEventListener('click', openNewPlanModal);
+    document.getElementById('newPlanCloseBtn').addEventListener('click', closeNewPlanModal);
+    newPlanModal.addEventListener('click', (e) => { if (e.target === newPlanModal) closeNewPlanModal(); });
+
+    document.getElementsByName('planUnlimited').forEach(radio => {
+      radio.addEventListener('change', function() {
+        planUsageFields.classList.toggle('visible', this.value === 'no');
+      });
+    });
+    document.getElementsByName('planUsageType').forEach(radio => {
+      radio.addEventListener('change', function() {
+        planUsageValueLbl.textContent = this.value === 'duration' ? 'Durée (en jours)' : 'Nombre de requêtes';
+      });
+    });
+
+    newPlanForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const name      = document.getElementById('planNameInput').value.trim();
+      const price     = parseInt(document.getElementById('planPriceInput').value, 10);
+      const unlimited = document.querySelector('input[name="planUnlimited"]:checked').value === 'yes';
+
+      if (!name) {
+        showToast('Le nom du plan est requis.', 'error');
+        return;
+      }
+      if (!Number.isInteger(price) || price < 0 || price > 1000000) {
+        showToast('Le prix doit être compris entre 0 et 1 000 000 Frs CFA.', 'error');
+        return;
+      }
+
+      const payload = { name, price, unlimited };
+      if (!unlimited) {
+        const usageType = document.querySelector('input[name="planUsageType"]:checked').value;
+        const value = parseInt(planUsageValue.value, 10);
+        if (!Number.isInteger(value) || value < 1) {
+          showToast('Veuillez préciser une valeur valide (nombre entier positif).', 'error');
+          return;
+        }
+        payload.usageType  = usageType;
+        payload.usageValue = value;
+      }
+
+      const btn = document.getElementById('savePlanBtn');
+      const sp  = document.getElementById('spinnerPlan');
+      btn.disabled = true;
+      sp.classList.add('active');
+      try {
+        const res  = await apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Plan créé avec succès.', 'success');
+          closeNewPlanModal();
+          await loadPlans();
+        } else {
+          showToast(data.error?.message || 'Erreur lors de la création du plan.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false;
+        sp.classList.remove('active');
+      }
+    });
+
     // ── TAB SWITCHING ──
     const views = {
       dashboard: document.getElementById('view-dashboard'),
       account:   document.getElementById('view-account'),
+      referrals: document.getElementById('view-referrals'),
+      plans:     document.getElementById('view-plans'),
       panel:     document.getElementById('view-panel')
     };
     const mainContent = document.getElementById('mainContent');
@@ -649,6 +1070,8 @@
         if (views[target]) views[target].classList.add('active');
 
         if (target === 'account') loadProfile();
+        if (target === 'referrals') loadReferralCodes();
+        if (target === 'plans') loadPlans();
       });
     });
 

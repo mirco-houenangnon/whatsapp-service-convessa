@@ -33,6 +33,7 @@ import {
 } from '../db/TenantStore.js'
 import { WhatsAppManager }         from './WhatsAppManager.js'
 import type { MediaPayload }       from '../db/MessageQueue.js'
+import { config }                  from '../config.js'
 
 const RECONNECT_DELAYS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const
 
@@ -197,46 +198,8 @@ export class TenantManager extends EventEmitter {
                                 return
                             }
 
-                            // ── Vérifier que le numéro scanné correspond au numéro attendu ──
-                            const tenantForCheck = await getTenantById(tenantId)
-                            if (tenantForCheck) {
-                                const expectedPhone = tenantForCheck.phone.replace(/[^0-9]/g, '')
-
-                                // Normalisation : comparer les N derniers chiffres significatifs
-                                // pour gérer les variations d'indicatif (229 vs 00229 vs +229)
-                                // On prend les 8 derniers chiffres — suffisamment discriminants
-                                // mais on s'assure que les deux ont au moins 8 chiffres
-                                const sigLen = Math.min(rawPhone.length, expectedPhone.length, 8)
-
-                                if (sigLen >= 6) {  // vérifier seulement si les deux ont au moins 6 chiffres
-                                    const scannedSuffix  = rawPhone.slice(-sigLen)
-                                    const expectedSuffix = expectedPhone.slice(-sigLen)
-
-                                    if (scannedSuffix !== expectedSuffix) {
-                                        logger.warn(
-                                            {
-                                                component:    'TenantManager',
-                                                tenantId,
-                                                expected:     maskPhone(expectedPhone),
-                                                scanned:      maskPhone(rawPhone),
-                                                scannedSuffix,
-                                                expectedSuffix,
-                                            },
-                                            'Numéro WhatsApp scanné ne correspond pas au numéro attendu — connexion refusée'
-                                        )
-                                        try { sock.end(undefined) } catch { /* ignoré */ }
-                                        session.isConnected = false
-                                        await updateTenantStatus(tenantId, 'disconnected')
-                                        this.emit('error', tenantId, {
-                                            code:    'PHONE_MISMATCH',
-                                            message: `Le compte WhatsApp scanné (${rawPhone}) ne correspond pas au numéro attendu (${expectedPhone}). Scannez le bon compte.`,
-                                        })
-                                        return
-                                    }
-                                }
-                            }
-
-                            // Mettre à jour le numéro réel du tenant
+                            // Aucune saisie manuelle de numéro : le tenant scanne directement.
+                            // Le numéro réel est déduit du JID Baileys et enregistré ici.
                             await updateTenantPhone(tenantId, rawPhone)
                         }
 
@@ -345,13 +308,27 @@ export class TenantManager extends EventEmitter {
 
     // ── Envoi de message depuis la session d'un tenant ─────────────────────────
 
+    /**
+     * Envoie un message depuis la session propre du tenant.
+     *
+     * IMPORTANT — `timeoutMs` est un filet de sécurité INTERNE (par défaut
+     * `config.send.safetyTimeoutMs`, 120s) : il évite qu'une promesse Baileys
+     * bloquée ne reste ouverte indéfiniment en mémoire. Ce n'est PAS un
+     * timeout "réponse HTTP" — la route /send répond immédiatement au client
+     * et ne dépend jamais de la durée réelle de cet envoi (voir send.ts).
+     * Un média volumineux peut légitimement prendre plus de 15s à uploader ;
+     * le rendre bloquant pour le client causait de faux échecs alors que le
+     * message partait bien.
+     *
+     * Retourne l'ID du message WhatsApp (key.id) une fois réellement transmis.
+     */
     async sendMessageAsTenant(
         tenantId:  string,
         remoteJid: string,
         text:      string | null,
         media?:    MediaPayload,
-        timeoutMs = 15_000
-    ): Promise<void> {
+        timeoutMs = config.send.safetyTimeoutMs
+    ): Promise<{ waMessageId: string | null }> {
         const session = this.sessions.get(tenantId)
         if (!session?.isConnected || !session.sock) {
             throw new Error('Session tenant non connectée')
@@ -369,10 +346,124 @@ export class TenantManager extends EventEmitter {
         }
 
         const timeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout après ${timeoutMs}ms`)), timeoutMs)
+            setTimeout(() => reject(new Error(`Timeout de sécurité après ${timeoutMs}ms`)), timeoutMs)
         )
 
-        await Promise.race([sendPromise, timeout])
+        const result = await Promise.race([sendPromise, timeout]) as { key?: { id?: string | null } } | undefined
+        return { waMessageId: result?.key?.id ?? null }
+    }
+
+    // ── Groupes ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Crée un groupe WhatsApp depuis la session du tenant.
+     * Les participants dont les réglages de confidentialité empêchent l'ajout
+     * direct ("qui peut m'ajouter à des groupes") reçoivent automatiquement
+     * le lien d'invitation en message privé, plutôt que d'échouer silencieusement.
+     */
+    async createGroupAsTenant(
+        tenantId:     string,
+        name:         string,
+        participantsJid: string[]
+    ): Promise<{ groupJid: string; addedJids: string[]; invitedByLinkJids: string[] }> {
+        const session = this.sessions.get(tenantId)
+        if (!session?.isConnected || !session.sock) {
+            throw new Error('Session tenant non connectée')
+        }
+
+        const group    = await session.sock.groupCreate(name, participantsJid)
+        const groupJid = group.id
+
+        // `groupCreate` ne renvoie pas de statut par participant (contrairement à
+        // `groupParticipantsUpdate`) : on déduit les échecs par différence entre
+        // la liste demandée et la liste réellement présente dans le groupe créé.
+        const presentJids = new Set((group.participants ?? []).map(p => p.id))
+        const addedJids:  string[] = participantsJid.filter(jid => presentJids.has(jid))
+        const failedJids: string[] = participantsJid.filter(jid => !presentJids.has(jid))
+
+        // Fallback : envoyer le lien d'invitation en DM à ceux qui n'ont pas pu être ajoutés
+        const invitedByLinkJids: string[] = []
+        if (failedJids.length > 0) {
+            try {
+                const code = await session.sock.groupInviteCode(groupJid)
+                if (!code) throw new Error('Code d\'invitation introuvable')
+                const link = `https://chat.whatsapp.com/${code}`
+                for (const jid of failedJids) {
+                    try {
+                        await session.sock.sendMessage(jid, {
+                            text: `Vous avez été invité(e) au groupe "${name}". Rejoignez via ce lien : ${link}`,
+                        })
+                        invitedByLinkJids.push(jid)
+                    } catch (err) {
+                        logger.warn({ component: 'TenantManager', tenantId, jid, err }, 'Impossible d\'envoyer le lien d\'invitation par DM')
+                    }
+                }
+            } catch (err) {
+                logger.warn({ component: 'TenantManager', tenantId, err }, 'Impossible de générer le lien d\'invitation pour le fallback')
+            }
+        }
+
+        logger.info(
+            { component: 'TenantManager', tenantId, groupJid, added: addedJids.length, invitedByLink: invitedByLinkJids.length },
+            'Groupe WhatsApp créé'
+        )
+
+        return { groupJid, addedJids, invitedByLinkJids }
+    }
+
+    /**
+     * Récupère (ou génère) le code d'invitation d'un groupe.
+     */
+    async getGroupInviteCode(tenantId: string, groupJid: string): Promise<string> {
+        const session = this.sessions.get(tenantId)
+        if (!session?.isConnected || !session.sock) {
+            throw new Error('Session tenant non connectée')
+        }
+        const code = await session.sock.groupInviteCode(groupJid)
+        if (!code) throw new Error('Code d\'invitation introuvable')
+        return code
+    }
+
+    /**
+     * Ajoute des participants à un groupe existant. Retourne, comme à la
+     * création, la liste de ceux ajoutés directement et ceux à relancer par lien.
+     */
+    async addGroupParticipants(
+        tenantId:        string,
+        groupJid:        string,
+        participantsJid: string[]
+    ): Promise<{ addedJids: string[]; invitedByLinkJids: string[] }> {
+        const session = this.sessions.get(tenantId)
+        if (!session?.isConnected || !session.sock) {
+            throw new Error('Session tenant non connectée')
+        }
+
+        const results = await session.sock.groupParticipantsUpdate(groupJid, participantsJid, 'add')
+
+        const addedJids: string[]  = []
+        const failedJids: string[] = []
+        for (const r of results) {
+            if (!r.jid) continue
+            if (r.status === '200') addedJids.push(r.jid)
+            else failedJids.push(r.jid)
+        }
+
+        const invitedByLinkJids: string[] = []
+        if (failedJids.length > 0) {
+            try {
+                const code = await session.sock.groupInviteCode(groupJid)
+                if (!code) throw new Error('Code d\'invitation introuvable')
+                const link = `https://chat.whatsapp.com/${code}`
+                for (const jid of failedJids) {
+                    try {
+                        await session.sock.sendMessage(jid, { text: `Voici le lien pour rejoindre le groupe : ${link}` })
+                        invitedByLinkJids.push(jid)
+                    } catch { /* ignoré */ }
+                }
+            } catch { /* ignoré */ }
+        }
+
+        return { addedJids, invitedByLinkJids }
     }
 
     private async _sendTenantMedia(

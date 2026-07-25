@@ -103,6 +103,33 @@ export const config = {
         maxRetry:   optionalInt('MAX_RETRY_ATTEMPTS', 3),
     },
 
+    // ── URL publique du service (utilisée dans la doc Swagger, les liens, etc.) ──
+    publicUrl: optional('PUBLIC_URL', `http://127.0.0.1:${optionalInt('PORT', 3005)}`),
+
+    // ── Rate limiting ──────────────────────────────────────────────────────────
+    rateLimit: {
+        max:      optionalInt('RATE_LIMIT_MAX', 60),        // requêtes max / fenêtre
+        windowMs: optionalInt('RATE_LIMIT_WINDOW_MS', 60_000), // fenêtre en ms
+    },
+
+    // ── Clé API tenant ─────────────────────────────────────────────────────────
+    apiKey: {
+        validityDays: optionalInt('API_KEY_VALIDITY_DAYS', 30),
+    },
+
+    // ── Envoi de messages tenant (/api/v1/send) ───────────────────────────────
+    send: {
+        // Filet de sécurité interne — n'est PLUS renvoyé comme erreur au client :
+        // /send répond immédiatement, ce timeout ne fait qu'éviter qu'une
+        // promesse Baileys bloquée ne reste ouverte indéfiniment en mémoire.
+        safetyTimeoutMs: optionalInt('SEND_SAFETY_TIMEOUT_MS', 120_000),
+    },
+
+    // ── QR code tenant ─────────────────────────────────────────────────────────
+    qr: {
+        expiresInSec: optionalInt('QR_EXPIRES_IN_SEC', 60),
+    },
+
     alert: alertConfig,
 
     // ── Firebase Auth ──────────────────────────────────────────────────────────

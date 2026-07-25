@@ -60,8 +60,8 @@ Client → POST /api/v1/auth/verify  (Bearer idToken) ou GET /api/v1/auth/me
     },
     servers: [
         {
-            url:         `http://127.0.0.1:${config.port}`,
-            description: 'Serveur local',
+            url:         config.publicUrl,
+            description: config.isProd ? 'Serveur de production' : 'Serveur local',
         },
     ],
 

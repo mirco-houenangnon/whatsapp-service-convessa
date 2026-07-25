@@ -1,9 +1,10 @@
 
 
 import { randomBytes, createHash } from 'crypto'
+import { config } from '../config.js'
 
 const PREFIX       = 'pk_convessa_'
-const VALIDITY_MS  = 30 * 24 * 60 * 60 * 1000 // 30 jours
+const VALIDITY_MS  = config.apiKey.validityDays * 24 * 60 * 60 * 1000
 
 export function generateApiKey(): {
     token:     string   // ex: pk_convessa_a3f8c2d1...128chars

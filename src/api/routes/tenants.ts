@@ -29,7 +29,6 @@ import {
     getTenantById,
     getTenantApiKey,
     getTenantByUserUid,
-    getTenantByPhoneForOtherUser,
     deleteTenant,
     listTenants,
 }                               from '../../db/TenantStore.js'
@@ -45,25 +44,15 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
     // ═══════════════════════════════════════════════════════════════════════
 
     // ── POST /api/v1/tenants — créer SA session ───────────────────────────────
+    // Aucun numéro n'est demandé ici : le tenant scanne directement son QR,
+    // le vrai numéro WhatsApp est déduit automatiquement du compte scanné
+    // (voir TenantManager._initSession → updateTenantPhone).
     router.post('/tenants', rateLimit, requireFirebaseAuth, async (req, res) => {
         const userUid = req.firebaseUser!.uid
 
-        const { phone, name, webhookUrl } = req.body as {
-            phone?:      unknown
+        const { name, webhookUrl } = req.body as {
             name?:       unknown
             webhookUrl?: unknown
-        }
-
-        if (!phone || typeof phone !== 'string' || !phone.trim()) {
-            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "Le champ 'phone' est requis (numéro international)" } })
-            return
-        }
-
-        const cleanPhone = phone.trim().replace(/[\s\-()]/g, '').replace(/^\+/, '')
-
-        if (!/^\d{7,15}$/.test(cleanPhone)) {
-            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Format de numéro invalide — indicatif international requis (ex: 22994119476)' } })
-            return
         }
 
         try {
@@ -82,18 +71,7 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
                 return
             }
 
-            // ── Règle : un numéro WhatsApp = un seul utilisateur ────────────────
-            const usedByOtherUser = await getTenantByPhoneForOtherUser(cleanPhone, userUid)
-            if (usedByOtherUser) {
-                res.status(409).json({
-                    success: false,
-                    error: { code: 'PHONE_ALREADY_USED', message: 'Ce numéro WhatsApp est déjà utilisé par un autre compte.' },
-                })
-                return
-            }
-
             const tenant = await createTenant({
-                phone:      cleanPhone,
                 name:       typeof name === 'string' ? name.trim() : undefined,
                 webhookUrl: typeof webhookUrl === 'string' ? webhookUrl.trim() : undefined,
                 userUid,

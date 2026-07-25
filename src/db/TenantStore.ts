@@ -14,7 +14,8 @@ export type TenantStatus = 'pending_qr' | 'connected' | 'disconnected' | 'revoke
 export interface Tenant {
     id:             string
     userUid:        string | null
-    phone:          string
+    /** null tant que le tenant n'a pas encore scanné son QR code */
+    phone:          string | null
     name:           string | null
     apiKeyHash:     string | null
     apiKeyHint:     string | null
@@ -28,7 +29,7 @@ export interface Tenant {
 interface TenantRow {
     id:                string
     user_uid:          string | null
-    phone:             string
+    phone:             string | null
     name:              string | null
     api_key_hash:      string | null
     api_key_hint:      string | null
@@ -76,9 +77,12 @@ export function decryptApiKey(row: TenantRow): string | null {
 
 /**
  * Crée un nouveau tenant lié optionnellement à un user Firebase.
+ *
+ * Le téléphone n'est JAMAIS fourni ici : il est inconnu jusqu'au scan du QR.
+ * `TenantManager` le renseigne automatiquement (via `updateTenantPhone`) en
+ * lisant le JID réel renvoyé par Baileys à la connexion.
  */
 export async function createTenant(data: {
-    phone:       string
     name?:       string
     webhookUrl?: string
     userUid?:    string   // FK vers auth_users.uid
@@ -88,14 +92,11 @@ export async function createTenant(data: {
 
     await pool.execute(
         `INSERT INTO wa_tenants (id, phone, name, webhook_url, user_uid, status)
-         VALUES (?, ?, ?, ?, ?, 'pending_qr')`,
-        [id, data.phone, data.name ?? null, data.webhookUrl ?? null, data.userUid ?? null]
+         VALUES (?, NULL, ?, ?, ?, 'pending_qr')`,
+        [id, data.name ?? null, data.webhookUrl ?? null, data.userUid ?? null]
     )
 
-    logger.info(
-        { component: 'TenantStore', tenantId: id, phone: maskPhone(data.phone) },
-        'Tenant créé'
-    )
+    logger.info({ component: 'TenantStore', tenantId: id }, 'Tenant créé (sans numéro — en attente de scan)')
 
     const tenant = await getTenantById(id)
     if (!tenant) throw new Error('Tenant introuvable après création')

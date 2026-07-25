@@ -54,6 +54,10 @@ export interface DeviceSessionRow {
  */
 export function extractFingerprint(req: Request, extraClientData?: Record<string, string>): DeviceFingerprint {
 
+    // Machine hash envoyé par le frontend (canvas + WebGL + screen + timezone + GPU)
+    // Stable entre navigateurs sur la même machine
+    const machineHash = req.headers['x-machine-hash']?.toString()?.trim() ?? null
+
     const ip            = getClientIp(req)
     const userAgent     = req.headers['user-agent']?.slice(0, 512)     ?? null
     const acceptLang    = req.headers['accept-language']?.slice(0, 128) ?? null
@@ -70,23 +74,31 @@ export function extractFingerprint(req: Request, extraClientData?: Record<string
     if (chMobile)   clientHints['mobile']   = chMobile
     if (chBrowser)  clientHints['browser']  = chBrowser
     if (chArch)     clientHints['arch']     = chArch
+    if (machineHash) clientHints['machineHash'] = machineHash
     if (extraClientData) Object.assign(clientHints, extraClientData)
 
-    // Construire l'empreinte à partir des champs stables
-    // On exclut l'IP seule pour éviter les FP sur IP dynamique
-    const fingerprintSource = [
-        userAgent  ?? '',
-        acceptLang ?? '',
-        acceptEnc  ?? '',
-        chPlatform ?? '',
-        chMobile   ?? '',
-        chBrowser  ?? '',
-        chArch     ?? '',
-    ].join('|')
+    // Si le frontend a envoyé un machine hash (cross-browser fingerprint),
+    // on l'utilise directement comme fingerprintHash — c'est le signal le plus
+    // fiable car basé sur GPU/canvas/écran/timezone, stable entre navigateurs.
+    // Sinon, fallback sur les headers HTTP (moins stable entre navigateurs).
+    let fingerprintHash: string
+    if (machineHash && /^[0-9a-f]{16,}$/i.test(machineHash)) {
+        fingerprintHash = machineHash
+    } else {
+        const fingerprintSource = [
+            userAgent  ?? '',
+            acceptLang ?? '',
+            acceptEnc  ?? '',
+            chPlatform ?? '',
+            chMobile   ?? '',
+            chBrowser  ?? '',
+            chArch     ?? '',
+        ].join('|')
 
-    const fingerprintHash = createHash('sha256')
-        .update(fingerprintSource)
-        .digest('hex')
+        fingerprintHash = createHash('sha256')
+            .update(fingerprintSource)
+            .digest('hex')
+    }
 
     return {
         fingerprintHash,

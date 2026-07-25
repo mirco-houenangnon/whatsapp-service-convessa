@@ -82,7 +82,7 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
                 logger.error({ component: 'API', tenantId: tenant.id, err }, 'Erreur création session tenant')
             })
 
-            logger.info({ component: 'API', tenantId: tenant.id, userUid, phone: maskPhone(cleanPhone) }, 'Tenant créé (self-service)')
+            logger.info({ component: 'API', tenantId: tenant.id, userUid }, 'Tenant créé (self-service)')
 
             res.status(201).json({
                 success:  true,

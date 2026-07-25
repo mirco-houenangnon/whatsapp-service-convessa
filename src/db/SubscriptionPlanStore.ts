@@ -95,3 +95,15 @@ export async function listSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     )
     return (rows as SubscriptionPlanRow[]).map(rowToPlan)
 }
+
+/**
+ * Liste les plans d'abonnement pour affichage public (page tarifs du site).
+ * Triés par prix croissant — pas d'authentification requise pour cette route.
+ */
+export async function listPublicPlans(): Promise<SubscriptionPlan[]> {
+    const pool   = getPool()
+    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
+        'SELECT * FROM subscription_plans ORDER BY price ASC, created_at ASC'
+    )
+    return (rows as SubscriptionPlanRow[]).map(rowToPlan)
+}

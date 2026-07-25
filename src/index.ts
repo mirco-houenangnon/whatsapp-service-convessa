@@ -1,16 +1,3 @@
-/**
- * index.ts — Point d'entrée du service WhatsApp Gateway.
- *
- * Séquence de démarrage :
- *   1. Valider la configuration (.env)
- *   2. Tester la connexion MySQL
- *   3. Exécuter les migrations (CREATE TABLE IF NOT EXISTS)
- *   4. Démarrer Express + Socket.io
- *   5. Initialiser WhatsAppManager (numéro admin — fixe)
- *   6. Initialiser TenantManager (sessions multi-tenant)
- *   7. Démarrer le QueueProcessor (worker FIFO)
- *   8. Firebase Admin SDK (auth multiplateforme)
- */
 
 import express           from 'express'
 import { createServer }  from 'http'
@@ -37,6 +24,8 @@ import { authRouter }      from './api/routes/auth.js'
 import { docsRouter }      from './api/routes/docs.js'
 import { adminRouter }     from './api/routes/admin.js'
 import { sendRouter }      from './api/routes/send.js'
+import { plansRouter } from './api/routes/plans.js'
+ 
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -54,7 +43,7 @@ const io = new Server(httpServer, {
 })
 
 // ── Middlewares globaux ───────────────────────────────────────────────────────
-
+app.use('/api/v1/plans', plansRouter())
 app.use(helmet({
     // Cross-Origin-Opener-Policy doit être 'unsafe-none' pour permettre aux
     // popups Firebase OAuth (Google, GitHub) de communiquer avec la fenêtre parente.

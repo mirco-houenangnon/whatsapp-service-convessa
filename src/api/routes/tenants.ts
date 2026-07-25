@@ -82,7 +82,7 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
                 logger.error({ component: 'API', tenantId: tenant.id, err }, 'Erreur création session tenant')
             })
 
-            logger.info({ component: 'API', tenantId: tenant.id, userUid, phone: maskPhone(cleanPhone) }, 'Tenant créé (self-service)')
+            logger.info({ component: 'API', tenantId: tenant.id, userUid }, 'Tenant créé (self-service) — téléphone en attente de scan')
 
             res.status(201).json({
                 success:  true,
@@ -138,7 +138,23 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             return
         }
 
-        const rawQr = tenantManager.getLastQr(tenant.id)
+        let rawQr = tenantManager.getLastQr(tenant.id)
+
+        // Si pas de QR en mémoire et la session n'est pas active, la (re)lancer.
+        // Cela couvre : redémarrage du serveur, session pending_qr non restaurée,
+        // ou premier appel trop rapide après POST /tenants.
+        if (!rawQr && !tenantManager.isConnected(tenant.id)) {
+            tenantManager.createSession(tenant.id).catch((err) => {
+                logger.error({ component: 'API', tenantId: tenant.id, err }, 'Erreur (re)lancement session tenant depuis /me/qr')
+            })
+            res.status(202).json({
+                success: false,
+                status:  'pending_qr',
+                message: 'Session en cours de démarrage — le QR arrivera via Socket.io dans 2-5 secondes.',
+            })
+            return
+        }
+
         if (!rawQr) {
             res.status(202).json({
                 success: false,
@@ -161,6 +177,54 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         } catch (err) {
             logger.error({ component: 'API', err }, 'Erreur génération QR')
             res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur génération QR' } })
+        }
+    })
+
+    // ── POST /api/v1/tenants/me/activate — génère MA clé API (après QR scanné) ─
+    // Appelée par le frontend juste après que l'utilisateur ait répondu au
+    // prompt "possédez-vous un code de parrainage ?" (avec ou sans code).
+    // Sans code → les privilèges du plan gratuit (price = 0) sont appliqués.
+    router.post('/tenants/me/activate', rateLimit, requireFirebaseAuth, async (req, res) => {
+        const tenant = await getTenantByUserUid(req.firebaseUser!.uid)
+
+        if (!tenant) {
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Aucune session WhatsApp liée à ce compte' } })
+            return
+        }
+
+        if (tenant.status !== 'connected') {
+            res.status(409).json({
+                success: false,
+                error: { code: 'SESSION_NOT_CONNECTED', message: 'Scannez d\'abord votre QR code avant d\'activer votre session' },
+            })
+            return
+        }
+
+        const { referralCode } = req.body as { referralCode?: unknown }
+        const code = typeof referralCode === 'string' && referralCode.trim() ? referralCode.trim() : null
+
+        try {
+            const { token, hint, expiresAt } = await tenantManager.activateTenant(tenant.id, code)
+            res.json({
+                success:         true,
+                tenantId:        tenant.id,
+                apiKey:          token,
+                apiKeyHint:      hint,
+                apiKeyExpiresAt: expiresAt ? expiresAt.toISOString() : null,
+            })
+        } catch (err: unknown) {
+            const e = err as { code?: string; message?: string }
+
+            if (e.code === 'INVALID_REFERRAL_CODE') {
+                res.status(400).json({ success: false, error: { code: 'INVALID_REFERRAL_CODE', message: 'Code de parrainage invalide ou introuvable' } })
+                return
+            }
+            if (e.code === 'ALREADY_ACTIVATED') {
+                res.status(409).json({ success: false, error: { code: 'ALREADY_ACTIVATED', message: 'Cette session possède déjà une clé API' } })
+                return
+            }
+            logger.error({ component: 'API', err }, 'Erreur activation tenant (code de parrainage)')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de l\'activation de la session' } })
         }
     })
 

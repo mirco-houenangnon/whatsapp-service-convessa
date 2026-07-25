@@ -21,13 +21,14 @@ import { EventEmitter } from 'events'
 
 import { logger, maskPhone }       from '../services/logger.js'
 import { generateApiKey }          from '../services/apiKeyService.js'
+import { resolveTenantPrivileges, ReferralCodeError } from '../services/tenantPrivileges.js'
 import { useDbAuthState }          from '../db/SessionStore.js'
 import {
     getTenantById,
     getTenantByWhatsAppJid,
     updateTenantStatus,
     updateTenantPhone,
-    setTenantApiKey,
+    setTenantApiKeyWithPrivileges,
     listTenants,
     type Tenant,
 } from '../db/TenantStore.js'
@@ -232,41 +233,96 @@ export class TenantManager extends EventEmitter {
         }
     }
 
-    // ── Première connexion — génération clé API + notifications ───────────────
+    // ── Première connexion — QR scanné avec succès ─────────────────────────────
+    // On NE génère PLUS la clé API automatiquement ici : le frontend doit
+    // d'abord demander à l'utilisateur s'il possède un code de parrainage
+    // (modal) puis appeler activateTenant() (via POST /api/v1/tenants/me/activate).
+    // On signale simplement au frontend que la connexion WhatsApp a réussi et
+    // qu'elle est "en attente d'activation".
 
     private async _onFirstConnection(tenant: Tenant, session: TenantSession): Promise<void> {
-        const { token, hash, hint, expiresAt } = generateApiKey()
+        logger.info(
+            { component: 'TenantManager', tenantId: tenant.id },
+            'QR scanné avec succès — en attente d\'activation (code de parrainage éventuel)'
+        )
 
-        await setTenantApiKey(tenant.id, hash, hint, token, expiresAt)
+        this.emit('connected', tenant.id, {
+            phone:              maskPhone(session.phone ?? ''),
+            awaitingActivation: true,
+        })
+    }
+
+    // ── Activation — appelée une fois que l'utilisateur a répondu au prompt ────
+    // "possédez-vous un code de parrainage ?" (avec ou sans code). Calcule les
+    // privilèges d'utilisation (illimité / durée / quota de messages) puis
+    // génère la clé API définitive.
+
+    async activateTenant(tenantId: string, referralCode?: string | null): Promise<{
+        token:     string
+        hint:      string
+        expiresAt: Date | null
+    }> {
+        const tenant = await getTenantById(tenantId)
+        if (!tenant) {
+            throw Object.assign(new Error('Tenant introuvable'), { code: 'TENANT_NOT_FOUND' })
+        }
+        if (tenant.apiKeyHash) {
+            // Idempotence : ne jamais régénérer/écraser une clé déjà émise.
+            throw Object.assign(new Error('Cette session possède déjà une clé API'), { code: 'ALREADY_ACTIVATED' })
+        }
+
+        let privileges
+        try {
+            privileges = await resolveTenantPrivileges(referralCode)
+        } catch (err) {
+            if (err instanceof ReferralCodeError) {
+                throw Object.assign(new Error(err.message), { code: 'INVALID_REFERRAL_CODE' })
+            }
+            throw err
+        }
+
+        const { token, hash, hint } = generateApiKey()
+        const trimmedCode = referralCode?.trim() || null
+
+        await setTenantApiKeyWithPrivileges(tenant.id, hash, hint, token, privileges, trimmedCode)
 
         logger.info(
-            { component: 'TenantManager', tenantId: tenant.id, expiresAt },
-            'Clé API pk_convessa générée'
+            {
+                component: 'TenantManager', tenantId: tenant.id,
+                usageType: privileges.usageType, messagesLimit: privileges.messagesLimit,
+                expiresAt: privileges.expiresAt, referralCode: trimmedCode,
+            },
+            'Tenant activé — clé API générée avec privilèges'
         )
+
+        const session     = this.sessions.get(tenantId)
+        const phoneToMask = session?.phone ?? tenant.phone ?? ''
+        const expiresIso  = privileges.expiresAt ? privileges.expiresAt.toISOString() : null
 
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
                 event:           'tenant.connected',
                 tenantId:        tenant.id,
-                phone:           maskPhone(session.phone ?? ''),
+                phone:           maskPhone(phoneToMask),
                 apiKey:          token,
                 apiKeyHint:      hint,
-                apiKeyExpiresAt: expiresAt.toISOString(),
+                apiKeyExpiresAt: expiresIso,
+                usageType:       privileges.usageType,
+                messagesLimit:   privileges.messagesLimit,
                 connectedAt:     new Date().toISOString(),
             })
         }
 
         this.emit('connected', tenant.id, {
-            phone:           maskPhone(session.phone ?? ''),
+            phone:           maskPhone(phoneToMask),
             apiKey:          token,
             apiKeyHint:      hint,
-            apiKeyExpiresAt: expiresAt.toISOString(),
+            apiKeyExpiresAt: expiresIso,
+            usageType:       privileges.usageType,
+            messagesLimit:   privileges.messagesLimit,
         })
 
-        logger.info(
-            { component: 'TenantManager', tenantId: tenant.id, hint },
-            'Tenant activé — clé API transmise'
-        )
+        return { token, hint, expiresAt: privileges.expiresAt }
     }
 
     // ── Webhook ────────────────────────────────────────────────────────────────

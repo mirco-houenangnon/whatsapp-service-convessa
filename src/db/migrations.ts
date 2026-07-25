@@ -283,5 +283,16 @@ export async function runMigrations(): Promise<void> {
     // le scan du QR (le tenant ne saisit plus jamais de numéro manuellement).
     await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
 
+    // ── Privilèges d'utilisation (code de parrainage ou plan gratuit) ─────────
+    // usage_type      : 'unlimited' (aucune limite), 'duration' (expire à une date —
+    //                    stockée dans api_key_expires_at) ou 'requests' (quota de messages).
+    // messages_limit  : nombre de messages autorisés si usage_type = 'requests' (sinon NULL).
+    // messages_sent   : compteur de messages déjà envoyés (incrémenté à chaque /send).
+    // referral_code   : code de parrainage utilisé à l'activation, pour traçabilité (sinon NULL).
+    await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS usage_type ENUM('unlimited','duration','requests') NOT NULL DEFAULT 'unlimited'`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_limit INT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_sent INT NOT NULL DEFAULT 0`).catch(() => {})
+    await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS referral_code VARCHAR(12) DEFAULT NULL`).catch(() => {})
+
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

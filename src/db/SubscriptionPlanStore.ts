@@ -107,3 +107,17 @@ export async function listPublicPlans(): Promise<SubscriptionPlan[]> {
     )
     return (rows as SubscriptionPlanRow[]).map(rowToPlan)
 }
+
+/**
+ * Récupère le plan gratuit (price = 0) — utilisé pour attribuer les
+ * privilèges par défaut à un tenant qui s'active SANS code de parrainage.
+ * S'il existe plusieurs plans à 0, on prend le plus ancien.
+ */
+export async function getFreePlan(): Promise<SubscriptionPlan | null> {
+    const pool   = getPool()
+    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
+        'SELECT * FROM subscription_plans WHERE price = 0 ORDER BY created_at ASC LIMIT 1'
+    )
+    const row = rows[0]
+    return row ? rowToPlan(row) : null
+}

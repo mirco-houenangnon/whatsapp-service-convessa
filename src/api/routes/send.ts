@@ -43,6 +43,8 @@ import {
     listLoggedMessagesForTenant,
 }                               from '../../db/MessageLogStore.js'
 import { getTenantGroupById }  from '../../db/GroupStore.js'
+import { incrementMessagesSent } from '../../db/TenantStore.js'
+import { isTenantSendingAllowed } from '../../services/tenantPrivileges.js'
 import type { MediaPayload, MediaType } from '../../db/MessageQueue.js'
 
 const PHONE_REGEX        = /^[+\d\s\-()]+$/
@@ -247,6 +249,21 @@ export function sendRouter(tenantManager: TenantManager): Router {
             return
         }
 
+        // ── Privilèges d'utilisation (durée ou quota de messages) ────────────
+        // Bloque tout envoi dès que la clé est expirée (usage_type = 'duration')
+        // ou que le quota de messages est atteint (usage_type = 'requests').
+        const access = isTenantSendingAllowed(tenant)
+        if (!access.allowed) {
+            res.status(403).json({
+                success: false,
+                error: {
+                    code:    access.code ?? 'ACCESS_DENIED',
+                    message: access.message ?? "Envoi de messages non autorisé pour cette session. Renouvelez votre abonnement.",
+                },
+            })
+            return
+        }
+
         // ── Créer le journal + lancer l'envoi en arrière-plan pour chaque destinataire ──
         const results: { to: string; messageId: string; toType: 'contact' | 'group' }[] = []
 
@@ -259,6 +276,13 @@ export function sendRouter(tenantManager: TenantManager): Router {
                 hasMedia:  !!mediaPayload,
                 mediaType: mediaPayload?.type ?? null,
             })
+
+            // Compteur uniquement pertinent pour les privilèges basés sur un
+            // quota de messages ('requests') — inoffensif dans les autres cas,
+            // mais on évite l'écriture DB inutile pour 'unlimited'/'duration'.
+            if (tenant.usageType === 'requests') {
+                await incrementMessagesSent(tenant.id)
+            }
 
             dispatchInBackground(messageId, tenant.id, tenant.phone, jid, messageTrimmed ?? null, mediaPayload, tenant.webhookUrl)
             results.push({ to: jid, messageId, toType })

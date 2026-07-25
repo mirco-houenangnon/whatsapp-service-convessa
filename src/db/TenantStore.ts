@@ -11,6 +11,15 @@ import type mysql from 'mysql2/promise'
 
 export type TenantStatus = 'pending_qr' | 'connected' | 'disconnected' | 'revoked'
 
+/**
+ * Type de privilège d'utilisation accordé au tenant (code de parrainage ou
+ * plan gratuit) au moment de l'activation :
+ *   - unlimited : aucune limite, ni durée ni quota
+ *   - duration  : la clé expire à apiKeyExpiresAt
+ *   - requests  : la clé est valable pour messagesLimit messages (voir messagesSent)
+ */
+export type TenantUsageType = 'unlimited' | 'duration' | 'requests'
+
 export interface Tenant {
     id:             string
     userUid:        string | null
@@ -24,6 +33,10 @@ export interface Tenant {
     connectedAt:    Date | null
     createdAt:      Date
     apiKeyExpiresAt: Date | null
+    usageType:      TenantUsageType
+    messagesLimit:  number | null
+    messagesSent:   number
+    referralCode:   string | null
 }
 
 interface TenantRow {
@@ -41,6 +54,10 @@ interface TenantRow {
     connected_at:      Date | null
     created_at:        Date
     api_key_expires_at: Date | null
+    usage_type:        TenantUsageType
+    messages_limit:    number | null
+    messages_sent:     number
+    referral_code:     string | null
 }
 
 function rowToTenant(row: TenantRow): Tenant {
@@ -56,6 +73,10 @@ function rowToTenant(row: TenantRow): Tenant {
         connectedAt:     row.connected_at,
         createdAt:       row.created_at,
         apiKeyExpiresAt: row.api_key_expires_at,
+        usageType:       row.usage_type ?? 'unlimited',
+        messagesLimit:   row.messages_limit,
+        messagesSent:    row.messages_sent ?? 0,
+        referralCode:    row.referral_code,
     }
 }
 
@@ -248,6 +269,83 @@ export async function setTenantApiKey(
         [hash, hint, payload.data, payload.iv, payload.tag, expiresAt, id]
     )
     logger.info({ component: 'TenantStore', tenantId: id }, 'Clé API enregistrée (chiffrée, expire dans 30 jours)')
+}
+
+/**
+ * Privilèges d'utilisation à appliquer lors de la génération de la clé API
+ * (calculés depuis un code de parrainage ou le plan gratuit — voir
+ * services/tenantPrivileges.ts).
+ */
+export interface TenantPrivileges {
+    usageType:     TenantUsageType
+    /** Nombre de messages autorisés — uniquement si usageType = 'requests' */
+    messagesLimit: number | null
+    /** Date d'expiration de la clé — uniquement si usageType = 'duration' */
+    expiresAt:     Date | null
+}
+
+/**
+ * Enregistre la clé API d'un tenant AVEC ses privilèges d'utilisation
+ * (code de parrainage ou plan gratuit). Remplace l'ancien comportement où
+ * la date d'expiration était toujours fixée à 30 jours : désormais,
+ * `expiresAt` ne représente une expiration réelle que pour usageType = 'duration'
+ * (NULL pour 'unlimited' et 'requests', ce dernier étant borné par messagesLimit).
+ * - Hash SHA-256 pour la vérification des requêtes
+ * - Chiffrement AES-256-GCM pour pouvoir la réafficher au tenant
+ * - Hint pour l'identification visuelle
+ */
+export async function setTenantApiKeyWithPrivileges(
+    id:          string,
+    hash:        string,
+    hint:        string,
+    token:       string,
+    privileges:  TenantPrivileges,
+    referralCode: string | null = null,
+): Promise<void> {
+    const pool    = getPool()
+    const payload = encrypt(token, config.sessionEncryptionKey)
+
+    await pool.execute(
+        `UPDATE wa_tenants
+         SET api_key_hash       = ?,
+             api_key_hint       = ?,
+             api_key_enc        = ?,
+             api_key_iv         = ?,
+             api_key_tag        = ?,
+             api_key_expires_at = ?,
+             usage_type         = ?,
+             messages_limit     = ?,
+             messages_sent      = 0,
+             referral_code      = ?,
+             status             = 'connected',
+             connected_at       = CURRENT_TIMESTAMP,
+             updated_at         = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+            hash, hint, payload.data, payload.iv, payload.tag,
+            privileges.expiresAt,
+            privileges.usageType,
+            privileges.messagesLimit,
+            referralCode,
+            id,
+        ]
+    )
+    logger.info(
+        { component: 'TenantStore', tenantId: id, usageType: privileges.usageType, expiresAt: privileges.expiresAt, messagesLimit: privileges.messagesLimit },
+        'Clé API enregistrée avec privilèges d\'utilisation'
+    )
+}
+
+/**
+ * Incrémente le compteur de messages envoyés par un tenant (uniquement
+ * pertinent pour usageType = 'requests', mais inoffensif dans les autres cas).
+ */
+export async function incrementMessagesSent(id: string): Promise<void> {
+    const pool = getPool()
+    await pool.execute(
+        `UPDATE wa_tenants SET messages_sent = messages_sent + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [id]
+    )
 }
 
 /**

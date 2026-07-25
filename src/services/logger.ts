@@ -34,7 +34,7 @@ export const logger = pino(
  *   "+33612345678"  → "+336XXXXXX78"
  *   "22997123456"   → "229XXXXX56"
  */
-export function maskPhone(phone: string): string {
+export function maskPhone(phone: string | null | undefined): string {
     if (!phone) return '—'
     const clean = phone.replace(/\s/g, '')
     if (clean.length <= 4) return clean

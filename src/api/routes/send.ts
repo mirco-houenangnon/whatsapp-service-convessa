@@ -1,17 +1,32 @@
 /**
  * send.ts — Route d'envoi de messages depuis la session WhatsApp d'un tenant.
  *
- * Authentification : clé API tenant (X-Api-Key: wag_live_...)
+ * Authentification : clé API tenant (X-Api-Key: pk_convessa_...)
  * La clé identifie le tenant = l'émetteur WhatsApp.
- * Le développeur précise uniquement le destinataire (to) et le contenu.
  *
  * POST /api/v1/send
- * Body: { to: "22960000000", message?: "...", media?: { type, mime, url|base64, name? } }
+ * Body: {
+ *   to: "22960000000" | ["22960000000", "22961111111"] | "<groupId>",
+ *   message?: "...",
+ *   media?: { type, mime, url|base64, name? }
+ * }
  *
- * Différence avec /api/v1/messages/send :
- *   - Authentification par clé tenant (pas la clé Bridge globale)
- *   - Envoi depuis la session WhatsApp propre du tenant
- *   - Le destinataire `to` est obligatoire
+ * ── Comportement (important) ──────────────────────────────────────────────
+ * La route répond IMMÉDIATEMENT (202, statut "queued") sans attendre la fin
+ * réelle de l'envoi Baileys. Pour un média volumineux (vidéo, document),
+ * l'upload vers WhatsApp peut prendre plus de temps qu'un aller-retour HTTP
+ * raisonnable — attendre ce délai avant de répondre provoquait de faux
+ * signalements d'échec ("timeout") alors que le message finissait par partir.
+ *
+ * Le statut réel (sent / failed) est ensuite notifié de façon fiable par :
+ *   - Socket.io : événement `message_status` { tenantId, messageId, status, ... }
+ *   - Webhook   : si le tenant en a configuré un (event: "message.sent" / "message.failed")
+ *   - Polling   : GET /api/v1/messages/:id (self-service, clé tenant)
+ *
+ * `to` peut être :
+ *   - un numéro (contact)
+ *   - un tableau de numéros → un message indépendant est envoyé à chacun (broadcast)
+ *   - un `groupId` (celui renvoyé par POST /api/v1/groups) → envoi dans le groupe
  */
 
 import { Router }              from 'express'
@@ -20,74 +35,86 @@ import { rateLimit }           from '../middleware/rateLimit.js'
 import { TenantManager }       from '../../whatsapp/TenantManager.js'
 import { validateMedia, getMediaRules } from '../../services/mediaValidator.js'
 import { logger, maskPhone }   from '../../services/logger.js'
-import { config }              from '../../config.js'
+import {
+    createLoggedMessage,
+    markMessageSent,
+    markMessageFailed,
+    getLoggedMessageById,
+    listLoggedMessagesForTenant,
+}                               from '../../db/MessageLogStore.js'
+import { getTenantGroupById }  from '../../db/GroupStore.js'
 import type { MediaPayload, MediaType } from '../../db/MessageQueue.js'
 
 const PHONE_REGEX        = /^[+\d\s\-()]+$/
 const VALID_MEDIA_TYPES: MediaType[] = ['image', 'video', 'audio', 'document']
+const MAX_BROADCAST_RECIPIENTS = 50
 
 function sanitizePhone(raw: string): string {
     return raw.replace(/[\s\-()]/g, '').replace(/^\+/, '')
 }
 
+// Un groupId interne est un UUID v4 (jamais un numéro de téléphone)
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export function sendRouter(tenantManager: TenantManager): Router {
     const router = Router()
 
+    // ── Callback commun : exécute réellement l'envoi en arrière-plan ──────────
+    // et met à jour le journal + notifie Socket.io/webhook une fois résolu.
+    function dispatchInBackground(
+        messageId: string,
+        tenantId:  string,
+        tenantPhone: string | null,
+        remoteJid: string,
+        text:      string | null,
+        media:     MediaPayload | undefined,
+        webhookUrl: string | null,
+    ): void {
+        tenantManager.sendMessageAsTenant(tenantId, remoteJid, text, media)
+            .then(async ({ waMessageId }) => {
+                await markMessageSent(messageId, waMessageId)
+                logger.info(
+                    { component: 'SendRoute', tenantId, messageId, from: maskPhone(tenantPhone), to: maskPhone(remoteJid) },
+                    'Message tenant envoyé (confirmé)'
+                )
+                tenantManager.emit('message_status', tenantId, {
+                    messageId, status: 'sent', to: remoteJid, waMessageId,
+                })
+                notifyWebhook(webhookUrl, { event: 'message.sent', messageId, tenantId, to: remoteJid, waMessageId })
+            })
+            .catch(async (err) => {
+                const message = err instanceof Error ? err.message : String(err)
+                await markMessageFailed(messageId, 'SEND_ERROR', message)
+                logger.error({ component: 'SendRoute', tenantId, messageId, err }, 'Échec envoi message tenant (confirmé)')
+                tenantManager.emit('message_status', tenantId, {
+                    messageId, status: 'failed', to: remoteJid, error: message,
+                })
+                notifyWebhook(webhookUrl, { event: 'message.failed', messageId, tenantId, to: remoteJid, error: message })
+            })
+    }
+
+    function notifyWebhook(url: string | null, payload: unknown): void {
+        if (!url) return
+        import('https').then(({ request }) => {
+            try {
+                const body   = JSON.stringify(payload)
+                const urlObj = new URL(url)
+                const req = request({
+                    hostname: urlObj.hostname,
+                    port:     urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+                    path:     urlObj.pathname + urlObj.search,
+                    method:   'POST',
+                    headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+                    timeout:  10_000,
+                }, () => { /* réponse ignorée — fire and forget */ })
+                req.on('error', (err) => logger.warn({ component: 'SendRoute', url, err }, 'Erreur webhook message'))
+                req.write(body)
+                req.end()
+            } catch { /* ignoré */ }
+        }).catch(() => {})
+    }
+
     // ── POST /api/v1/send ──────────────────────────────────────────────────────
-    /**
-     * @swagger
-     * /api/v1/send:
-     *   post:
-     *     tags: [Envoi Tenant]
-     *     summary: Envoyer un message depuis votre compte WhatsApp
-     *     description: |
-     *       Authentifiez-vous avec votre clé API tenant (X-Api-Key).
-     *       Le message sera envoyé depuis le numéro WhatsApp que vous avez scanné.
-     *       Le champ `to` (destinataire) est toujours obligatoire.
-     *     security:
-     *       - tenantApiKey: []
-     *     requestBody:
-     *       required: true
-     *       content:
-     *         application/json:
-     *           schema:
-     *             type: object
-     *             required: [to]
-     *             properties:
-     *               to:
-     *                 type: string
-     *                 description: Numéro du destinataire (indicatif international, sans +)
-     *                 example: "22960000000"
-     *               message:
-     *                 type: string
-     *                 description: Texte du message (max 4096 caractères)
-     *               media:
-     *                 type: object
-     *                 properties:
-     *                   type: { type: string, enum: [image, video, audio, document] }
-     *                   mime: { type: string, example: "image/jpeg" }
-     *                   url:  { type: string, description: "URL publique du média" }
-     *                   base64: { type: string, description: "Données base64 du média" }
-     *                   name:   { type: string, description: "Nom du fichier (documents)" }
-     *     responses:
-     *       202:
-     *         description: Message mis en file d'attente
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 success:   { type: boolean }
-     *                 messageId: { type: string }
-     *                 from:      { type: string, description: "Numéro émetteur masqué" }
-     *                 to:        { type: string, description: "Numéro destinataire masqué" }
-     *       401:
-     *         description: Clé API invalide ou manquante
-     *       403:
-     *         description: Session WhatsApp déconnectée
-     *       503:
-     *         description: Session tenant non connectée
-     */
     router.post('/send', rateLimit, requireTenantApiKey, async (req, res) => {
         const tenant = req.tenant!
         const body   = req.body as {
@@ -96,21 +123,47 @@ export function sendRouter(tenantManager: TenantManager): Router {
             media?:   unknown
         }
 
-        // ── Validation de 'to' ────────────────────────────────────────────────
-        if (!body.to || typeof body.to !== 'string' || !body.to.trim()) {
+        // ── Validation de 'to' — contact, tableau de contacts, ou groupId ───────
+        if (!body.to || (typeof body.to !== 'string' && !Array.isArray(body.to))) {
             res.status(400).json({
                 success: false,
-                error: { code: 'VALIDATION_ERROR', message: "Le champ 'to' (destinataire) est obligatoire" },
+                error: { code: 'VALIDATION_ERROR', message: "Le champ 'to' est obligatoire (numéro, tableau de numéros, ou groupId)" },
             })
             return
         }
 
-        if (!PHONE_REGEX.test(body.to.trim())) {
+        const toList: string[] = Array.isArray(body.to) ? body.to.map(String) : [body.to]
+
+        if (toList.length === 0) {
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "'to' ne peut pas être vide" } })
+            return
+        }
+        if (toList.length > MAX_BROADCAST_RECIPIENTS) {
             res.status(400).json({
                 success: false,
-                error: { code: 'VALIDATION_ERROR', message: "Format du numéro 'to' invalide — indicatif international requis (ex: 22960000000)" },
+                error: { code: 'VALIDATION_ERROR', message: `Maximum ${MAX_BROADCAST_RECIPIENTS} destinataires par envoi. Espacez vos appels pour des volumes plus importants.` },
             })
             return
+        }
+
+        // Résoudre chaque entrée de `to` en JID réel (contact ou groupe)
+        const resolved: { jid: string; toType: 'contact' | 'group' }[] = []
+        for (const raw of toList) {
+            const trimmed = String(raw).trim()
+            if (UUID_REGEX.test(trimmed)) {
+                const group = await getTenantGroupById(tenant.id, trimmed)
+                if (!group) {
+                    res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: `Groupe '${trimmed}' introuvable ou n'appartenant pas à ce compte` } })
+                    return
+                }
+                resolved.push({ jid: group.waGroupJid, toType: 'group' })
+            } else {
+                if (!PHONE_REGEX.test(trimmed)) {
+                    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: `Numéro invalide : '${trimmed}' — indicatif international requis` } })
+                    return
+                }
+                resolved.push({ jid: `${sanitizePhone(trimmed)}@s.whatsapp.net`, toType: 'contact' })
+            }
         }
 
         // ── Validation de 'message' ───────────────────────────────────────────
@@ -118,25 +171,16 @@ export function sendRouter(tenantManager: TenantManager): Router {
 
         if (body.message !== undefined && body.message !== null) {
             if (typeof body.message !== 'string') {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "'message' doit être une chaîne de caractères" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "'message' doit être une chaîne de caractères" } })
                 return
             }
             messageTrimmed = body.message.trim()
             if (!messageTrimmed) {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "Le message ne peut pas être vide" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Le message ne peut pas être vide' } })
                 return
             }
             if (messageTrimmed.length > 4096) {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "Le message ne peut pas dépasser 4096 caractères" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Le message ne peut pas dépasser 4096 caractères' } })
                 return
             }
         }
@@ -146,27 +190,18 @@ export function sendRouter(tenantManager: TenantManager): Router {
 
         if (body.media !== undefined && body.media !== null) {
             if (typeof body.media !== 'object' || Array.isArray(body.media)) {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "'media' doit être un objet" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "'media' doit être un objet" } })
                 return
             }
 
             const m = body.media as Record<string, unknown>
 
             if (!m['type'] || !VALID_MEDIA_TYPES.includes(m['type'] as MediaType)) {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: `'media.type' invalide. Valeurs acceptées : ${VALID_MEDIA_TYPES.join(', ')}` },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: `'media.type' invalide. Valeurs acceptées : ${VALID_MEDIA_TYPES.join(', ')}` } })
                 return
             }
             if (!m['mime'] || typeof m['mime'] !== 'string') {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "'media.mime' est requis (ex: 'image/jpeg')" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "'media.mime' est requis (ex: 'image/jpeg')" } })
                 return
             }
 
@@ -174,10 +209,7 @@ export function sendRouter(tenantManager: TenantManager): Router {
             const hasBase64 = typeof m['base64'] === 'string' && (m['base64'] as string).trim().length > 0
 
             if (!hasUrl && !hasBase64) {
-                res.status(400).json({
-                    success: false,
-                    error: { code: 'VALIDATION_ERROR', message: "'media' doit contenir 'url' ou 'base64'" },
-                })
+                res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "'media' doit contenir 'url' ou 'base64'" } })
                 return
             }
 
@@ -201,12 +233,8 @@ export function sendRouter(tenantManager: TenantManager): Router {
             }
         }
 
-        // ── Doit avoir au moins message ou média ──────────────────────────────
         if (!messageTrimmed && !mediaPayload) {
-            res.status(400).json({
-                success: false,
-                error: { code: 'VALIDATION_ERROR', message: "La requête doit contenir au moins 'message' ou 'media'" },
-            })
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "La requête doit contenir au moins 'message' ou 'media'" } })
             return
         }
 
@@ -214,60 +242,45 @@ export function sendRouter(tenantManager: TenantManager): Router {
         if (!tenantManager.isConnected(tenant.id)) {
             res.status(503).json({
                 success: false,
-                error: {
-                    code:    'SESSION_NOT_CONNECTED',
-                    message: 'Votre session WhatsApp n\'est pas connectée. Scannez le QR code depuis votre dashboard.',
-                },
+                error: { code: 'SESSION_NOT_CONNECTED', message: "Votre session WhatsApp n'est pas connectée. Scannez le QR code depuis votre dashboard." },
             })
             return
         }
 
-        // ── Envoi ─────────────────────────────────────────────────────────────
-        try {
-            const recipient = sanitizePhone(body.to.trim())
-            const remoteJid = `${recipient}@s.whatsapp.net`
+        // ── Créer le journal + lancer l'envoi en arrière-plan pour chaque destinataire ──
+        const results: { to: string; messageId: string; toType: 'contact' | 'group' }[] = []
 
-            await tenantManager.sendMessageAsTenant(
-                tenant.id,
-                remoteJid,
-                messageTrimmed ?? null,
-                mediaPayload,
-            )
-
-            logger.info(
-                {
-                    component: 'SendRoute',
-                    tenantId:  tenant.id,
-                    from:      maskPhone(tenant.phone),
-                    to:        maskPhone(recipient),
-                    hasMedia:  !!mediaPayload,
-                },
-                'Message envoyé via session tenant'
-            )
-
-            res.status(202).json({
-                success:  true,
-                sent:     true,
-                from:     maskPhone(tenant.phone),
-                to:       maskPhone(recipient),
-                message:  messageTrimmed ?? null,
-                hasMedia: !!mediaPayload,
+        for (const { jid, toType } of resolved) {
+            const messageId = await createLoggedMessage({
+                tenantId:  tenant.id,
+                toJid:     jid,
+                toType,
+                message:   messageTrimmed ?? null,
+                hasMedia:  !!mediaPayload,
+                mediaType: mediaPayload?.type ?? null,
             })
 
-        } catch (err) {
-            logger.error({ component: 'SendRoute', tenantId: tenant.id, err }, 'Erreur envoi message tenant')
-            res.status(500).json({
-                success: false,
-                error: {
-                    code:    'SEND_ERROR',
-                    message: config.isProd ? 'Erreur lors de l\'envoi' : (err instanceof Error ? err.message : String(err)),
-                },
-            })
+            dispatchInBackground(messageId, tenant.id, tenant.phone, jid, messageTrimmed ?? null, mediaPayload, tenant.webhookUrl)
+            results.push({ to: jid, messageId, toType })
         }
+
+        logger.info(
+            { component: 'SendRoute', tenantId: tenant.id, from: maskPhone(tenant.phone), count: results.length, hasMedia: !!mediaPayload },
+            'Message(s) tenant accepté(s) — envoi en cours'
+        )
+
+        // ── Réponse immédiate — ne dépend jamais de la durée réelle de l'envoi ──
+        res.status(202).json({
+            success:  true,
+            status:   'queued',
+            from:     maskPhone(tenant.phone),
+            messages: results,
+            // Rétro-compatibilité pour un envoi simple à un seul destinataire
+            ...(results.length === 1 ? { messageId: results[0]?.messageId, to: results[0]?.to } : {}),
+        })
     })
 
     // ── GET /api/v1/send/info ─────────────────────────────────────────────────
-    // Retourne les infos de la session liée à cette clé API
     router.get('/send/info', requireTenantApiKey, async (req, res) => {
         const tenant = req.tenant!
         res.json({
@@ -278,6 +291,54 @@ export function sendRouter(tenantManager: TenantManager): Router {
             connected:   tenantManager.isConnected(tenant.id),
             connectedAt: tenant.connectedAt,
             mediaLimits: getMediaRules(),
+        })
+    })
+
+    // ── GET /api/v1/send/status/:id — statut d'un message précis (polling) ────
+    // (chemin distinct de GET /api/v1/messages/:id, réservé à l'admin dans messages.ts)
+    router.get('/send/status/:id', requireTenantApiKey, async (req, res) => {
+        const tenant = req.tenant!
+        const msg    = await getLoggedMessageById(req.params['id'] as string)
+
+        if (!msg || msg.tenantId !== tenant.id) {
+            res.status(404).json({ success: false, error: { code: 'MESSAGE_NOT_FOUND', message: 'Message introuvable' } })
+            return
+        }
+
+        res.json({
+            success:      true,
+            messageId:    msg.id,
+            status:       msg.status,
+            to:           msg.toJid,
+            toType:       msg.toType,
+            hasMedia:     msg.hasMedia,
+            errorCode:    msg.errorCode,
+            errorMessage: msg.errorMessage,
+            waMessageId:  msg.waMessageId,
+            createdAt:    msg.createdAt,
+            sentAt:       msg.sentAt,
+        })
+    })
+
+    // ── GET /api/v1/send/history — historique des messages du tenant ──────────
+    router.get('/send/history', requireTenantApiKey, async (req, res) => {
+        const tenant  = req.tenant!
+        const limit   = parseInt(String(req.query['limit'] ?? '50'), 10)
+        const history = await listLoggedMessagesForTenant(tenant.id, isNaN(limit) ? 50 : limit)
+
+        res.json({
+            success: true,
+            count:   history.length,
+            messages: history.map(m => ({
+                messageId: m.id,
+                to:        m.toJid,
+                toType:    m.toType,
+                status:    m.status,
+                hasMedia:  m.hasMedia,
+                errorCode: m.errorCode,
+                createdAt: m.createdAt,
+                sentAt:    m.sentAt,
+            })),
         })
     })
 

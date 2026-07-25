@@ -7,8 +7,8 @@
 import type { RequestHandler } from 'express'
 import { config }              from '../../config.js'
 
-const RATE_LIMIT_MAX    = 60    // requêtes max par fenêtre
-const RATE_LIMIT_WINDOW = 60_000 // fenêtre de 60 secondes
+const RATE_LIMIT_MAX    = config.rateLimit.max      // requêtes max par fenêtre
+const RATE_LIMIT_WINDOW = config.rateLimit.windowMs // fenêtre en ms
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 

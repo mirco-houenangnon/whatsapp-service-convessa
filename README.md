@@ -1,3 +1,18 @@
+1- 1 machine = 1 compte (Diègue)
+2- 1 numéro ayant déjà été scanné ne peut plus être scanné avec une session active (Diègue)
+3- couper la saisie du numéro avant scannage. (Mirco)
+5-pouvoir copier les choses depuis la documentation (Maurel)
+6- abonnements : par nombre de message / temps d'utilisation (A définir et ensuite Diègue) 
+7- Gestion des codes promos et de parrainage (uac et autre) et surtout voir comment bloquer l'utilisation du code de parrainage. (Diègue)
+8- à l'entrée, utiliser le plan gratuit pendant une durée à déterminer (Diègue)
+9-envoyer message dans groupe existant + envoyer en une seule fois à x personnes simultanées + créer le groupe avant d'envoyer + gérer les lien avant d'intégrer dans groupe (Mirco)
+10- mettre tout ce qui est changeable en variable dans un fichier (Mirco)
+11- api à intégrer par les dev (Mirco)
+12- gérer les messages d'erreur sur le fonctionnement de la plateforme (Mirco)
+
+
+
+
 # WhatsApp Gateway
 
 Service Node.js/TypeScript — API REST générique pour envoyer des messages WhatsApp,

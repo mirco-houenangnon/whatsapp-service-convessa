@@ -42,7 +42,7 @@ const TABLES = [
     `CREATE TABLE IF NOT EXISTS wa_tenants (
         id            VARCHAR(36)   NOT NULL,
         user_uid      VARCHAR(128)  DEFAULT NULL COMMENT 'FK vers auth_users.uid',
-        phone         VARCHAR(30)   NOT NULL,
+        phone         VARCHAR(30)   DEFAULT NULL COMMENT 'Rempli automatiquement depuis le JID Baileys apres scan du QR - jamais saisi par l utilisateur',
         name          VARCHAR(100)  DEFAULT NULL,
         api_key_hash  VARCHAR(64)   DEFAULT NULL   COMMENT 'SHA-256 pour vérification',
         api_key_hint  VARCHAR(60)   DEFAULT NULL   COMMENT 'Préfixe visible ex: pk_convessa_a3f8...',
@@ -162,6 +162,48 @@ const TABLES = [
         INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
+    // ── Groupes WhatsApp créés par les tenants ────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS wa_groups (
+        id                       VARCHAR(36)   NOT NULL,
+        tenant_id                VARCHAR(36)   NOT NULL,
+        wa_group_jid             VARCHAR(60)   NOT NULL COMMENT 'ex: 120363...@g.us',
+        name                     VARCHAR(150)  NOT NULL,
+        invite_code              VARCHAR(50)   DEFAULT NULL,
+        invite_code_generated_at DATETIME      DEFAULT NULL,
+        participants_count       INT           NOT NULL DEFAULT 0,
+        status                   ENUM('active','deleted') NOT NULL DEFAULT 'active',
+        created_at               DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at               DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_tenant_group_name (tenant_id, name),
+        UNIQUE KEY uq_tenant_group_jid  (tenant_id, wa_group_jid),
+        INDEX idx_tenant (tenant_id),
+        CONSTRAINT fk_wa_groups_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Journal des messages envoyés par les tenants (self-service /send) ─────
+    `CREATE TABLE IF NOT EXISTS wa_messages (
+        id             VARCHAR(36)   NOT NULL,
+        tenant_id      VARCHAR(36)   NOT NULL,
+        to_jid         VARCHAR(60)   NOT NULL,
+        to_type        ENUM('contact','group') NOT NULL DEFAULT 'contact',
+        message        TEXT          DEFAULT NULL,
+        has_media      TINYINT(1)    NOT NULL DEFAULT 0,
+        media_type     ENUM('image','video','audio','document') DEFAULT NULL,
+        status         ENUM('queued','sent','delivered','failed') NOT NULL DEFAULT 'queued',
+        error_code     VARCHAR(50)   DEFAULT NULL,
+        error_message  TEXT          DEFAULT NULL,
+        wa_message_id  VARCHAR(100)  DEFAULT NULL COMMENT 'ID retourné par Baileys (key.id) une fois réellement transmis',
+        created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        sent_at        DATETIME      DEFAULT NULL,
+        updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        INDEX idx_tenant (tenant_id),
+        INDEX idx_status (status),
+        INDEX idx_created_at (created_at),
+        CONSTRAINT fk_wa_messages_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
     // ── Administrateurs Convessa (backoffice) ─────────────────────────────────
     `CREATE TABLE IF NOT EXISTS convessa_admins (
         id            INT           NOT NULL AUTO_INCREMENT,
@@ -236,6 +278,10 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_sessions MODIFY COLUMN phone VARCHAR(50) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN api_key_hint VARCHAR(60) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_expires_at DATETIME DEFAULT NULL`).catch(() => {})
+
+    // Téléphone désormais optionnel à la création — rempli automatiquement après
+    // le scan du QR (le tenant ne saisit plus jamais de numéro manuellement).
+    await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

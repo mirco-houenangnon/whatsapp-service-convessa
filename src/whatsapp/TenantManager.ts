@@ -28,6 +28,7 @@ import {
     updateTenantStatus,
     updateTenantPhone,
     setTenantApiKey,
+    listTenants,
     type Tenant,
 } from '../db/TenantStore.js'
 import { WhatsAppManager }         from './WhatsAppManager.js'
@@ -74,6 +75,36 @@ export class TenantManager extends EventEmitter {
 
         await updateTenantStatus(tenantId, 'pending_qr')
         await this._initSession(tenantId, 0)
+    }
+
+    // ── Restauration des sessions au démarrage du serveur ──────────────────────
+    // Le Map `sessions` est en mémoire et vide à chaque redémarrage du process.
+    // Sans cet appel, `isConnected()` renvoie false pour tous les tenants même
+    // si leur statut en base est 'connected' et que leurs credentials Baileys
+    // sont toujours valides — d'où un 503 SESSION_NOT_CONNECTED trompeur sur
+    // /api/v1/send juste après un redéploiement/redémarrage.
+    // _initSession() réutilise les credentials persistées (useDbAuthState) :
+    // la reconnexion se fait silencieusement, sans générer de nouveau QR.
+
+    async restoreSessions(): Promise<void> {
+        const tenants = await listTenants()
+        const toRestore = tenants.filter(t => t.status === 'connected')
+
+        if (toRestore.length === 0) {
+            logger.info({ component: 'TenantManager' }, 'Aucune session tenant à restaurer')
+            return
+        }
+
+        logger.info(
+            { component: 'TenantManager', count: toRestore.length },
+            'Restauration des sessions tenant connectées...'
+        )
+
+        for (const tenant of toRestore) {
+            this._initSession(tenant.id, 0).catch((err) => {
+                logger.error({ component: 'TenantManager', tenantId: tenant.id, err }, 'Erreur restauration session tenant')
+            })
+        }
     }
 
     // ── Initialisation interne d'une session ───────────────────────────────────
@@ -252,21 +283,21 @@ export class TenantManager extends EventEmitter {
 
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
-                event:       'tenant.connected',
-                tenantId:    tenant.id,
-                phone:       maskPhone(session.phone ?? ''),
-                apiKey:      token,
-                apiKeyHint:  hint,
-                expiresAt:   expiresAt.toISOString(),
-                connectedAt: new Date().toISOString(),
+                event:           'tenant.connected',
+                tenantId:        tenant.id,
+                phone:           maskPhone(session.phone ?? ''),
+                apiKey:          token,
+                apiKeyHint:      hint,
+                apiKeyExpiresAt: expiresAt.toISOString(),
+                connectedAt:     new Date().toISOString(),
             })
         }
 
         this.emit('connected', tenant.id, {
-            phone:      maskPhone(session.phone ?? ''),
-            apiKey:     token,
-            apiKeyHint: hint,
-            expiresAt:  expiresAt.toISOString(),
+            phone:           maskPhone(session.phone ?? ''),
+            apiKey:          token,
+            apiKeyHint:      hint,
+            apiKeyExpiresAt: expiresAt.toISOString(),
         })
 
         logger.info(

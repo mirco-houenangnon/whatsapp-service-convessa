@@ -1,7 +1,29 @@
-import { Router }        from 'express'
-import qrcode            from 'qrcode'
-import { requireApiKey } from '../middleware/auth.js'
-import { rateLimit }     from '../middleware/rateLimit.js'
+/**
+ * tenants.ts — Gestion des tenants (sessions WhatsApp des clients Convessa).
+ *
+ * ── Self-service (le tenant lui-même) — Authentification : Firebase Bearer token ──
+ *   POST   /api/v1/tenants           → Créer sa propre session (userUid = req.firebaseUser.uid)
+ *   GET    /api/v1/tenants/me        → Ma session
+ *   GET    /api/v1/tenants/me/qr     → Mon QR code courant
+ *   GET    /api/v1/tenants/me/api-key→ Ma clé API complète déchiffrée
+ *   DELETE /api/v1/tenants/me        → Déconnecter / supprimer ma session
+ *
+ * ── Backoffice (les devs Convessa) — Authentification : clé Bridge (X-Api-Key) ──
+ *   GET    /api/v1/tenants           → Lister tous les tenants (téléphone masqué)
+ *   GET    /api/v1/tenants/:id       → Détail d'un tenant
+ *   DELETE /api/v1/tenants/:id       → Supprimer un tenant
+ *
+ * IMPORTANT — Aucune route self-service ne doit jamais accepter un tenantId
+ * ou userUid fourni par le client : l'identité vient exclusivement du token
+ * Firebase vérifié (req.firebaseUser.uid). C'est ce qui garantit qu'un tenant
+ * ne peut jamais lire, modifier ou récupérer la clé d'un autre tenant.
+ */
+
+import { Router }              from 'express'
+import qrcode                  from 'qrcode'
+import { requireApiKey }       from '../middleware/auth.js'
+import { requireFirebaseAuth } from '../middleware/firebaseAuth.js'
+import { rateLimit }           from '../middleware/rateLimit.js'
 import {
     createTenant,
     getTenantById,
@@ -10,22 +32,26 @@ import {
     getTenantByPhoneForOtherUser,
     deleteTenant,
     listTenants,
-}                        from '../../db/TenantStore.js'
-import { TenantManager } from '../../whatsapp/TenantManager.js'
-import { config }        from '../../config.js'
-import { logger, maskPhone } from '../../services/logger.js'
+}                               from '../../db/TenantStore.js'
+import { TenantManager }       from '../../whatsapp/TenantManager.js'
+import { config }              from '../../config.js'
+import { logger, maskPhone }   from '../../services/logger.js'
 
 export function tenantsRouter(tenantManager: TenantManager): Router {
     const router = Router()
 
-    // ── POST /api/v1/tenants ──────────────────────────────────────────────────
-    // Crée un tenant et démarre sa session WhatsApp (génère un QR)
-    router.post('/tenants', rateLimit, requireApiKey, async (req, res) => {
-        const { phone, name, webhookUrl, userUid } = req.body as {
+    // ═══════════════════════════════════════════════════════════════════════
+    // SELF-SERVICE — le tenant gère sa propre session (Firebase Bearer token)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // ── POST /api/v1/tenants — créer SA session ───────────────────────────────
+    router.post('/tenants', rateLimit, requireFirebaseAuth, async (req, res) => {
+        const userUid = req.firebaseUser!.uid
+
+        const { phone, name, webhookUrl } = req.body as {
             phone?:      unknown
             name?:       unknown
             webhookUrl?: unknown
-            userUid?:    unknown
         }
 
         if (!phone || typeof phone !== 'string' || !phone.trim()) {
@@ -33,72 +59,62 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             return
         }
 
-        // Nettoyage du numéro — support international
         const cleanPhone = phone.trim().replace(/[\s\-()]/g, '').replace(/^\+/, '')
 
         if (!/^\d{7,15}$/.test(cleanPhone)) {
-            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: "Format de numéro invalide — indicatif international requis (ex: 22994119476)" } })
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Format de numéro invalide — indicatif international requis (ex: 22994119476)' } })
             return
         }
 
-        const cleanUserUid = typeof userUid === 'string' && userUid.trim() ? userUid.trim() : undefined
-
         try {
-            // ── Règle : un utilisateur = une seule session WhatsApp ────────────────
-            if (cleanUserUid) {
-                const existingForUser = await getTenantByUserUid(cleanUserUid)
-                if (existingForUser) {
-                    res.status(409).json({
-                        success: false,
-                        error: {
-                            code:    'USER_ALREADY_HAS_SESSION',
-                            message: "Cet utilisateur possède déjà une session WhatsApp. Supprimez-la avant d'en créer une nouvelle.",
-                        },
-                        tenantId: existingForUser.id,
-                        status:   existingForUser.status,
-                    })
-                    return
-                }
+            // ── Règle : un utilisateur = une seule session WhatsApp ────────────
+            const existingForUser = await getTenantByUserUid(userUid)
+            if (existingForUser) {
+                res.status(409).json({
+                    success: false,
+                    error: {
+                        code:    'USER_ALREADY_HAS_SESSION',
+                        message: 'Vous possédez déjà une session WhatsApp. Supprimez-la avant d\'en créer une nouvelle.',
+                    },
+                    tenantId: existingForUser.id,
+                    status:   existingForUser.status,
+                })
+                return
+            }
 
-                // ── Règle : un numéro WhatsApp = un seul utilisateur ────────────────
-                const usedByOtherUser = await getTenantByPhoneForOtherUser(cleanPhone, cleanUserUid)
-                if (usedByOtherUser) {
-                    res.status(409).json({
-                        success: false,
-                        error: {
-                            code:    'PHONE_ALREADY_USED',
-                            message: 'Ce numéro WhatsApp est déjà utilisé par un autre compte.',
-                        },
-                    })
-                    return
-                }
+            // ── Règle : un numéro WhatsApp = un seul utilisateur ────────────────
+            const usedByOtherUser = await getTenantByPhoneForOtherUser(cleanPhone, userUid)
+            if (usedByOtherUser) {
+                res.status(409).json({
+                    success: false,
+                    error: { code: 'PHONE_ALREADY_USED', message: 'Ce numéro WhatsApp est déjà utilisé par un autre compte.' },
+                })
+                return
             }
 
             const tenant = await createTenant({
                 phone:      cleanPhone,
                 name:       typeof name === 'string' ? name.trim() : undefined,
                 webhookUrl: typeof webhookUrl === 'string' ? webhookUrl.trim() : undefined,
-                userUid:    cleanUserUid,
+                userUid,
             })
 
-            // Démarrer la session WhatsApp pour ce tenant
-            // C'est async — le QR sera disponible dans quelques secondes
+            // Démarrer la session WhatsApp — async, le QR sera dispo dans quelques secondes
             tenantManager.createSession(tenant.id).catch((err) => {
                 logger.error({ component: 'API', tenantId: tenant.id, err }, 'Erreur création session tenant')
             })
 
-            logger.info({ component: 'API', tenantId: tenant.id, phone: maskPhone(cleanPhone) }, 'Tenant créé')
+            logger.info({ component: 'API', tenantId: tenant.id, userUid, phone: maskPhone(cleanPhone) }, 'Tenant créé (self-service)')
 
             res.status(201).json({
                 success:  true,
                 tenantId: tenant.id,
                 status:   'pending_qr',
-                message:  'Session en cours de démarrage. Appelez GET /api/v1/tenants/:id/qr dans 3-5 secondes pour récupérer le QR code.',
+                message:  'Session en cours de démarrage. Appelez GET /api/v1/tenants/me/qr dans 3-5 secondes.',
             })
 
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : ''
-            // Duplicate phone
             if (msg.includes('Duplicate') || msg.includes('uq_phone')) {
                 res.status(409).json({ success: false, error: { code: 'TENANT_ALREADY_EXISTS', message: 'Un tenant avec ce numéro existe déjà' } })
                 return
@@ -108,23 +124,43 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         }
     })
 
-    // ── GET /api/v1/tenants/:id/qr ────────────────────────────────────────────
-    // Retourne le QR code courant en base64 PNG
-    router.get('/tenants/:id/qr', rateLimit, requireApiKey, async (req, res) => {
-        const { id } = req.params
+    // ── GET /api/v1/tenants/me — MA session ────────────────────────────────────
+    router.get('/tenants/me', requireFirebaseAuth, async (req, res) => {
+        const tenant = await getTenantByUserUid(req.firebaseUser!.uid)
 
-        const tenant = await getTenantById(id as string)
         if (!tenant) {
-            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant introuvable' } })
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Aucune session WhatsApp liée à ce compte' } })
+            return
+        }
+
+        res.json({
+            success:         true,
+            tenantId:        tenant.id,
+            phone:           maskPhone(tenant.phone),
+            name:            tenant.name,
+            status:          tenant.status,
+            apiKeyHint:      tenant.apiKeyHint,
+            apiKeyExpiresAt: tenant.apiKeyExpiresAt,
+            connectedAt:     tenant.connectedAt,
+            createdAt:       tenant.createdAt,
+        })
+    })
+
+    // ── GET /api/v1/tenants/me/qr — MON QR code courant ────────────────────────
+    router.get('/tenants/me/qr', rateLimit, requireFirebaseAuth, async (req, res) => {
+        const tenant = await getTenantByUserUid(req.firebaseUser!.uid)
+
+        if (!tenant) {
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Aucune session WhatsApp liée à ce compte' } })
             return
         }
 
         if (tenant.status === 'connected') {
-            res.status(200).json({ success: true, status: 'connected', message: 'Ce tenant est déjà connecté' })
+            res.status(200).json({ success: true, status: 'connected', message: 'Votre session est déjà connectée' })
             return
         }
 
-        const rawQr = tenantManager.getLastQr(id as string)
+        const rawQr = tenantManager.getLastQr(tenant.id)
         if (!rawQr) {
             res.status(202).json({
                 success: false,
@@ -137,12 +173,12 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         try {
             const qrBase64 = await qrcode.toDataURL(rawQr)
             res.json({
-                success:    true,
-                status:     'pending_qr',
-                tenantId:   id,
-                qrCode:     qrBase64,
-                expiresIn:  60,  // secondes — WhatsApp invalide le QR après ~60s
-                instructions: "Afficher ce QR code à l'utilisateur. Il doit le scanner avec WhatsApp → Appareils liés → Lier un appareil.",
+                success:      true,
+                status:       'pending_qr',
+                tenantId:     tenant.id,
+                qrCode:       qrBase64,
+                expiresIn:    60,
+                instructions: 'Scannez avec WhatsApp → Appareils liés → Lier un appareil.',
             })
         } catch (err) {
             logger.error({ component: 'API', err }, 'Erreur génération QR')
@@ -150,36 +186,60 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         }
     })
 
-    // ── GET /api/v1/tenants/:id/api-key ──────────────────────────────────────
-    // Retourne la clé API complète déchiffrée — pour affichage dans le dashboard
-    router.get('/tenants/:id/api-key', requireApiKey, async (req, res) => {
-        const id = req.params['id'] as string
+    // ── GET /api/v1/tenants/me/api-key — MA clé API complète ───────────────────
+    router.get('/tenants/me/api-key', requireFirebaseAuth, async (req, res) => {
+        const tenant = await getTenantByUserUid(req.firebaseUser!.uid)
 
-        const tenant = await getTenantById(id)
         if (!tenant) {
-            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant introuvable' } })
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Aucune session WhatsApp liée à ce compte' } })
             return
         }
 
-        const apiKey = await getTenantApiKey(id)
+        const apiKey = await getTenantApiKey(tenant.id)
         if (!apiKey) {
             res.status(404).json({
                 success: false,
-                error: { code: 'API_KEY_NOT_FOUND', message: 'Aucune clé API — le tenant n\'a pas encore scanné son QR code' },
+                error: { code: 'API_KEY_NOT_FOUND', message: 'Aucune clé API — scannez d\'abord votre QR code' },
             })
             return
         }
 
         res.json({
-            success:    true,
-            tenantId:   id,
+            success:         true,
+            tenantId:        tenant.id,
             apiKey,
-            apiKeyHint: tenant.apiKeyHint,
+            apiKeyHint:      tenant.apiKeyHint,
+            apiKeyExpiresAt: tenant.apiKeyExpiresAt,
         })
     })
 
+    // ── DELETE /api/v1/tenants/me — déconnecter MA session ──────────────────────
+    router.delete('/tenants/me', requireFirebaseAuth, async (req, res) => {
+        const tenant = await getTenantByUserUid(req.firebaseUser!.uid)
+
+        if (!tenant) {
+            res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Aucune session WhatsApp liée à ce compte' } })
+            return
+        }
+
+        try {
+            await tenantManager.closeSession(tenant.id)
+            await deleteTenant(tenant.id)
+            logger.warn({ component: 'API', tenantId: tenant.id, userUid: req.firebaseUser!.uid }, 'Session tenant supprimée (self-service)')
+            res.json({ success: true, message: 'Session supprimée' })
+        } catch (err) {
+            logger.error({ component: 'API', err }, 'Erreur suppression tenant (self-service)')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de la suppression' } })
+        }
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BACKOFFICE ADMIN — clé Bridge (X-Api-Key), jamais utilisé par le frontend tenant
+    // ═══════════════════════════════════════════════════════════════════════
+
     // ── GET /api/v1/tenants/:id ───────────────────────────────────────────────
-    router.get('/tenants/:id', requireApiKey, async (req, res) => {        const tenant = await getTenantById(req.params['id'] as string)
+    router.get('/tenants/:id', requireApiKey, async (req, res) => {
+        const tenant = await getTenantById(req.params['id'] as string)
 
         if (!tenant) {
             res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant introuvable' } })
@@ -189,6 +249,7 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         res.json({
             success:     true,
             tenantId:    tenant.id,
+            userUid:     tenant.userUid,
             phone:       maskPhone(tenant.phone),
             name:        tenant.name,
             status:      tenant.status,
@@ -218,22 +279,22 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
         }
     })
 
-    // ── GET /api/v1/tenants ───────────────────────────────────────────────────
+    // ── GET /api/v1/tenants — liste complète (admin uniquement) ─────────────────
     router.get('/tenants', requireApiKey, async (_req, res) => {
         const tenants = await listTenants()
         res.json({
             success: true,
             count:   tenants.length,
             tenants: tenants.map(t => ({
-                tenantId:          t.id,
-                userUid:           t.userUid,
-                phone:             t.phone,
-                name:              t.name,
-                status:            t.status,
-                apiKeyHint:        t.apiKeyHint,
-                apiKeyExpiresAt:   t.apiKeyExpiresAt,
-                connectedAt:       t.connectedAt,
-                createdAt:         t.createdAt,
+                tenantId:        t.id,
+                userUid:         t.userUid,
+                phone:           maskPhone(t.phone),
+                name:            t.name,
+                status:          t.status,
+                apiKeyHint:      t.apiKeyHint,
+                apiKeyExpiresAt: t.apiKeyExpiresAt,
+                connectedAt:     t.connectedAt,
+                createdAt:       t.createdAt,
             })),
         })
     })

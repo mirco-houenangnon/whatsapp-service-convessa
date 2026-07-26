@@ -9,7 +9,7 @@ dotenv.config()
 function required(name: string): string {
     const val = process.env[name]?.trim()
     if (!val) {
-        console.error(`[Config] ❌ Variable obligatoire manquante : ${name}`)
+        console.error(`[Config] Variable obligatoire manquante : ${name}`)
         process.exit(1)
     }
     return val
@@ -49,10 +49,34 @@ if (IS_PROD && corsOriginRaw === '*') {
     console.warn('[Config] ⚠️  CORS_ORIGIN=* en production — restreignez à votre domaine')
 }
 // Supporte plusieurs origines séparées par une virgule : "https://a.com,https://b.com"
-const corsOriginList = corsOriginRaw === '*'
-    ? ('*' as const)
+// Supporte aussi le wildcard "*.vercel.app" pour les previews Vercel
+const _corsOrigins = corsOriginRaw === '*'
+    ? ['*']
     : corsOriginRaw.split(',').map(s => s.trim()).filter(Boolean)
-const corsOrigin = corsOriginList
+
+// Fonction de validation CORS — accepte les wildcards "*.domain.com"
+function buildCorsOrigin(origins: string[]): string | string[] | ((origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void) {
+    if (origins.includes('*')) return '*'
+
+    // Sépare les patterns wildcard des URLs exactes
+    const wildcards = origins.filter(o => o.startsWith('*.'))
+    const exact     = origins.filter(o => !o.startsWith('*.'))
+
+    if (wildcards.length === 0) return exact
+
+    // Retourne une fonction de validation pour les wildcards
+    return (origin, cb) => {
+        if (!origin) { cb(null, true); return }
+        if (exact.includes(origin)) { cb(null, true); return }
+        const allowed = wildcards.some(pattern => {
+            const suffix = pattern.slice(1) // "*.vercel.app" → ".vercel.app"
+            return origin.endsWith(suffix)
+        })
+        cb(null, allowed)
+    }
+}
+
+const corsOrigin = buildCorsOrigin(_corsOrigins)
 
 // ── Alerte e-mail ─────────────────────────────────────────────────────────────
 const alertEmail = process.env['ALERT_EMAIL']?.trim() ?? ''

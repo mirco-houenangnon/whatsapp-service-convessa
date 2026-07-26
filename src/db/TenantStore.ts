@@ -136,8 +136,8 @@ export async function getTenantByApiKeyHash(hash: string): Promise<Tenant | null
 
 export async function updateTenantStatus(id: string, status: TenantStatus): Promise<void> {
     await query(
-        `UPDATE wa_tenants SET status = $1,
-             connected_at = CASE WHEN $1 = 'connected' THEN NOW() ELSE connected_at END,
+        `UPDATE wa_tenants SET status = $1::varchar,
+             connected_at = CASE WHEN $1::varchar = 'connected' THEN NOW() ELSE connected_at END,
              updated_at   = NOW()
          WHERE id = $2`,
         [status, id]
@@ -164,7 +164,7 @@ export async function setTenantApiKeyWithPrivileges(
         `UPDATE wa_tenants
          SET api_key_hash = $1, api_key_hint = $2, api_key_enc = $3,
              api_key_iv = $4, api_key_tag = $5, api_key_expires_at = $6,
-             usage_type = $7, messages_limit = $8, messages_sent = 0,
+             usage_type = $7::varchar, messages_limit = $8, messages_sent = 0,
              referral_code = $9, status = 'connected', connected_at = NOW(), updated_at = NOW()
          WHERE id = $10`,
         [hash, hint, payload.data, payload.iv, payload.tag, privileges.expiresAt,

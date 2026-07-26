@@ -88,11 +88,11 @@ export async function updateStatus(
     id: string, status: MessageStatus, extra?: { jid?: string; lastError?: string; sentAt?: Date }
 ): Promise<void> {
     await query(
-        `UPDATE wa_message_queue SET status = $1,
+        `UPDATE wa_message_queue SET status = $1::varchar,
              jid        = COALESCE($2, jid),
              last_error = COALESCE($3, last_error),
              sent_at    = COALESCE($4, sent_at),
-             attempts   = CASE WHEN $1 IN ('sending','failed') THEN attempts + 1 ELSE attempts END
+             attempts   = CASE WHEN $1::varchar IN ('sending','failed') THEN attempts + 1 ELSE attempts END
          WHERE id = $5`,
         [status, extra?.jid ?? null, extra?.lastError ?? null, extra?.sentAt ?? null, id]
     )

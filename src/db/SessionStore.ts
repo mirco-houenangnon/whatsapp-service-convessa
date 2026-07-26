@@ -104,10 +104,10 @@ export async function updateSessionStatus(
 ): Promise<void> {
     await query(
         `UPDATE wa_sessions
-         SET status       = $1,
+         SET status       = $1::varchar,
              phone        = COALESCE($2, phone),
              display_name = COALESCE($3, display_name),
-             connected_at = CASE WHEN $1 = 'active' THEN NOW() ELSE connected_at END,
+             connected_at = CASE WHEN $1::varchar = 'active' THEN NOW() ELSE connected_at END,
              updated_at   = NOW()
          WHERE id = $4`,
         [status, meta?.phone ?? null, meta?.displayName ?? null, sessionId]

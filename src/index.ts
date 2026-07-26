@@ -178,11 +178,10 @@ async function bootstrap(): Promise<void> {
         tenantManager.restoreSessions().catch((err) => {
             logger.error({ component: 'Server', err }, 'Erreur lors de la restauration des sessions tenant')
         })
-
         await new Promise<void>((resolve) => {
-            httpServer.listen(config.port, '127.0.0.1', resolve)
+            httpServer.listen(config.port, '::', resolve)
         })
-
+        
         logger.info(
             { component: 'Server', port: config.port, env: config.nodeEnv },
             `WhatsApp Gateway démarré → http://127.0.0.1:${config.port}`

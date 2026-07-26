@@ -44,10 +44,15 @@ const sessionEncryptionKey = IS_PROD
     : optional('SESSION_ENCRYPTION_KEY', 'dev-encryption-key-do-not-use-in-prod-32x')
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const corsOrigin = optional('CORS_ORIGIN', '*')
-if (IS_PROD && corsOrigin === '*') {
+const corsOriginRaw = optional('CORS_ORIGIN', '*')
+if (IS_PROD && corsOriginRaw === '*') {
     console.warn('[Config] ⚠️  CORS_ORIGIN=* en production — restreignez à votre domaine')
 }
+// Supporte plusieurs origines séparées par une virgule : "https://a.com,https://b.com"
+const corsOriginList = corsOriginRaw === '*'
+    ? ('*' as const)
+    : corsOriginRaw.split(',').map(s => s.trim()).filter(Boolean)
+const corsOrigin = corsOriginList
 
 // ── Alerte e-mail ─────────────────────────────────────────────────────────────
 const alertEmail = process.env['ALERT_EMAIL']?.trim() ?? ''

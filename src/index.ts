@@ -52,7 +52,10 @@ const app        = express()
 const httpServer = createServer(app)
 
 const io = new Server(httpServer, {
-    cors:              { origin: config.corsOrigin },
+    cors: {
+        origin:      config.corsOrigin,
+        credentials: true,
+    },
     maxHttpBufferSize: 1e5,
 })
 
@@ -86,7 +89,10 @@ app.use(helmet({
         : false,
 }))
 
-app.use(cors({ origin: config.corsOrigin }))
+app.use(cors({
+    origin:      config.corsOrigin,
+    credentials: true,
+}))
 // Autoriser les requêtes Private Network Access (Chrome 94+)
 // Nécessaire quand le frontend est servi en HTTPS et contacte le backend local
 app.use((_req, res, next) => {
@@ -98,17 +104,19 @@ app.use(express.json({ limit: '150mb' }))
 app.disable('x-powered-by')
 
 // ── Dashboard HTML ────────────────────────────────────────────────────────────
-
-if (!config.isProd || config.enableDashboard) {
+// Toujours servi — la sécurité est assurée par l'auth JWT admin (/api/admin/*)
+// et non par la variable ENABLE_DASHBOARD.
+{
     const publicDir = path.join(__dirname, '..', 'public')
     app.use(express.static(publicDir))
 
-    // Redirect /admin/ → /admin/index.html et /admin → /admin/login.html si pas de token
-    app.get('/admin', (_req, res) => res.redirect('/admin/login.html'))
+    app.get('/admin',  (_req, res) => res.redirect('/admin/login.html'))
     app.get('/admin/', (_req, res) => res.redirect('/admin/index.html'))
 
-    logger.info({ component: 'Server' }, `Dashboard disponible sur http://127.0.0.1:${config.port}`)
-    logger.info({ component: 'Server' }, `Admin backoffice sur http://127.0.0.1:${config.port}/admin/login.html`)
+    logger.info(
+        { component: 'Server' },
+        `Admin backoffice → ${config.isProd ? 'https' : 'http'}://[host]/admin/login.html`
+    )
 }
 
 // ── Instances principales ─────────────────────────────────────────────────────

@@ -1,53 +1,62 @@
 /**
- * connection.ts — Pool de connexion MySQL.
+ * connection.ts — Pool de connexion PostgreSQL (Neon).
  * Un pool unique partagé dans tout le service.
  */
 
-import mysql from 'mysql2/promise'
+import pg from 'pg'
 import { config } from '../config.js'
 import { logger } from '../services/logger.js'
 
-let pool: mysql.Pool | null = null
+const { Pool } = pg
 
-export function getPool(): mysql.Pool {
+let pool: pg.Pool | null = null
+
+export function getPool(): pg.Pool {
     if (!pool) {
-        pool = mysql.createPool({
-            host:               config.db.host,
-            port:               config.db.port,
-            database:           config.db.name,
-            user:               config.db.user,
-            password:           config.db.pass,
-            waitForConnections: true,
-            connectionLimit:    10,
-            queueLimit:         0,
-            timezone:           'Z',          // UTC partout
-            charset:            'utf8mb4',
+        pool = new Pool({
+            connectionString: config.db.url,
+            ssl: { rejectUnauthorized: false },
+            max:              10,
+            idleTimeoutMillis: 30_000,
+            connectionTimeoutMillis: 10_000,
         })
 
-        logger.info({ component: 'DB' }, `Pool MySQL créé → ${config.db.host}:${config.db.port}/${config.db.name}`)
-    }
+        pool.on('error', (err) => {
+            logger.error({ component: 'DB', err }, 'Erreur pool PostgreSQL inattendue')
+        })
 
+        logger.info({ component: 'DB' }, 'Pool PostgreSQL (Neon) créé')
+    }
     return pool
 }
 
 /**
- * Teste la connexion à la base de données.
- * Lève une erreur si la base est inaccessible.
+ * Exécute une requête paramétrée.
+ * Remplace mysql2 pool.execute() — les placeholders sont $1, $2, ...
  */
-export async function testConnection(): Promise<void> {
-    const conn = await getPool().getConnection()
-    await conn.ping()
-    conn.release()
-    logger.info({ component: 'DB' }, 'Connexion MySQL OK')
+export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
+    sql:    string,
+    params?: unknown[]
+): Promise<T[]> {
+    const result = await getPool().query<T>(sql, params)
+    return result.rows
 }
 
 /**
- * Ferme proprement le pool (utilisé à l'arrêt du service).
+ * Teste la connexion à la base de données.
+ */
+export async function testConnection(): Promise<void> {
+    await query('SELECT 1')
+    logger.info({ component: 'DB' }, 'Connexion PostgreSQL (Neon) OK')
+}
+
+/**
+ * Ferme proprement le pool.
  */
 export async function closePool(): Promise<void> {
     if (pool) {
         await pool.end()
         pool = null
-        logger.info({ component: 'DB' }, 'Pool MySQL fermé')
+        logger.info({ component: 'DB' }, 'Pool PostgreSQL fermé')
     }
 }

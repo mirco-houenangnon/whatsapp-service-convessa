@@ -3,7 +3,7 @@
  *
  * Séquence de démarrage :
  *   1. Valider la configuration (.env)
- *   2. Tester la connexion MySQL
+ *   2. Tester la connexion PostgreSQL (Neon)
  *   3. Exécuter les migrations (CREATE TABLE IF NOT EXISTS)
  *   4. Démarrer Express + Socket.io
  *   5. Initialiser WhatsAppManager (numéro admin — fixe)

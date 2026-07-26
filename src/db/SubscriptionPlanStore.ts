@@ -1,142 +1,78 @@
 /**
- * SubscriptionPlanStore.ts — CRUD des plans d'abonnement Convessa.
+ * SubscriptionPlanStore.ts — Plans d'abonnement — PostgreSQL.
  */
 
 import { v4 as uuidv4 } from 'uuid'
-import { getPool }      from './connection.js'
+import { query }        from './connection.js'
 import { logger }       from '../services/logger.js'
-import type mysql from 'mysql2/promise'
 
 export type UsageType = 'duration' | 'requests'
 
 export interface SubscriptionPlan {
-    id:          string
-    name:        string
-    price:       number
-    unlimited:   boolean
-    usageType:   UsageType | null
-    usageValue:  number | null
-    description: string | null
-    features:    string[]
-    isPopular:   boolean
-    createdAt:   Date
+    id: string; name: string; price: number; unlimited: boolean
+    usageType: UsageType | null; usageValue: number | null
+    description: string | null; features: string[]; isPopular: boolean; createdAt: Date
 }
 
 interface SubscriptionPlanRow {
-    id:          string
-    name:        string
-    price:       number
-    unlimited:   number
-    usage_type:  UsageType | null
-    usage_value: number | null
-    description: string | null
-    features:    string | null  // JSON string
-    is_popular:  number
-    created_at:  Date
+    id: string; name: string; price: number; unlimited: boolean
+    usage_type: UsageType | null; usage_value: number | null
+    description: string | null; features: unknown; is_popular: boolean; created_at: Date
 }
 
 function rowToPlan(row: SubscriptionPlanRow): SubscriptionPlan {
     let features: string[] = []
     if (row.features) {
-        try { features = JSON.parse(row.features) } catch { features = [] }
+        try {
+            const f = typeof row.features === 'string' ? JSON.parse(row.features) : row.features
+            features = Array.isArray(f) ? f : []
+        } catch { features = [] }
     }
     return {
-        id:          row.id,
-        name:        row.name,
-        price:       row.price,
-        unlimited:   Boolean(row.unlimited),
-        usageType:   row.usage_type,
-        usageValue:  row.usage_value,
-        description: row.description ?? null,
-        features,
-        isPopular:   Boolean(row.is_popular),
-        createdAt:   row.created_at,
+        id: row.id, name: row.name, price: row.price, unlimited: Boolean(row.unlimited),
+        usageType: row.usage_type, usageValue: row.usage_value,
+        description: row.description ?? null, features, isPopular: Boolean(row.is_popular), createdAt: row.created_at,
     }
 }
 
-/**
- * Crée un nouveau plan d'abonnement.
- * L'id (uuid) est généré côté backend.
- */
 export async function createSubscriptionPlan(data: {
-    name:         string
-    price:        number
-    unlimited:    boolean
-    usageType?:   UsageType | null
-    usageValue?:  number | null
-    description?: string | null
-    features?:    string[]
-    isPopular?:   boolean
+    name: string; price: number; unlimited: boolean
+    usageType?: UsageType | null; usageValue?: number | null
+    description?: string | null; features?: string[]; isPopular?: boolean
 }): Promise<SubscriptionPlan> {
-    const pool = getPool()
-    const id   = uuidv4()
-
-    await pool.execute(
+    const id = uuidv4()
+    await query(
         `INSERT INTO subscription_plans (id, name, price, unlimited, usage_type, usage_value, description, features, is_popular)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-            id,
-            data.name,
-            data.price,
-            data.unlimited ? 1 : 0,
-            data.unlimited ? null : (data.usageType ?? null),
-            data.unlimited ? null : (data.usageValue ?? null),
-            data.description ?? null,
-            data.features ? JSON.stringify(data.features) : null,
-            data.isPopular ? 1 : 0,
-        ]
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [id, data.name, data.price, data.unlimited,
+         data.unlimited ? null : (data.usageType ?? null),
+         data.unlimited ? null : (data.usageValue ?? null),
+         data.description ?? null,
+         data.features ? JSON.stringify(data.features) : null,
+         data.isPopular ?? false]
     )
-
-    logger.info({ component: 'SubscriptionPlanStore', id, name: data.name }, 'Plan d\'abonnement créé')
-
+    logger.info({ component: 'SubscriptionPlanStore', id, name: data.name }, 'Plan créé')
     const created = await getSubscriptionPlanById(id)
     if (!created) throw new Error('Plan introuvable après création')
     return created
 }
 
 export async function getSubscriptionPlanById(id: string): Promise<SubscriptionPlan | null> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM subscription_plans WHERE id = ?',
-        [id]
-    )
-    const row = rows[0]
-    return row ? rowToPlan(row) : null
+    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans WHERE id = $1', [id])
+    return rows[0] ? rowToPlan(rows[0]) : null
 }
 
-/**
- * Liste tous les plans d'abonnement (pour l'admin).
- */
 export async function listSubscriptionPlans(): Promise<SubscriptionPlan[]> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM subscription_plans ORDER BY created_at DESC'
-    )
-    return (rows as SubscriptionPlanRow[]).map(rowToPlan)
+    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans ORDER BY created_at DESC')
+    return rows.map(rowToPlan)
 }
 
-/**
- * Liste les plans d'abonnement pour affichage public (page tarifs du site).
- * Triés par prix croissant — pas d'authentification requise pour cette route.
- */
 export async function listPublicPlans(): Promise<SubscriptionPlan[]> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM subscription_plans ORDER BY price ASC, created_at ASC'
-    )
-    return (rows as SubscriptionPlanRow[]).map(rowToPlan)
+    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans ORDER BY price ASC, created_at ASC')
+    return rows.map(rowToPlan)
 }
 
-/**
- * Récupère le plan gratuit (price = 0) — utilisé pour attribuer les
- * privilèges par défaut à un tenant qui s'active SANS code de parrainage.
- * S'il existe plusieurs plans à 0, on prend le plus ancien.
- */
 export async function getFreePlan(): Promise<SubscriptionPlan | null> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<SubscriptionPlanRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM subscription_plans WHERE price = 0 ORDER BY created_at ASC LIMIT 1'
-    )
-    const row = rows[0]
-    return row ? rowToPlan(row) : null
+    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans WHERE price = 0 ORDER BY created_at ASC LIMIT 1')
+    return rows[0] ? rowToPlan(rows[0]) : null
 }

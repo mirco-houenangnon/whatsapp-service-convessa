@@ -1,25 +1,20 @@
 /**
- * GroupStore.ts — CRUD des groupes WhatsApp créés par les tenants.
- *
- * Un groupe est créé UNE fois (via POST /api/v1/groups) et persiste ensuite :
- * le développeur peut y renvoyer des messages indéfiniment via son `groupId`,
- * sans jamais recréer de groupe à chaque envoi.
+ * GroupStore.ts — CRUD des groupes WhatsApp — PostgreSQL.
  */
 
 import { v4 as uuidv4 } from 'uuid'
-import { getPool }      from './connection.js'
-import type mysql from 'mysql2/promise'
+import { query }        from './connection.js'
 
 export interface Group {
-    id:                     string
-    tenantId:                string
-    waGroupJid:              string
-    name:                    string
-    inviteCode:              string | null
-    inviteCodeGeneratedAt:   Date | null
-    participantsCount:       number
-    status:                  'active' | 'deleted'
-    createdAt:               Date
+    id:                    string
+    tenantId:              string
+    waGroupJid:            string
+    name:                  string
+    inviteCode:            string | null
+    inviteCodeGeneratedAt: Date | null
+    participantsCount:     number
+    status:                'active' | 'deleted'
+    createdAt:             Date
 }
 
 interface GroupRow {
@@ -48,86 +43,53 @@ function rowToGroup(row: GroupRow): Group {
     }
 }
 
-/**
- * Recherche un groupe existant du tenant par son nom (insensible à la casse,
- * espaces ignorés) — permet un `POST /groups` idempotent : rappeler avec le
- * même nom renvoie le groupe déjà créé plutôt que d'en créer un doublon.
- */
 export async function findTenantGroupByName(tenantId: string, name: string): Promise<Group | null> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<GroupRow[] & mysql.RowDataPacket[]>(
-        `SELECT * FROM wa_groups WHERE tenant_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?)) AND status = 'active' LIMIT 1`,
+    const rows = await query<GroupRow>(
+        `SELECT * FROM wa_groups WHERE tenant_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2)) AND status = 'active' LIMIT 1`,
         [tenantId, name]
     )
-    const row = rows[0]
-    return row ? rowToGroup(row) : null
+    return rows[0] ? rowToGroup(rows[0]) : null
 }
 
-export async function createGroup(data: {
-    tenantId:   string
-    waGroupJid: string
-    name:       string
-    participantsCount: number
-}): Promise<Group> {
-    const pool = getPool()
-    const id   = uuidv4()
-
-    await pool.execute(
+export async function createGroup(data: { tenantId: string; waGroupJid: string; name: string; participantsCount: number }): Promise<Group> {
+    const id = uuidv4()
+    await query(
         `INSERT INTO wa_groups (id, tenant_id, wa_group_jid, name, participants_count, status)
-         VALUES (?, ?, ?, ?, ?, 'active')`,
+         VALUES ($1, $2, $3, $4, $5, 'active')`,
         [id, data.tenantId, data.waGroupJid, data.name, data.participantsCount]
     )
-
     const group = await getGroupById(id)
     if (!group) throw new Error('Groupe introuvable après création')
     return group
 }
 
 export async function getGroupById(id: string): Promise<Group | null> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<GroupRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM wa_groups WHERE id = ?',
-        [id]
-    )
-    const row = rows[0]
-    return row ? rowToGroup(row) : null
+    const rows = await query<GroupRow>('SELECT * FROM wa_groups WHERE id = $1', [id])
+    return rows[0] ? rowToGroup(rows[0]) : null
 }
 
-/**
- * Récupère un groupe appartenant à un tenant précis (vérification de
- * propriété — un tenant ne doit jamais pouvoir agir sur le groupe d'un autre).
- */
 export async function getTenantGroupById(tenantId: string, id: string): Promise<Group | null> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<GroupRow[] & mysql.RowDataPacket[]>(
-        'SELECT * FROM wa_groups WHERE id = ? AND tenant_id = ?',
-        [id, tenantId]
-    )
-    const row = rows[0]
-    return row ? rowToGroup(row) : null
+    const rows = await query<GroupRow>('SELECT * FROM wa_groups WHERE id = $1 AND tenant_id = $2', [id, tenantId])
+    return rows[0] ? rowToGroup(rows[0]) : null
 }
 
 export async function listTenantGroups(tenantId: string): Promise<Group[]> {
-    const pool   = getPool()
-    const [rows] = await pool.execute<GroupRow[] & mysql.RowDataPacket[]>(
-        `SELECT * FROM wa_groups WHERE tenant_id = ? AND status = 'active' ORDER BY created_at DESC`,
-        [tenantId]
+    const rows = await query<GroupRow>(
+        `SELECT * FROM wa_groups WHERE tenant_id = $1 AND status = 'active' ORDER BY created_at DESC`, [tenantId]
     )
-    return (rows as GroupRow[]).map(rowToGroup)
+    return rows.map(rowToGroup)
 }
 
 export async function updateGroupInviteCode(id: string, inviteCode: string): Promise<void> {
-    const pool = getPool()
-    await pool.execute(
-        `UPDATE wa_groups SET invite_code = ?, invite_code_generated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    await query(
+        `UPDATE wa_groups SET invite_code = $1, invite_code_generated_at = NOW(), updated_at = NOW() WHERE id = $2`,
         [inviteCode, id]
     )
 }
 
 export async function incrementParticipantsCount(id: string, addedCount: number): Promise<void> {
-    const pool = getPool()
-    await pool.execute(
-        `UPDATE wa_groups SET participants_count = participants_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    await query(
+        `UPDATE wa_groups SET participants_count = participants_count + $1, updated_at = NOW() WHERE id = $2`,
         [addedCount, id]
     )
 }

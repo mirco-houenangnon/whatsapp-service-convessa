@@ -146,6 +146,23 @@ export const config = {
 
     // ── Admin Backoffice ───────────────────────────────────────────────────────
     adminJwtSecret: optional('ADMIN_JWT_SECRET', 'convessa-admin-dev-secret-change-in-prod'),
+
+    // ── Passerelles de paiement ────────────────────────────────────────────────
+    payments: {
+        fedapay: {
+            secretKey:   optional('FEDAPAY_SECRET_KEY', ''),
+            callbackUrl: optional('FEDAPAY_CALLBACK_URL', ''),
+            environment: optional('FEDAPAY_ENV', 'live') as 'live' | 'sandbox',
+        },
+        kkiapay: {
+            privateKey:  optional('KKIAPAY_PRIVATE_KEY', ''),
+            publicKey:   optional('KKIAPAY_PUBLIC_KEY', ''),
+            secretKey:   optional('KKIAPAY_SECRET_KEY', ''),
+            sandbox:     process.env['KKIAPAY_SANDBOX'] === 'true',
+        },
+        // URL du frontend — pour construire les URLs de retour après paiement
+        frontendUrl: optional('FRONTEND_URL', 'http://localhost:5173'),
+    },
 } as const
 
 export type AppConfig = typeof config

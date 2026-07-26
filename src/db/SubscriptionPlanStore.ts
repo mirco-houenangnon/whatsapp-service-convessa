@@ -10,13 +10,16 @@ import type mysql from 'mysql2/promise'
 export type UsageType = 'duration' | 'requests'
 
 export interface SubscriptionPlan {
-    id:         string
-    name:       string
-    price:      number
-    unlimited:  boolean
-    usageType:  UsageType | null
-    usageValue: number | null
-    createdAt:  Date
+    id:          string
+    name:        string
+    price:       number
+    unlimited:   boolean
+    usageType:   UsageType | null
+    usageValue:  number | null
+    description: string | null
+    features:    string[]
+    isPopular:   boolean
+    createdAt:   Date
 }
 
 interface SubscriptionPlanRow {
@@ -26,18 +29,28 @@ interface SubscriptionPlanRow {
     unlimited:   number
     usage_type:  UsageType | null
     usage_value: number | null
+    description: string | null
+    features:    string | null  // JSON string
+    is_popular:  number
     created_at:  Date
 }
 
 function rowToPlan(row: SubscriptionPlanRow): SubscriptionPlan {
+    let features: string[] = []
+    if (row.features) {
+        try { features = JSON.parse(row.features) } catch { features = [] }
+    }
     return {
-        id:         row.id,
-        name:       row.name,
-        price:      row.price,
-        unlimited:  Boolean(row.unlimited),
-        usageType:  row.usage_type,
-        usageValue: row.usage_value,
-        createdAt:  row.created_at,
+        id:          row.id,
+        name:        row.name,
+        price:       row.price,
+        unlimited:   Boolean(row.unlimited),
+        usageType:   row.usage_type,
+        usageValue:  row.usage_value,
+        description: row.description ?? null,
+        features,
+        isPopular:   Boolean(row.is_popular),
+        createdAt:   row.created_at,
     }
 }
 
@@ -46,18 +59,21 @@ function rowToPlan(row: SubscriptionPlanRow): SubscriptionPlan {
  * L'id (uuid) est généré côté backend.
  */
 export async function createSubscriptionPlan(data: {
-    name:        string
-    price:       number
-    unlimited:   boolean
-    usageType?:  UsageType | null
-    usageValue?: number | null
+    name:         string
+    price:        number
+    unlimited:    boolean
+    usageType?:   UsageType | null
+    usageValue?:  number | null
+    description?: string | null
+    features?:    string[]
+    isPopular?:   boolean
 }): Promise<SubscriptionPlan> {
     const pool = getPool()
     const id   = uuidv4()
 
     await pool.execute(
-        `INSERT INTO subscription_plans (id, name, price, unlimited, usage_type, usage_value)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO subscription_plans (id, name, price, unlimited, usage_type, usage_value, description, features, is_popular)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             id,
             data.name,
@@ -65,6 +81,9 @@ export async function createSubscriptionPlan(data: {
             data.unlimited ? 1 : 0,
             data.unlimited ? null : (data.usageType ?? null),
             data.unlimited ? null : (data.usageValue ?? null),
+            data.description ?? null,
+            data.features ? JSON.stringify(data.features) : null,
+            data.isPopular ? 1 : 0,
         ]
     )
 

@@ -95,6 +95,11 @@ export class SocketGateway {
                 this.io.emit('tenant_error', { tenantId, ...(typeof data === 'object' ? data : {}) })
             }
 
+            // Abonnement activé après paiement
+            const onSubscriptionActivated = (tenantId: string, data: unknown) => {
+                this.io.emit('subscription_activated', { tenantId, ...(typeof data === 'object' ? data : {}) })
+            }
+
             // Statut final d'un message tenant (sent/failed) — émis par send.ts
             // une fois que Baileys a réellement résolu l'envoi. Découple le
             // résultat réel de la réponse HTTP immédiate de POST /api/v1/send.
@@ -102,11 +107,12 @@ export class SocketGateway {
                 this.io.emit('message_status', { tenantId, ...(typeof data === 'object' ? data : {}) })
             }
 
-            this.tenantManager.on('qr',             onTenantQr)
-            this.tenantManager.on('connected',       onTenantConnected)
-            this.tenantManager.on('disconnected',    onTenantDisconnected)
-            this.tenantManager.on('error',           onTenantError)
-            this.tenantManager.on('message_status',  onMessageStatus)
+            this.tenantManager.on('qr',                    onTenantQr)
+            this.tenantManager.on('connected',              onTenantConnected)
+            this.tenantManager.on('disconnected',           onTenantDisconnected)
+            this.tenantManager.on('error',                  onTenantError)
+            this.tenantManager.on('message_status',         onMessageStatus)
+            this.tenantManager.on('subscription_activated', onSubscriptionActivated)
 
             // ── Nettoyage à la déconnexion ───────────────────────────────────
             socket.on('disconnect', () => {
@@ -116,11 +122,12 @@ export class SocketGateway {
                 this.waManager.off('logged_out',   onLoggedOut)
                 this.waManager.off('status_update', onStatusUpdate)
                 this.waManager.off('message',      onMessage)
-                this.tenantManager.off('qr',            onTenantQr)
-                this.tenantManager.off('connected',      onTenantConnected)
-                this.tenantManager.off('disconnected',   onTenantDisconnected)
-                this.tenantManager.off('error',          onTenantError)
-                this.tenantManager.off('message_status', onMessageStatus)
+                this.tenantManager.off('qr',                    onTenantQr)
+                this.tenantManager.off('connected',              onTenantConnected)
+                this.tenantManager.off('disconnected',           onTenantDisconnected)
+                this.tenantManager.off('error',                  onTenantError)
+                this.tenantManager.off('message_status',         onMessageStatus)
+                this.tenantManager.off('subscription_activated', onSubscriptionActivated)
             })
         })
 

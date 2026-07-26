@@ -239,8 +239,32 @@ const TABLES = [
         unlimited     TINYINT(1)    NOT NULL DEFAULT 0,
         usage_type    ENUM('duration','requests') DEFAULT NULL,
         usage_value   INT           DEFAULT NULL,
+        description   TEXT          DEFAULT NULL,
+        features      JSON          DEFAULT NULL  COMMENT 'Liste des fonctionnalités du plan',
+        is_popular    TINYINT(1)    NOT NULL DEFAULT 0,
         created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Paiements d'abonnement ─────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS subscription_payments (
+        id              VARCHAR(36)   NOT NULL,
+        tenant_id       VARCHAR(36)   NOT NULL,
+        plan_id         VARCHAR(36)   NOT NULL,
+        gateway         ENUM('fedapay','kkiapay') NOT NULL,
+        gateway_tx_id   VARCHAR(255)  DEFAULT NULL COMMENT 'ID de transaction côté passerelle',
+        amount          INT           NOT NULL     COMMENT 'Montant en FCFA',
+        currency        VARCHAR(10)   NOT NULL DEFAULT 'XOF',
+        status          ENUM('pending','success','failed','cancelled') NOT NULL DEFAULT 'pending',
+        created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        INDEX idx_tenant (tenant_id),
+        INDEX idx_plan   (plan_id),
+        INDEX idx_status (status),
+        INDEX idx_gateway_tx (gateway_tx_id),
+        CONSTRAINT fk_payments_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE,
+        CONSTRAINT fk_payments_plan   FOREIGN KEY (plan_id)   REFERENCES subscription_plans(id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
@@ -279,7 +303,7 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN api_key_hint VARCHAR(60) DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_expires_at DATETIME DEFAULT NULL`).catch(() => {})
 
-    // Téléphone désormais optionnel à la création — rempli automatiquement après
+    // ── Téléphone désormais optionnel à la création — rempli automatiquement après
     // le scan du QR (le tenant ne saisit plus jamais de numéro manuellement).
     await pool.execute(`ALTER TABLE wa_tenants MODIFY COLUMN phone VARCHAR(30) DEFAULT NULL`).catch(() => {})
 
@@ -293,6 +317,11 @@ export async function runMigrations(): Promise<void> {
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_limit INT DEFAULT NULL`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_sent INT NOT NULL DEFAULT 0`).catch(() => {})
     await pool.execute(`ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS referral_code VARCHAR(12) DEFAULT NULL`).catch(() => {})
+
+    // ── Colonnes supplémentaires pour les plans (description, features, is_popular) ─
+    await pool.execute(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features JSON DEFAULT NULL`).catch(() => {})
+    await pool.execute(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_popular TINYINT(1) NOT NULL DEFAULT 0`).catch(() => {})
 
     logger.info({ component: 'DB' }, 'Migrations OK — tables vérifiées')
 }

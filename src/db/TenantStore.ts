@@ -359,8 +359,8 @@ export async function getTenantByWhatsAppJid(jid: string, excludeId?: string): P
     const pool  = getPool()
     // Baileys JID format: "22990956919:19@s.whatsapp.net"
     // Le ":19" est le device ID — on doit l'ignorer pour avoir le vrai numéro
-    const jidPart = jid.split('@')[0]                          // "22990956919:19"
-    const phone   = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? ''  // "22990956919"
+    const jidPart  = jid.split('@')[0] ?? ''                      // "22990956919:19"
+    const phone    = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? ''  // "22990956919"
     if (!phone) return null
 
     const [rows] = await pool.execute<TenantRow[] & mysql.RowDataPacket[]>(

@@ -121,6 +121,10 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             apiKeyExpiresAt: tenant.apiKeyExpiresAt,
             connectedAt:     tenant.connectedAt,
             createdAt:       tenant.createdAt,
+            usageType:       tenant.usageType,
+            messagesLimit:   tenant.messagesLimit,
+            messagesSent:    tenant.messagesSent,
+            referralCode:    tenant.referralCode,
         })
     })
 

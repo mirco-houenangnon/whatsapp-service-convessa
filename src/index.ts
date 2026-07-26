@@ -39,6 +39,7 @@ import { adminRouter }     from './api/routes/admin.js'
 import { sendRouter }      from './api/routes/send.js'
 import { groupsRouter }    from './api/routes/groups.js'
 import { plansRouter }     from './api/routes/plans.js'
+import { paymentsRouter }  from './api/routes/payments.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -86,6 +87,12 @@ app.use(helmet({
 }))
 
 app.use(cors({ origin: config.corsOrigin }))
+// Autoriser les requêtes Private Network Access (Chrome 94+)
+// Nécessaire quand le frontend est servi en HTTPS et contacte le backend local
+app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true')
+    next()
+})
 // Limite augmentée pour les médias base64 (document PDF jusqu'à 100MB = ~133MB base64)
 app.use(express.json({ limit: '150mb' }))
 app.disable('x-powered-by')
@@ -123,6 +130,7 @@ app.use('/api/admin', adminRouter())
 app.use('/api/v1', sendRouter(tenantManager))
 app.use('/api/v1', groupsRouter(tenantManager))
 app.use('/api/v1/plans', plansRouter())
+app.use('/api/v1', paymentsRouter(tenantManager))
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

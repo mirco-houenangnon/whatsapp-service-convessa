@@ -12,7 +12,7 @@ import {
 import { createAdminToken }  from '../../services/adminJwt.js'
 import { listTenants }       from '../../db/TenantStore.js'
 import { listUsers }         from '../../db/UserStore.js'
-import { getPool }           from '../../db/connection.js'
+import { getPool, query }    from '../../db/connection.js'
 import { logger }            from '../../services/logger.js'
 import { config }            from '../../config.js'
 import {
@@ -183,60 +183,57 @@ export function adminRouter(): Router {
     // ── GET /api/admin/stats ──────────────────────────────────────────────────
     router.get('/stats', requireAdminAuth, async (_req, res) => {
         try {
-            const pool = getPool()
-
-            const [[tenantStats]] = await pool.execute(
+            const [tenantStats] = await query<{
+                total: string; connected: string; pending_qr: string; disconnected: string
+            }>(
                 `SELECT
                     COUNT(*) AS total,
-                    SUM(status = 'connected')    AS connected,
-                    SUM(status = 'pending_qr')   AS pending_qr,
-                    SUM(status = 'disconnected') AS disconnected
+                    SUM(CASE WHEN status = 'connected'    THEN 1 ELSE 0 END) AS connected,
+                    SUM(CASE WHEN status = 'pending_qr'   THEN 1 ELSE 0 END) AS pending_qr,
+                    SUM(CASE WHEN status = 'disconnected' THEN 1 ELSE 0 END) AS disconnected
                  FROM wa_tenants`
-            ) as unknown as [[{
-                total: number; connected: number; pending_qr: number; disconnected: number
-            }]]
+            )
 
-            const [[userStats]] = await pool.execute(
-                `SELECT COUNT(*) AS total, SUM(active = TRUE) AS active
+            const [userStats] = await query<{ total: string; active: string }>(
+                `SELECT COUNT(*) AS total, SUM(CASE WHEN active = TRUE THEN 1 ELSE 0 END) AS active
                  FROM auth_users`
-            ) as unknown as [[{ total: number; active: number }]]
+            )
 
-            const [[msgStats]] = await pool.execute(
+            const [msgStats] = await query<{
+                total: string; sent: string; failed: string; queued: string
+            }>(
                 `SELECT
                     COUNT(*) AS total,
-                    SUM(status = 'sent')   AS sent,
-                    SUM(status = 'failed') AS failed,
-                    SUM(status = 'queued') AS queued
+                    SUM(CASE WHEN status = 'sent'   THEN 1 ELSE 0 END) AS sent,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                    SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued
                  FROM wa_message_queue`
-            ) as unknown as [[{
-                total: number; sent: number; failed: number; queued: number
-            }]]
+            )
 
-            const [[msgToday]] = await pool.execute(
-                `SELECT COUNT(*) AS count
-                 FROM wa_message_queue
-                 WHERE DATE(queued_at) = CURDATE()`
-            ) as unknown as [[{ count: number }]]
+            const [msgToday] = await query<{ count: string }>(
+                `SELECT COUNT(*) AS count FROM wa_message_queue
+                 WHERE DATE(queued_at) = CURRENT_DATE`
+            )
 
             res.json({
                 success: true,
                 stats: {
                     tenants: {
-                        total:        Number(tenantStats.total        ?? 0),
-                        connected:    Number(tenantStats.connected    ?? 0),
-                        pendingQr:    Number(tenantStats.pending_qr   ?? 0),
-                        disconnected: Number(tenantStats.disconnected ?? 0),
+                        total:        Number(tenantStats?.total        ?? 0),
+                        connected:    Number(tenantStats?.connected    ?? 0),
+                        pendingQr:    Number(tenantStats?.pending_qr   ?? 0),
+                        disconnected: Number(tenantStats?.disconnected ?? 0),
                     },
                     users: {
-                        total:  Number(userStats.total  ?? 0),
-                        active: Number(userStats.active ?? 0),
+                        total:  Number(userStats?.total  ?? 0),
+                        active: Number(userStats?.active ?? 0),
                     },
                     messages: {
-                        total:  Number(msgStats.total  ?? 0),
-                        sent:   Number(msgStats.sent   ?? 0),
-                        failed: Number(msgStats.failed ?? 0),
-                        queued: Number(msgStats.queued ?? 0),
-                        today:  Number(msgToday.count  ?? 0),
+                        total:  Number(msgStats?.total  ?? 0),
+                        sent:   Number(msgStats?.sent   ?? 0),
+                        failed: Number(msgStats?.failed ?? 0),
+                        queued: Number(msgStats?.queued ?? 0),
+                        today:  Number(msgToday?.count  ?? 0),
                     },
                 },
             })

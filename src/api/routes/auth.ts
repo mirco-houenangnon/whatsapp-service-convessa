@@ -954,7 +954,7 @@ export function authRouter(): Router {
  */
 async function sendOtpViaWhatsApp(phone: string, message: string): Promise<boolean> {
     try {
-        const url  = `http://[::1]:${config.port}/api/v1/messages/send`
+        const url  = `http://127.0.0.1:${config.port}/api/v1/messages/send`
         const resp = await fetch(url, {
             method:  'POST',
             headers: {
@@ -966,7 +966,8 @@ async function sendOtpViaWhatsApp(phone: string, message: string): Promise<boole
 
         if (resp.status === 503) return false  // WhatsApp non connecté
         return resp.ok || resp.status === 202
-    } catch {
+    } catch (err) {
+        logger.error({ component: 'Auth/OTP', err }, 'Erreur appel interne /messages/send (loopback)')
         return false
     }
 }

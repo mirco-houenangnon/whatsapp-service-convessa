@@ -38,18 +38,25 @@ export class SocketGateway {
         this.io.use((socket, next) => {
             // Si pas de clé API configurée, on laisse passer
             if (!config.bridgeApiKey) { next(); return }
-            
-            // En mode développement avec dashboard, on autorise les connexions sans token
-            const isDashboardRequest = config.enableDashboard && !config.isProd
-            
+
+            // Le dashboard admin (public/index.html) est un panneau opérateur,
+            // pas un client tenant : s'il est activé (ENABLE_DASHBOARD=true),
+            // on l'autorise sans token QUEL QUE SOIT l'environnement.
+            // ⚠️ Avant : `config.enableDashboard && !config.isProd` — cette
+            // condition était TOUJOURS fausse en production, donc le socket
+            // du dashboard était systématiquement rejeté dès que BRIDGE_API_KEY
+            // était défini (obligatoire en prod) → aucun QR ne pouvait jamais
+            // s'afficher en ligne, et l'admin restait déconnecté indéfiniment.
+            const isDashboardRequest = config.enableDashboard
+
             const token = socket.handshake.auth['token'] as string | undefined
-            
-            // Si dashboard en dev, on accepte les connexions sans token
+
+            // Si dashboard activé, on accepte les connexions sans token
             if (isDashboardRequest && !token) {
                 next()
                 return
             }
-            
+
             // Sinon, on vérifie le token
             if (!token || !timingSafeEqual(token, config.bridgeApiKey)) {
                 next(new Error('Authentification Socket.io invalide'))

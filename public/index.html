@@ -264,6 +264,17 @@
     socket.on('connect', () => console.log('[Socket.io] Connecté'));
     socket.on('disconnect', () => { statusText.textContent = 'Serveur hors ligne'; statusPill.className = ''; });
 
+    // Garde-fou : si l'authentification/connexion Socket.io échoue (ex: mauvaise
+    // configuration serveur), on l'affiche clairement au lieu de laisser la page
+    // silencieuse sans QR ni statut — plus jamais un échec invisible.
+    socket.on('connect_error', (err) => {
+        console.error('[Socket.io] Erreur de connexion :', err.message);
+        statusText.textContent = 'Erreur de connexion temps réel — voir console';
+        statusPill.className = '';
+        showToast('Connexion temps réel impossible : ' + err.message);
+        addEvent('alert-triangle', 'Erreur Socket.io', err.message);
+    });
+
     function confirmLogout() { document.getElementById('modal-overlay').classList.add('visible'); }
     function closeModal() { document.getElementById('modal-overlay').classList.remove('visible'); }
 

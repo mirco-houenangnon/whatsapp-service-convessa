@@ -88,6 +88,12 @@ export class WhatsAppManager extends EventEmitter {
                 logger: baileysLogger as any,
                 auth:   state,
                 syncFullHistory: false,
+                printQRInTerminal: false,
+                browser: ['Convessa Gateway', 'Chrome', '120.0.0'],
+                defaultQueryTimeoutMs: undefined,
+                connectTimeoutMs: 60_000,
+                qrTimeout: 60_000,
+                markOnlineOnConnect: true,
             })
 
             logger.info({ component: 'WhatsAppManager' }, 'Socket créé — attente connexion...')
@@ -95,6 +101,9 @@ export class WhatsAppManager extends EventEmitter {
             // ── Événements de connexion ──────────────────────────────────────
             this.sock.ev.on('connection.update', async (update) => {
                 const { connection, lastDisconnect, qr } = update
+
+                // Log pour debugging
+                logger.info({ component: 'WhatsAppManager', update: JSON.stringify({ connection, qr: qr ? 'present' : 'absent' }) }, 'connection.update event')
 
                 if (qr) {
                     this.isConnected  = false

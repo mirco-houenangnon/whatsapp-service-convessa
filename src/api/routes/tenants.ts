@@ -1,23 +1,4 @@
-/**
- * tenants.ts — Gestion des tenants (sessions WhatsApp des clients Convessa).
- *
- * ── Self-service (le tenant lui-même) — Authentification : Firebase Bearer token ──
- *   POST   /api/v1/tenants           → Créer sa propre session (userUid = req.firebaseUser.uid)
- *   GET    /api/v1/tenants/me        → Ma session
- *   GET    /api/v1/tenants/me/qr     → Mon QR code courant
- *   GET    /api/v1/tenants/me/api-key→ Ma clé API complète déchiffrée
- *   DELETE /api/v1/tenants/me        → Déconnecter / supprimer ma session
- *
- * ── Backoffice (les devs Convessa) — Authentification : clé Bridge (X-Api-Key) ──
- *   GET    /api/v1/tenants           → Lister tous les tenants (téléphone masqué)
- *   GET    /api/v1/tenants/:id       → Détail d'un tenant
- *   DELETE /api/v1/tenants/:id       → Supprimer un tenant
- *
- * IMPORTANT — Aucune route self-service ne doit jamais accepter un tenantId
- * ou userUid fourni par le client : l'identité vient exclusivement du token
- * Firebase vérifié (req.firebaseUser.uid). C'est ce qui garantit qu'un tenant
- * ne peut jamais lire, modifier ou récupérer la clé d'un autre tenant.
- */
+
 
 import { Router }              from 'express'
 import qrcode                  from 'qrcode'

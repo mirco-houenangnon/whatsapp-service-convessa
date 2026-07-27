@@ -31,6 +31,8 @@ import {
 } from '../../db/DeviceStore.js'
 import { logger }  from '../../services/logger.js'
 import { config }  from '../../config.js'
+import { WhatsAppManager } from '../../whatsapp/WhatsAppManager.js'
+import { enqueue }         from '../../db/MessageQueue.js'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -41,7 +43,7 @@ const PHONE_REGEX       = /^\d{7,15}$/
 // Router
 // ══════════════════════════════════════════════════════════════════════════════
 
-export function authRouter(): Router {
+export function authRouter(waManager: WhatsAppManager): Router {
     const router = Router()
 
     // ── POST /api/v1/auth/verify ──────────────────────────────────────────────
@@ -406,7 +408,7 @@ export function authRouter(): Router {
 
             // 9. Envoyer via WhatsApp
             const message = `Votre code de vérification : *${otpCode}*\n\nValable 10 minutes. Ne le partagez jamais.`
-            const sent    = await sendOtpViaWhatsApp(phone, message)
+            const sent    = await sendOtpViaWhatsApp(waManager, phone, message)
 
             if (!sent) {
                 logger.warn({ component: 'Auth/OTP', phone: maskPhone(phone) }, 'WhatsApp non connecté — OTP non envoyé')
@@ -759,7 +761,7 @@ export function authRouter(): Router {
             await saveOtp(phone, otpCode)
 
             const message = `🔐 Votre code de connexion : *${otpCode}*\n\nValable 10 minutes.`
-            const sent    = await sendOtpViaWhatsApp(phone, message)
+            const sent    = await sendOtpViaWhatsApp(waManager, phone, message)
 
             if (!sent && config.isProd) {
                 res.status(503).json({
@@ -949,25 +951,30 @@ export function authRouter(): Router {
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Envoie l'OTP via le endpoint interne /api/v1/messages/send.
+ * Envoie l'OTP en passant directement par la logique interne (waManager +
+ * file d'attente), sans repasser par le réseau via un appel HTTP à soi-même.
  * Retourne true si mis en file d'attente, false si WhatsApp non connecté.
  */
-async function sendOtpViaWhatsApp(phone: string, message: string): Promise<boolean> {
+async function sendOtpViaWhatsApp(
+    waManager: WhatsAppManager,
+    phone:     string,
+    message:   string,
+): Promise<boolean> {
     try {
-        const url  = `http://127.0.0.1:${config.port}/api/v1/messages/send`
-        const resp = await fetch(url, {
-            method:  'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(config.bridgeApiKey ? { 'X-Api-Key': config.bridgeApiKey } : {}),
-            },
-            body: JSON.stringify({ to: phone, message }),
-        })
+        if (!waManager.isReady()) {
+            return false  // WhatsApp non connecté
+        }
 
-        if (resp.status === 503) return false  // WhatsApp non connecté
-        return resp.ok || resp.status === 202
+        const { id, position } = await enqueue({ recipient: phone, message })
+
+        logger.info(
+            { component: 'Auth/OTP', messageId: id, position },
+            'OTP mis en file (in-process, sans appel HTTP loopback)'
+        )
+
+        return true
     } catch (err) {
-        logger.error({ component: 'Auth/OTP', err }, 'Erreur appel interne /messages/send (loopback)')
+        logger.error({ component: 'Auth/OTP', err }, 'Erreur mise en file OTP (interne)')
         return false
     }
 }

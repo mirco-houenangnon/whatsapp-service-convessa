@@ -1,12 +1,13 @@
 /**
- * TenantStore.ts — CRUD des tenants — PostgreSQL.
+ * TenantStore.ts — CRUD des tenants — MySQL.
  */
 
-import { v4 as uuidv4 }     from 'uuid'
-import { query }             from './connection.js'
-import { logger, maskPhone } from '../services/logger.js'
-import { encrypt, decrypt }  from '../services/crypto.js'
-import { config }            from '../config.js'
+import { v4 as uuidv4 }      from 'uuid'
+import { query, execute }     from './connection.js'
+import { logger, maskPhone }  from '../services/logger.js'
+import { encrypt, decrypt }   from '../services/crypto.js'
+import { config }             from '../config.js'
+import type mysql             from 'mysql2/promise'
 
 export type TenantStatus    = 'pending_qr' | 'connected' | 'disconnected' | 'revoked'
 export type TenantUsageType = 'unlimited' | 'duration' | 'requests'
@@ -85,9 +86,8 @@ export function decryptApiKey(row: TenantRow): string | null {
 
 export async function createTenant(data: { name?: string; webhookUrl?: string; userUid?: string }): Promise<Tenant> {
     const id = uuidv4()
-    await query(
-        `INSERT INTO wa_tenants (id, phone, name, webhook_url, user_uid, status)
-         VALUES ($1, NULL, $2, $3, $4, 'pending_qr')`,
+    await execute(
+        `INSERT INTO wa_tenants (id, phone, name, webhook_url, user_uid, status) VALUES (?, NULL, ?, ?, ?, 'pending_qr')`,
         [id, data.name ?? null, data.webhookUrl ?? null, data.userUid ?? null]
     )
     logger.info({ component: 'TenantStore', tenantId: id }, 'Tenant créé')
@@ -97,24 +97,23 @@ export async function createTenant(data: { name?: string; webhookUrl?: string; u
 }
 
 export async function getTenantById(id: string): Promise<Tenant | null> {
-    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE id = $1', [id])
+    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE id = ?', [id])
     return rows[0] ? rowToTenant(rows[0]) : null
 }
 
 export async function getTenantApiKey(id: string): Promise<string | null> {
-    const rows = await query<TenantRow>('SELECT api_key_enc, api_key_iv, api_key_tag FROM wa_tenants WHERE id = $1', [id])
+    const rows = await query<TenantRow>('SELECT api_key_enc, api_key_iv, api_key_tag FROM wa_tenants WHERE id = ?', [id])
     return rows[0] ? decryptApiKey(rows[0]) : null
 }
 
 export async function getTenantByPhone(phone: string): Promise<Tenant | null> {
-    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE phone = $1', [phone])
+    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE phone = ?', [phone])
     return rows[0] ? rowToTenant(rows[0]) : null
 }
 
 export async function getTenantByUserUid(userUid: string): Promise<Tenant | null> {
     const rows = await query<TenantRow>(
-        `SELECT * FROM wa_tenants WHERE user_uid = $1 AND status IN ('pending_qr','connected')
-         ORDER BY created_at DESC LIMIT 1`,
+        `SELECT * FROM wa_tenants WHERE user_uid = ? AND status IN ('pending_qr','connected') ORDER BY created_at DESC LIMIT 1`,
         [userUid]
     )
     return rows[0] ? rowToTenant(rows[0]) : null
@@ -122,35 +121,33 @@ export async function getTenantByUserUid(userUid: string): Promise<Tenant | null
 
 export async function getTenantByPhoneForOtherUser(phone: string, userUid: string): Promise<Tenant | null> {
     const rows = await query<TenantRow>(
-        `SELECT * FROM wa_tenants WHERE phone = $1 AND status IN ('pending_qr','connected')
-         AND (user_uid IS NULL OR user_uid != $2) LIMIT 1`,
+        `SELECT * FROM wa_tenants WHERE phone = ? AND status IN ('pending_qr','connected') AND (user_uid IS NULL OR user_uid != ?) LIMIT 1`,
         [phone, userUid]
     )
     return rows[0] ? rowToTenant(rows[0]) : null
 }
 
 export async function getTenantByApiKeyHash(hash: string): Promise<Tenant | null> {
-    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE api_key_hash = $1', [hash])
+    const rows = await query<TenantRow>('SELECT * FROM wa_tenants WHERE api_key_hash = ?', [hash])
     return rows[0] ? rowToTenant(rows[0]) : null
 }
 
 export async function updateTenantStatus(id: string, status: TenantStatus): Promise<void> {
-    await query(
-        `UPDATE wa_tenants SET status = $1::varchar,
-             connected_at = CASE WHEN $1::varchar = 'connected' THEN NOW() ELSE connected_at END,
-             updated_at   = NOW()
-         WHERE id = $2`,
-        [status, id]
+    await execute(
+        `UPDATE wa_tenants SET status = ?,
+             connected_at = CASE WHEN ? = 'connected' THEN CURRENT_TIMESTAMP ELSE connected_at END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [status, status, id]
     )
 }
 
 export async function setTenantApiKey(id: string, hash: string, hint: string, token: string, expiresAt: Date): Promise<void> {
     const payload = encrypt(token, config.sessionEncryptionKey)
-    await query(
-        `UPDATE wa_tenants SET api_key_hash = $1, api_key_hint = $2, api_key_enc = $3,
-             api_key_iv = $4, api_key_tag = $5, api_key_expires_at = $6,
-             status = 'connected', connected_at = NOW(), updated_at = NOW()
-         WHERE id = $7`,
+    await execute(
+        `UPDATE wa_tenants SET api_key_hash=?, api_key_hint=?, api_key_enc=?, api_key_iv=?, api_key_tag=?,
+             api_key_expires_at=?, status='connected', connected_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+         WHERE id=?`,
         [hash, hint, payload.data, payload.iv, payload.tag, expiresAt, id]
     )
 }
@@ -160,13 +157,11 @@ export async function setTenantApiKeyWithPrivileges(
     privileges: TenantPrivileges, referralCode: string | null = null
 ): Promise<void> {
     const payload = encrypt(token, config.sessionEncryptionKey)
-    await query(
-        `UPDATE wa_tenants
-         SET api_key_hash = $1, api_key_hint = $2, api_key_enc = $3,
-             api_key_iv = $4, api_key_tag = $5, api_key_expires_at = $6,
-             usage_type = $7::varchar, messages_limit = $8, messages_sent = 0,
-             referral_code = $9, status = 'connected', connected_at = NOW(), updated_at = NOW()
-         WHERE id = $10`,
+    await execute(
+        `UPDATE wa_tenants SET api_key_hash=?, api_key_hint=?, api_key_enc=?, api_key_iv=?, api_key_tag=?,
+             api_key_expires_at=?, usage_type=?, messages_limit=?, messages_sent=0, referral_code=?,
+             status='connected', connected_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+         WHERE id=?`,
         [hash, hint, payload.data, payload.iv, payload.tag, privileges.expiresAt,
          privileges.usageType, privileges.messagesLimit, referralCode, id]
     )
@@ -174,35 +169,27 @@ export async function setTenantApiKeyWithPrivileges(
 }
 
 export async function incrementMessagesSent(id: string): Promise<void> {
-    await query(`UPDATE wa_tenants SET messages_sent = messages_sent + 1, updated_at = NOW() WHERE id = $1`, [id])
+    await execute(`UPDATE wa_tenants SET messages_sent = messages_sent + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [id])
 }
 
 export async function getTenantByWhatsAppJid(jid: string, excludeId?: string): Promise<Tenant | null> {
-
-
-
-    // Baileys JID format: "22990956919:19@s.whatsapp.net"
-    // Le ":19" est le device ID — on doit l'ignorer pour avoir le vrai numéro
-    const jidPart = jid.split('@')[0]                          // "22990956919:19"
-    if (!jidPart) return null
-    const phone   = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? ''  // "22990956919"
-
+    const jidPart = jid.split('@')[0] ?? ''
+    const phone   = jidPart.split(':')[0]?.replace(/[^0-9]/g, '') ?? ''
     if (!phone) return null
-
-    const sql    = `SELECT * FROM wa_tenants WHERE phone = $1 AND status IN ('connected','pending_qr')${excludeId ? ' AND id != $2' : ''} LIMIT 1`
+    const sql    = `SELECT * FROM wa_tenants WHERE phone = ? AND status IN ('connected','pending_qr')${excludeId ? ' AND id != ?' : ''} LIMIT 1`
     const params = excludeId ? [phone, excludeId] : [phone]
     const rows   = await query<TenantRow>(sql, params)
     return rows[0] ? rowToTenant(rows[0]) : null
 }
 
 export async function updateTenantPhone(id: string, phone: string): Promise<void> {
-    await query(`UPDATE wa_tenants SET phone = $1, updated_at = NOW() WHERE id = $2`, [phone, id])
+    await execute(`UPDATE wa_tenants SET phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [phone, id])
 }
 
 export async function deleteTenant(id: string): Promise<void> {
-    await query('DELETE FROM wa_session_keys WHERE session_id = $1', [id])
-    await query('DELETE FROM wa_sessions WHERE id = $1', [id])
-    await query('DELETE FROM wa_tenants WHERE id = $1', [id])
+    await execute('DELETE FROM wa_session_keys WHERE session_id = ?', [id])
+    await execute('DELETE FROM wa_sessions WHERE id = ?', [id])
+    await execute('DELETE FROM wa_tenants WHERE id = ?', [id])
     logger.info({ component: 'TenantStore', tenantId: id }, 'Tenant supprimé')
 }
 

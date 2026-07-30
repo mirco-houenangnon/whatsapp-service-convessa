@@ -119,9 +119,11 @@ export const config = {
     sessionEncryptionKey,
 
     db: {
-        // URL de connexion PostgreSQL complète (Neon ou autre)
-        // Format: postgresql://user:pass@host/dbname?sslmode=require
-        url: optional('DATABASE_URL', 'postgresql://localhost:5432/convessa'),
+        host: optional('DB_HOST', '127.0.0.1'),
+        port: optionalInt('DB_PORT', 3306),
+        name: optional('DB_NAME', 'convessa'),
+        user: optional('DB_USER', 'root'),
+        pass: process.env['DB_PASS'] ?? '',
     },
 
     queue: {

@@ -1,45 +1,57 @@
 /**
- * connection.ts — Pool de connexion PostgreSQL (Neon).
+ * connection.ts — Pool de connexion MySQL (mysql2).
  * Un pool unique partagé dans tout le service.
  */
 
-import pg from 'pg'
+import mysql from 'mysql2/promise'
 import { config } from '../config.js'
 import { logger } from '../services/logger.js'
 
-const { Pool } = pg
+let pool: mysql.Pool | null = null
 
-let pool: pg.Pool | null = null
-
-export function getPool(): pg.Pool {
+export function getPool(): mysql.Pool {
     if (!pool) {
-        pool = new Pool({
-            connectionString: config.db.url,
-            ssl: { rejectUnauthorized: false },
-            max:              10,
-            idleTimeoutMillis: 30_000,
-            connectionTimeoutMillis: 10_000,
+        pool = mysql.createPool({
+            host:               config.db.host,
+            port:               config.db.port,
+            database:           config.db.name,
+            user:               config.db.user,
+            password:           config.db.pass,
+            charset:            'utf8mb4',
+            timezone:           'Z',
+            waitForConnections: true,
+            connectionLimit:    10,
+            queueLimit:         0,
+            connectTimeout:     10_000,
         })
 
-        pool.on('error', (err) => {
-            logger.error({ component: 'DB', err }, 'Erreur pool PostgreSQL inattendue')
-        })
-
-        logger.info({ component: 'DB' }, 'Pool PostgreSQL (Neon) créé')
+        logger.info({ component: 'DB' }, `Pool MySQL créé → ${config.db.host}:${config.db.port}/${config.db.name}`)
     }
     return pool
 }
 
 /**
- * Exécute une requête paramétrée.
- * Remplace mysql2 pool.execute() — les placeholders sont $1, $2, ...
+ * Exécute une requête SELECT paramétrée (placeholders `?`).
+ * Retourne les lignes sous forme T[].
  */
-export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
-    sql:    string,
+export async function query<T = Record<string, unknown>>(
+    sql:     string,
     params?: unknown[]
 ): Promise<T[]> {
-    const result = await getPool().query<T>(sql, params)
-    return result.rows
+    const [rows] = await getPool().execute<mysql.RowDataPacket[]>(sql, params)
+    return rows as unknown as T[]
+}
+
+/**
+ * Exécute une requête INSERT / UPDATE / DELETE.
+ * Retourne le OkPacket (insertId, affectedRows, etc.).
+ */
+export async function execute(
+    sql:     string,
+    params?: unknown[]
+): Promise<mysql.OkPacket> {
+    const [result] = await getPool().execute<mysql.OkPacket>(sql, params)
+    return result
 }
 
 /**
@@ -47,7 +59,7 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
  */
 export async function testConnection(): Promise<void> {
     await query('SELECT 1')
-    logger.info({ component: 'DB' }, 'Connexion PostgreSQL (Neon) OK')
+    logger.info({ component: 'DB' }, 'Connexion MySQL OK')
 }
 
 /**
@@ -57,6 +69,6 @@ export async function closePool(): Promise<void> {
     if (pool) {
         await pool.end()
         pool = null
-        logger.info({ component: 'DB' }, 'Pool PostgreSQL fermé')
+        logger.info({ component: 'DB' }, 'Pool MySQL fermé')
     }
 }

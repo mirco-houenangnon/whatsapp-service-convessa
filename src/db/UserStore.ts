@@ -1,9 +1,9 @@
 /**
- * UserStore.ts — Accès aux données utilisateurs (table auth_users) — PostgreSQL.
+ * UserStore.ts — Utilisateurs Firebase — MySQL.
  */
 
-import { query } from './connection.js'
-import { logger } from '../services/logger.js'
+import { query, execute } from './connection.js'
+import { logger }         from '../services/logger.js'
 
 export interface UserRow {
     uid:           string
@@ -17,39 +17,18 @@ export interface UserRow {
     last_login_at: Date
 }
 
-interface CreateUserInput {
-    uid:         string
-    email:       string | null
-    displayName: string | null
-    photoUrl:    string | null
-    provider:    string
-    phone?:      string | null
-}
+interface CreateUserInput { uid: string; email: string | null; displayName: string | null; photoUrl: string | null; provider: string; phone?: string | null }
 
-interface UpsertInput extends CreateUserInput {}
-
-export async function createUser(input: CreateUserInput): Promise<{
-    status: 'created' | 'exists'
-    user:   UserRow
-}> {
+export async function createUser(input: CreateUserInput): Promise<{ status: 'created' | 'exists'; user: UserRow }> {
     const byUid = await getUserByUid(input.uid)
     if (byUid) { await touchLastLogin(input.uid); return { status: 'exists', user: byUid } }
+    if (input.email) { const byEmail = await getUserByEmail(input.email); if (byEmail) return { status: 'exists', user: byEmail } }
+    if (input.phone) { const byPhone = await getUserByPhone(input.phone); if (byPhone) return { status: 'exists', user: byPhone } }
 
-    if (input.email) {
-        const byEmail = await getUserByEmail(input.email)
-        if (byEmail) return { status: 'exists', user: byEmail }
-    }
-    if (input.phone) {
-        const byPhone = await getUserByPhone(input.phone)
-        if (byPhone) return { status: 'exists', user: byPhone }
-    }
-
-    await query(
-        `INSERT INTO auth_users (uid, email, display_name, photo_url, provider, phone, active, last_login_at)
-         VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())`,
+    await execute(
+        `INSERT INTO auth_users (uid, email, display_name, photo_url, provider, phone, active, last_login_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
         [input.uid, input.email, input.displayName, input.photoUrl, input.provider, input.phone ?? null]
     )
-
     const user = await getUserByUid(input.uid)
     if (!user) throw new Error(`createUser: impossible de relire ${input.uid}`)
     logger.info({ component: 'UserStore', uid: input.uid, provider: input.provider }, 'Nouveau compte créé')
@@ -64,35 +43,27 @@ export async function loginUser(uid: string): Promise<UserRow | null> {
 }
 
 export async function touchLastLogin(uid: string): Promise<void> {
-    await query(`UPDATE auth_users SET last_login_at = NOW() WHERE uid = $1`, [uid])
+    await execute(`UPDATE auth_users SET last_login_at = NOW() WHERE uid = ?`, [uid])
 }
 
-export async function upsertUser(input: UpsertInput): Promise<UserRow> {
+export async function upsertUser(input: CreateUserInput): Promise<UserRow> {
     const byUid = await getUserByUid(input.uid)
     if (byUid) {
-        await query(
-            `UPDATE auth_users SET email = COALESCE($1, email), display_name = COALESCE($2, display_name),
-             photo_url = COALESCE($3, photo_url), last_login_at = NOW() WHERE uid = $4`,
+        await execute(
+            `UPDATE auth_users SET email=COALESCE(?,email), display_name=COALESCE(?,display_name), photo_url=COALESCE(?,photo_url), last_login_at=NOW() WHERE uid=?`,
             [input.email, input.displayName, input.photoUrl, input.uid]
         )
         return (await getUserByUid(input.uid))!
     }
-
     if (input.email) {
         const byEmail = await getUserByEmail(input.email)
         if (byEmail) {
-            await query(
-                `UPDATE auth_users SET photo_url = COALESCE($1, photo_url), display_name = COALESCE($2, display_name),
-                 last_login_at = NOW() WHERE uid = $3`,
-                [input.photoUrl, input.displayName, byEmail.uid]
-            )
+            await execute(`UPDATE auth_users SET photo_url=COALESCE(?,photo_url), display_name=COALESCE(?,display_name), last_login_at=NOW() WHERE uid=?`, [input.photoUrl, input.displayName, byEmail.uid])
             return (await getUserByUid(byEmail.uid))!
         }
     }
-
-    await query(
-        `INSERT INTO auth_users (uid, email, display_name, photo_url, provider, phone, active, last_login_at)
-         VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())`,
+    await execute(
+        `INSERT INTO auth_users (uid, email, display_name, photo_url, provider, phone, active, last_login_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
         [input.uid, input.email, input.displayName, input.photoUrl, input.provider, input.phone ?? null]
     )
     const user = await getUserByUid(input.uid)
@@ -101,28 +72,24 @@ export async function upsertUser(input: UpsertInput): Promise<UserRow> {
     return user
 }
 
+const SELECT_FIELDS = `SELECT uid, email, display_name, photo_url, provider, phone, active, created_at, last_login_at FROM auth_users`
+
 export async function getUserByUid(uid: string): Promise<UserRow | null> {
-    const rows = await query<UserRow>(
-        `SELECT uid, email, display_name, photo_url, provider, phone, active, created_at, last_login_at
-         FROM auth_users WHERE uid = $1 LIMIT 1`, [uid]
-    )
-    return rows[0] ?? null
+    const rows = await query<UserRow>(`${SELECT_FIELDS} WHERE uid = ? LIMIT 1`, [uid])
+    const row  = rows[0]
+    return row ? { ...row, active: Boolean(row.active) } : null
 }
 
 export async function getUserByPhone(phone: string): Promise<UserRow | null> {
-    const rows = await query<UserRow>(
-        `SELECT uid, email, display_name, photo_url, provider, phone, active, created_at, last_login_at
-         FROM auth_users WHERE phone = $1 LIMIT 1`, [phone]
-    )
-    return rows[0] ?? null
+    const rows = await query<UserRow>(`${SELECT_FIELDS} WHERE phone = ? LIMIT 1`, [phone])
+    const row  = rows[0]
+    return row ? { ...row, active: Boolean(row.active) } : null
 }
 
 export async function getUserByEmail(email: string): Promise<UserRow | null> {
-    const rows = await query<UserRow>(
-        `SELECT uid, email, display_name, photo_url, provider, phone, active, created_at, last_login_at
-         FROM auth_users WHERE email = $1 LIMIT 1`, [email]
-    )
-    return rows[0] ?? null
+    const rows = await query<UserRow>(`${SELECT_FIELDS} WHERE email = ? LIMIT 1`, [email])
+    const row  = rows[0]
+    return row ? { ...row, active: Boolean(row.active) } : null
 }
 
 interface ListOptions { page: number; limit: number; provider?: string }
@@ -131,23 +98,16 @@ export async function listUsers(opts: ListOptions): Promise<{ users: UserRow[]; 
     const offset     = (opts.page - 1) * opts.limit
     const conditions: string[] = []
     const params: unknown[]    = []
-
-    if (opts.provider) { conditions.push(`provider = $${params.length + 1}`); params.push(opts.provider) }
+    if (opts.provider) { conditions.push('provider = ?'); params.push(opts.provider) }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    const countRows = await query<{ total: string }>(
-        `SELECT COUNT(*) AS total FROM auth_users ${where}`, params
-    )
-    const total = parseInt(countRows[0]?.total ?? '0', 10)
+    const countRows = await query<{ total: number }>(`SELECT COUNT(*) AS total FROM auth_users ${where}`, params)
+    const total = Number(countRows[0]?.total ?? 0)
 
-    const rows = await query<UserRow>(
-        `SELECT uid, email, display_name, photo_url, provider, phone, active, created_at, last_login_at
-         FROM auth_users ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-        [...params, opts.limit, offset]
-    )
-    return { users: rows, total }
+    const rows = await query<UserRow>(`${SELECT_FIELDS} ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...params, opts.limit, offset])
+    return { users: rows.map(r => ({ ...r, active: Boolean(r.active) })), total }
 }
 
 export async function deactivateUser(uid: string): Promise<void> {
-    await query(`UPDATE auth_users SET active = FALSE WHERE uid = $1`, [uid])
+    await execute(`UPDATE auth_users SET active = 0 WHERE uid = ?`, [uid])
 }

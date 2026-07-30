@@ -1,10 +1,10 @@
 /**
- * PaymentStore.ts — Paiements d'abonnement — PostgreSQL.
+ * PaymentStore.ts — Paiements d'abonnement — MySQL.
  */
 
-import { v4 as uuidv4 } from 'uuid'
-import { query }        from './connection.js'
-import { logger }       from '../services/logger.js'
+import { v4 as uuidv4 }   from 'uuid'
+import { query, execute }  from './connection.js'
+import { logger }          from '../services/logger.js'
 
 export type PaymentGateway = 'fedapay' | 'kkiapay'
 export type PaymentStatus  = 'pending' | 'success' | 'failed' | 'cancelled'
@@ -31,9 +31,8 @@ function rowToPayment(row: PaymentRow): SubscriptionPayment {
 
 export async function createPayment(data: { tenantId: string; planId: string; gateway: PaymentGateway; amount: number; currency?: string }): Promise<SubscriptionPayment> {
     const id = uuidv4()
-    await query(
-        `INSERT INTO subscription_payments (id, tenant_id, plan_id, gateway, amount, currency, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+    await execute(
+        `INSERT INTO subscription_payments (id, tenant_id, plan_id, gateway, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
         [id, data.tenantId, data.planId, data.gateway, data.amount, data.currency ?? 'XOF']
     )
     logger.info({ component: 'PaymentStore', id, tenantId: data.tenantId }, 'Paiement créé')
@@ -43,18 +42,18 @@ export async function createPayment(data: { tenantId: string; planId: string; ga
 }
 
 export async function getPaymentById(id: string): Promise<SubscriptionPayment | null> {
-    const rows = await query<PaymentRow>('SELECT * FROM subscription_payments WHERE id = $1', [id])
+    const rows = await query<PaymentRow>('SELECT * FROM subscription_payments WHERE id = ?', [id])
     return rows[0] ? rowToPayment(rows[0]) : null
 }
 
 export async function getPaymentByGatewayTxId(gatewayTxId: string): Promise<SubscriptionPayment | null> {
-    const rows = await query<PaymentRow>('SELECT * FROM subscription_payments WHERE gateway_tx_id = $1 LIMIT 1', [gatewayTxId])
+    const rows = await query<PaymentRow>('SELECT * FROM subscription_payments WHERE gateway_tx_id = ? LIMIT 1', [gatewayTxId])
     return rows[0] ? rowToPayment(rows[0]) : null
 }
 
 export async function updatePaymentStatus(id: string, status: PaymentStatus, gatewayTxId?: string): Promise<void> {
-    await query(
-        `UPDATE subscription_payments SET status = $1, gateway_tx_id = COALESCE($2, gateway_tx_id), updated_at = NOW() WHERE id = $3`,
+    await execute(
+        `UPDATE subscription_payments SET status=?, gateway_tx_id=COALESCE(?,gateway_tx_id), updated_at=NOW() WHERE id=?`,
         [status, gatewayTxId ?? null, id]
     )
     logger.info({ component: 'PaymentStore', id, status }, 'Statut paiement mis à jour')
@@ -62,7 +61,7 @@ export async function updatePaymentStatus(id: string, status: PaymentStatus, gat
 
 export async function listPaymentsByTenant(tenantId: string): Promise<SubscriptionPayment[]> {
     const rows = await query<PaymentRow>(
-        'SELECT * FROM subscription_payments WHERE tenant_id = $1 ORDER BY created_at DESC', [tenantId]
+        'SELECT * FROM subscription_payments WHERE tenant_id = ? ORDER BY created_at DESC', [tenantId]
     )
     return rows.map(rowToPayment)
 }

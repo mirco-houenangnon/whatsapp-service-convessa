@@ -1,10 +1,10 @@
 /**
- * SubscriptionPlanStore.ts — Plans d'abonnement — PostgreSQL.
+ * SubscriptionPlanStore.ts — Plans d'abonnement — MySQL.
  */
 
-import { v4 as uuidv4 } from 'uuid'
-import { query }        from './connection.js'
-import { logger }       from '../services/logger.js'
+import { v4 as uuidv4 }   from 'uuid'
+import { query, execute }  from './connection.js'
+import { logger }          from '../services/logger.js'
 
 export type UsageType = 'duration' | 'requests'
 
@@ -15,18 +15,16 @@ export interface SubscriptionPlan {
 }
 
 interface SubscriptionPlanRow {
-    id: string; name: string; price: number; unlimited: boolean
+    id: string; name: string; price: number; unlimited: number
     usage_type: UsageType | null; usage_value: number | null
-    description: string | null; features: unknown; is_popular: boolean; created_at: Date
+    description: string | null; features: string | null; is_popular: number; created_at: Date
 }
 
 function rowToPlan(row: SubscriptionPlanRow): SubscriptionPlan {
     let features: string[] = []
     if (row.features) {
-        try {
-            const f = typeof row.features === 'string' ? JSON.parse(row.features) : row.features
-            features = Array.isArray(f) ? f : []
-        } catch { features = [] }
+        try { const f = typeof row.features === 'string' ? JSON.parse(row.features) : row.features; features = Array.isArray(f) ? f : [] }
+        catch { features = [] }
     }
     return {
         id: row.id, name: row.name, price: row.price, unlimited: Boolean(row.unlimited),
@@ -41,15 +39,14 @@ export async function createSubscriptionPlan(data: {
     description?: string | null; features?: string[]; isPopular?: boolean
 }): Promise<SubscriptionPlan> {
     const id = uuidv4()
-    await query(
-        `INSERT INTO subscription_plans (id, name, price, unlimited, usage_type, usage_value, description, features, is_popular)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [id, data.name, data.price, data.unlimited,
+    await execute(
+        `INSERT INTO subscription_plans (id, name, price, unlimited, usage_type, usage_value, description, features, is_popular) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.name, data.price, data.unlimited ? 1 : 0,
          data.unlimited ? null : (data.usageType ?? null),
          data.unlimited ? null : (data.usageValue ?? null),
          data.description ?? null,
          data.features ? JSON.stringify(data.features) : null,
-         data.isPopular ?? false]
+         data.isPopular ? 1 : 0]
     )
     logger.info({ component: 'SubscriptionPlanStore', id, name: data.name }, 'Plan créé')
     const created = await getSubscriptionPlanById(id)
@@ -58,7 +55,7 @@ export async function createSubscriptionPlan(data: {
 }
 
 export async function getSubscriptionPlanById(id: string): Promise<SubscriptionPlan | null> {
-    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans WHERE id = $1', [id])
+    const rows = await query<SubscriptionPlanRow>('SELECT * FROM subscription_plans WHERE id = ?', [id])
     return rows[0] ? rowToPlan(rows[0]) : null
 }
 

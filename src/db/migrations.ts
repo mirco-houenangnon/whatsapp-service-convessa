@@ -1,10 +1,19 @@
 /**
- * migrations.ts — Création des tables PostgreSQL au démarrage.
- * Idempotent via CREATE TABLE IF NOT EXISTS et ADD COLUMN IF NOT EXISTS.
+ * migrations.ts — Création des tables MySQL au démarrage.
+ * Idempotent : CREATE TABLE IF NOT EXISTS + ADD COLUMN IF NOT EXISTS.
+ * Seed admin automatique si la table convessa_admins est vide.
  */
 
-import { query } from './connection.js'
-import { logger } from '../services/logger.js'
+import { query, execute } from './connection.js'
+import { logger }         from '../services/logger.js'
+import { scryptSync, randomBytes } from 'crypto'
+
+// ── Helper hash mot de passe (même algo que AdminStore) ───────────────────────
+function hashPassword(password: string): string {
+    const salt = randomBytes(16).toString('hex')
+    const hash = scryptSync(password, salt, 64).toString('hex')
+    return `${salt}:${hash}`
+}
 
 const TABLES = [
 
@@ -16,31 +25,29 @@ const TABLES = [
         photo_url     VARCHAR(2048) DEFAULT NULL,
         provider      VARCHAR(50)   NOT NULL,
         phone         VARCHAR(30)   DEFAULT NULL,
-        active        BOOLEAN       NOT NULL DEFAULT TRUE,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        last_login_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (uid)
-    )`,
+        active        TINYINT(1)    NOT NULL DEFAULT 1,
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
+        last_login_at DATETIME      NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (uid),
+        INDEX idx_auth_users_email    (email),
+        INDEX idx_auth_users_phone    (phone),
+        INDEX idx_auth_users_provider (provider),
+        INDEX idx_auth_users_active   (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_auth_users_email    ON auth_users (email)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_users_phone    ON auth_users (phone)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_users_provider ON auth_users (provider)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_users_active   ON auth_users (active)`,
-
-    // ── OTP — codes de vérification téléphone ─────────────────────────────────
+    // ── OTP ───────────────────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS auth_otp_codes (
         phone       VARCHAR(30)   NOT NULL,
         code_hash   VARCHAR(64)   NOT NULL,
-        expires_at  TIMESTAMPTZ   NOT NULL,
+        expires_at  DATETIME      NOT NULL,
         attempts    SMALLINT      NOT NULL DEFAULT 0,
-        verified    BOOLEAN       NOT NULL DEFAULT FALSE,
-        created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (phone)
-    )`,
+        verified    TINYINT(1)    NOT NULL DEFAULT 0,
+        created_at  DATETIME      NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (phone),
+        INDEX idx_otp_expires_at (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_otp_expires_at ON auth_otp_codes (expires_at)`,
-
-    // ── Tenants (clients du service WhatsApp Gateway) ─────────────────────────
+    // ── Tenants ───────────────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_tenants (
         id                 VARCHAR(36)   NOT NULL,
         user_uid           VARCHAR(128)  DEFAULT NULL,
@@ -51,27 +58,24 @@ const TABLES = [
         api_key_enc        TEXT          DEFAULT NULL,
         api_key_iv         VARCHAR(32)   DEFAULT NULL,
         api_key_tag        VARCHAR(32)   DEFAULT NULL,
-        api_key_expires_at TIMESTAMPTZ   DEFAULT NULL,
+        api_key_expires_at DATETIME      DEFAULT NULL,
         webhook_url        VARCHAR(500)  DEFAULT NULL,
-        status             VARCHAR(20)   NOT NULL DEFAULT 'pending_qr'
-                               CHECK (status IN ('pending_qr','connected','disconnected','revoked')),
-        usage_type         VARCHAR(20)   NOT NULL DEFAULT 'unlimited'
-                               CHECK (usage_type IN ('unlimited','duration','requests')),
-        messages_limit     INTEGER       DEFAULT NULL,
-        messages_sent      INTEGER       NOT NULL DEFAULT 0,
+        status             VARCHAR(20)   NOT NULL DEFAULT 'pending_qr',
+        usage_type         VARCHAR(20)   NOT NULL DEFAULT 'unlimited',
+        messages_limit     INT           DEFAULT NULL,
+        messages_sent      INT           NOT NULL DEFAULT 0,
         referral_code      VARCHAR(12)   DEFAULT NULL,
-        connected_at       TIMESTAMPTZ   DEFAULT NULL,
-        created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        connected_at       DATETIME      DEFAULT NULL,
+        created_at         DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at         DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        UNIQUE (phone)
-    )`,
+        UNIQUE KEY uq_wa_tenants_phone (phone),
+        INDEX idx_wa_tenants_status       (status),
+        INDEX idx_wa_tenants_api_key_hash (api_key_hash),
+        INDEX idx_wa_tenants_user_uid     (user_uid)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_tenants_status       ON wa_tenants (status)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_tenants_api_key_hash ON wa_tenants (api_key_hash)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_tenants_user_uid     ON wa_tenants (user_uid)`,
-
-    // ── Sessions WhatsApp (Baileys credentials chiffrés) ──────────────────────
+    // ── Sessions WhatsApp (Baileys) ────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_sessions (
         id            VARCHAR(64)   NOT NULL,
         creds_iv      VARCHAR(32)   NOT NULL DEFAULT '',
@@ -79,234 +83,269 @@ const TABLES = [
         creds_data    TEXT          NOT NULL DEFAULT '',
         phone         VARCHAR(50)   DEFAULT NULL,
         display_name  VARCHAR(100)  DEFAULT NULL,
-        status        VARCHAR(20)   NOT NULL DEFAULT 'disconnected'
-                          CHECK (status IN ('active','disconnected','revoked')),
-        connected_at  TIMESTAMPTZ   DEFAULT NULL,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        status        VARCHAR(20)   NOT NULL DEFAULT 'disconnected',
+        connected_at  DATETIME      DEFAULT NULL,
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at    DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
-    )`,
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Clés Signal Baileys ───────────────────────────────────────────────────
+    // ── Clés Signal Baileys ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_session_keys (
         session_id  VARCHAR(64)   NOT NULL,
         key_type    VARCHAR(50)   NOT NULL,
         key_id      VARCHAR(255)  NOT NULL,
         key_value   TEXT          NOT NULL,
-        created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (session_id, key_type, key_id)
-    )`,
+        created_at  DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at  DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, key_type, key_id),
+        INDEX idx_wa_session_keys_session (session_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_session_keys_session ON wa_session_keys (session_id)`,
-
-    // ── File d'attente des messages ───────────────────────────────────────────
+    // ── File d'attente des messages ────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_message_queue (
         id          VARCHAR(36)   NOT NULL,
         tenant_id   VARCHAR(36)   DEFAULT NULL,
         recipient   VARCHAR(30)   NOT NULL,
         jid         VARCHAR(50)   DEFAULT NULL,
         message     TEXT          DEFAULT NULL,
-        media_type  VARCHAR(20)   DEFAULT NULL
-                        CHECK (media_type IS NULL OR media_type IN ('image','video','audio','document')),
+        media_type  VARCHAR(20)   DEFAULT NULL,
         media_url   TEXT          DEFAULT NULL,
         media_b64   TEXT          DEFAULT NULL,
         media_mime  VARCHAR(100)  DEFAULT NULL,
         media_name  VARCHAR(255)  DEFAULT NULL,
-        status      VARCHAR(10)   NOT NULL DEFAULT 'queued'
-                        CHECK (status IN ('queued','sending','sent','failed')),
+        status      VARCHAR(10)   NOT NULL DEFAULT 'queued',
         attempts    SMALLINT      NOT NULL DEFAULT 0,
         last_error  TEXT          DEFAULT NULL,
-        queued_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        sent_at     TIMESTAMPTZ   DEFAULT NULL,
-        PRIMARY KEY (id)
-    )`,
+        queued_at   DATETIME      NOT NULL DEFAULT NOW(),
+        sent_at     DATETIME      DEFAULT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_wa_message_queue_status    (status),
+        INDEX idx_wa_message_queue_queued_at (queued_at),
+        INDEX idx_wa_message_queue_tenant_id (tenant_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_message_queue_status    ON wa_message_queue (status)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_message_queue_queued_at ON wa_message_queue (queued_at)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_message_queue_tenant_id ON wa_message_queue (tenant_id)`,
-
-    // ── Journal d'activité ────────────────────────────────────────────────────
+    // ── Journal d'activité ─────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_logs (
-        id          BIGSERIAL     PRIMARY KEY,
-        level       VARCHAR(10)   NOT NULL CHECK (level IN ('debug','info','warn','error')),
+        id          BIGINT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        level       VARCHAR(10)   NOT NULL,
         component   VARCHAR(50)   NOT NULL,
         message     TEXT          NOT NULL,
-        context     JSONB         DEFAULT NULL,
-        created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
-    )`,
+        context     JSON          DEFAULT NULL,
+        created_at  DATETIME      NOT NULL DEFAULT NOW(),
+        INDEX idx_wa_logs_level      (level),
+        INDEX idx_wa_logs_component  (component),
+        INDEX idx_wa_logs_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_logs_level      ON wa_logs (level)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_logs_component  ON wa_logs (component)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_logs_created_at ON wa_logs (created_at)`,
-
-    // ── Appareils (empreintes clients) ────────────────────────────────────────
+    // ── Appareils (empreintes clients) ─────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS auth_devices (
-        id               SERIAL        PRIMARY KEY,
+        id               INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
         fingerprint_hash VARCHAR(64)   NOT NULL,
         first_ip         VARCHAR(45)   NOT NULL,
         user_agent       VARCHAR(512)  DEFAULT NULL,
         accept_language  VARCHAR(128)  DEFAULT NULL,
-        client_hints     JSONB         DEFAULT NULL,
-        first_seen_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        last_seen_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        blocked          BOOLEAN       NOT NULL DEFAULT FALSE,
+        client_hints     JSON          DEFAULT NULL,
+        first_seen_at    DATETIME      NOT NULL DEFAULT NOW(),
+        last_seen_at     DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
+        blocked          TINYINT(1)    NOT NULL DEFAULT 0,
         blocked_reason   VARCHAR(255)  DEFAULT NULL,
         registered_uid   VARCHAR(128)  DEFAULT NULL,
-        UNIQUE (fingerprint_hash)
-    )`,
+        UNIQUE KEY uq_auth_devices_fp (fingerprint_hash),
+        INDEX idx_auth_devices_registered_uid (registered_uid),
+        INDEX idx_auth_devices_blocked        (blocked)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_auth_devices_registered_uid ON auth_devices (registered_uid)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_devices_blocked        ON auth_devices (blocked)`,
-
-    // ── Sessions par appareil (journal de sécurité) ───────────────────────────
+    // ── Sessions par appareil ──────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS auth_device_sessions (
-        id          BIGSERIAL     PRIMARY KEY,
-        device_id   INTEGER       NOT NULL,
+        id          BIGINT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        device_id   INT           NOT NULL,
         user_uid    VARCHAR(128)  DEFAULT NULL,
         ip          VARCHAR(45)   NOT NULL,
-        action      VARCHAR(30)   NOT NULL
-                        CHECK (action IN ('register_attempt','register_success','login_attempt','login_success','login_blocked')),
+        action      VARCHAR(30)   NOT NULL,
         provider    VARCHAR(50)   NOT NULL,
-        meta        JSONB         DEFAULT NULL,
-        created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
-    )`,
+        meta        JSON          DEFAULT NULL,
+        created_at  DATETIME      NOT NULL DEFAULT NOW(),
+        INDEX idx_auth_device_sessions_device_id  (device_id),
+        INDEX idx_auth_device_sessions_user_uid   (user_uid),
+        INDEX idx_auth_device_sessions_action     (action),
+        INDEX idx_auth_device_sessions_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_auth_device_sessions_device_id  ON auth_device_sessions (device_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_device_sessions_user_uid   ON auth_device_sessions (user_uid)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_device_sessions_action     ON auth_device_sessions (action)`,
-    `CREATE INDEX IF NOT EXISTS idx_auth_device_sessions_created_at ON auth_device_sessions (created_at)`,
-
-    // ── Groupes WhatsApp créés par les tenants ────────────────────────────────
+    // ── Groupes WhatsApp ───────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_groups (
         id                       VARCHAR(36)   NOT NULL,
         tenant_id                VARCHAR(36)   NOT NULL,
         wa_group_jid             VARCHAR(60)   NOT NULL,
         name                     VARCHAR(150)  NOT NULL,
         invite_code              VARCHAR(50)   DEFAULT NULL,
-        invite_code_generated_at TIMESTAMPTZ   DEFAULT NULL,
-        participants_count       INTEGER       NOT NULL DEFAULT 0,
-        status                   VARCHAR(10)   NOT NULL DEFAULT 'active'
-                                     CHECK (status IN ('active','deleted')),
-        created_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        invite_code_generated_at DATETIME      DEFAULT NULL,
+        participants_count       INT           NOT NULL DEFAULT 0,
+        status                   VARCHAR(10)   NOT NULL DEFAULT 'active',
+        created_at               DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at               DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        UNIQUE (tenant_id, name),
-        UNIQUE (tenant_id, wa_group_jid),
+        UNIQUE KEY uq_wa_groups_tenant_name (tenant_id, name),
+        UNIQUE KEY uq_wa_groups_tenant_jid  (tenant_id, wa_group_jid),
+        INDEX idx_wa_groups_tenant (tenant_id),
         CONSTRAINT fk_wa_groups_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE
-    )`,
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_groups_tenant ON wa_groups (tenant_id)`,
-
-    // ── Journal des messages envoyés par les tenants ──────────────────────────
+    // ── Journal des messages tenant ────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS wa_messages (
         id             VARCHAR(36)   NOT NULL,
         tenant_id      VARCHAR(36)   NOT NULL,
         to_jid         VARCHAR(60)   NOT NULL,
-        to_type        VARCHAR(10)   NOT NULL DEFAULT 'contact'
-                           CHECK (to_type IN ('contact','group')),
+        to_type        VARCHAR(10)   NOT NULL DEFAULT 'contact',
         message        TEXT          DEFAULT NULL,
-        has_media      BOOLEAN       NOT NULL DEFAULT FALSE,
-        media_type     VARCHAR(20)   DEFAULT NULL
-                           CHECK (media_type IS NULL OR media_type IN ('image','video','audio','document')),
-        status         VARCHAR(10)   NOT NULL DEFAULT 'queued'
-                           CHECK (status IN ('queued','sent','delivered','failed')),
+        has_media      TINYINT(1)    NOT NULL DEFAULT 0,
+        media_type     VARCHAR(20)   DEFAULT NULL,
+        status         VARCHAR(10)   NOT NULL DEFAULT 'queued',
         error_code     VARCHAR(50)   DEFAULT NULL,
         error_message  TEXT          DEFAULT NULL,
         wa_message_id  VARCHAR(100)  DEFAULT NULL,
-        created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        sent_at        TIMESTAMPTZ   DEFAULT NULL,
-        updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        created_at     DATETIME      NOT NULL DEFAULT NOW(),
+        sent_at        DATETIME      DEFAULT NULL,
+        updated_at     DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
+        INDEX idx_wa_messages_tenant     (tenant_id),
+        INDEX idx_wa_messages_status     (status),
+        INDEX idx_wa_messages_created_at (created_at),
         CONSTRAINT fk_wa_messages_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE
-    )`,
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_wa_messages_tenant     ON wa_messages (tenant_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_messages_status     ON wa_messages (status)`,
-    `CREATE INDEX IF NOT EXISTS idx_wa_messages_created_at ON wa_messages (created_at)`,
-
-    // ── Administrateurs Convessa (backoffice) ─────────────────────────────────
+    // ── Administrateurs Convessa ───────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS convessa_admins (
-        id            SERIAL        PRIMARY KEY,
+        id            INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
         email         VARCHAR(255)  NOT NULL,
         display_name  VARCHAR(100)  DEFAULT NULL,
         password_hash VARCHAR(200)  NOT NULL,
-        active        BOOLEAN       NOT NULL DEFAULT TRUE,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        last_login_at TIMESTAMPTZ   DEFAULT NULL,
-        UNIQUE (email)
-    )`,
+        active        TINYINT(1)    NOT NULL DEFAULT 1,
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at    DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
+        last_login_at DATETIME      DEFAULT NULL,
+        UNIQUE KEY uq_convessa_admins_email (email),
+        INDEX idx_convessa_admins_active (active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    `CREATE INDEX IF NOT EXISTS idx_convessa_admins_active ON convessa_admins (active)`,
-
-    // ── Codes de parrainage ───────────────────────────────────────────────────
+    // ── Codes de parrainage ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS referral_codes (
         id            VARCHAR(36)   NOT NULL,
         code          VARCHAR(12)   NOT NULL,
-        unlimited     BOOLEAN       NOT NULL DEFAULT FALSE,
-        usage_type    VARCHAR(10)   DEFAULT NULL
-                          CHECK (usage_type IS NULL OR usage_type IN ('duration','requests')),
-        usage_value   INTEGER       DEFAULT NULL,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        unlimited     TINYINT(1)    NOT NULL DEFAULT 0,
+        usage_type    VARCHAR(10)   DEFAULT NULL,
+        usage_value   INT           DEFAULT NULL,
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
         PRIMARY KEY (id),
-        UNIQUE (code)
-    )`,
+        UNIQUE KEY uq_referral_codes_code (code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Plans d'abonnement ────────────────────────────────────────────────────
+    // ── Plans d'abonnement ─────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS subscription_plans (
         id            VARCHAR(36)   NOT NULL,
         name          VARCHAR(100)  NOT NULL,
-        price         INTEGER       NOT NULL DEFAULT 0,
-        unlimited     BOOLEAN       NOT NULL DEFAULT FALSE,
-        usage_type    VARCHAR(10)   DEFAULT NULL
-                          CHECK (usage_type IS NULL OR usage_type IN ('duration','requests')),
-        usage_value   INTEGER       DEFAULT NULL,
+        price         INT           NOT NULL DEFAULT 0,
+        unlimited     TINYINT(1)    NOT NULL DEFAULT 0,
+        usage_type    VARCHAR(10)   DEFAULT NULL,
+        usage_value   INT           DEFAULT NULL,
         description   TEXT          DEFAULT NULL,
-        features      JSONB         DEFAULT NULL,
-        is_popular    BOOLEAN       NOT NULL DEFAULT FALSE,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        features      JSON          DEFAULT NULL,
+        is_popular    TINYINT(1)    NOT NULL DEFAULT 0,
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
         PRIMARY KEY (id)
-    )`,
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-    // ── Paiements d'abonnement ────────────────────────────────────────────────
+    // ── Paiements d'abonnement ─────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS subscription_payments (
         id              VARCHAR(36)   NOT NULL,
         tenant_id       VARCHAR(36)   NOT NULL,
         plan_id         VARCHAR(36)   NOT NULL,
-        gateway         VARCHAR(10)   NOT NULL CHECK (gateway IN ('fedapay','kkiapay')),
+        gateway         VARCHAR(10)   NOT NULL,
         gateway_tx_id   VARCHAR(255)  DEFAULT NULL,
-        amount          INTEGER       NOT NULL,
+        amount          INT           NOT NULL,
         currency        VARCHAR(10)   NOT NULL DEFAULT 'XOF',
-        status          VARCHAR(10)   NOT NULL DEFAULT 'pending'
-                            CHECK (status IN ('pending','success','failed','cancelled')),
-        created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+        status          VARCHAR(10)   NOT NULL DEFAULT 'pending',
+        created_at      DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at      DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
+        INDEX idx_sub_payments_tenant     (tenant_id),
+        INDEX idx_sub_payments_plan       (plan_id),
+        INDEX idx_sub_payments_status     (status),
+        INDEX idx_sub_payments_gateway_tx (gateway_tx_id),
         CONSTRAINT fk_payments_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE,
         CONSTRAINT fk_payments_plan   FOREIGN KEY (plan_id)   REFERENCES subscription_plans(id)
-    )`,
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+]
 
-    `CREATE INDEX IF NOT EXISTS idx_sub_payments_tenant     ON subscription_payments (tenant_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_sub_payments_plan       ON subscription_payments (plan_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_sub_payments_status     ON subscription_payments (status)`,
-    `CREATE INDEX IF NOT EXISTS idx_sub_payments_gateway_tx ON subscription_payments (gateway_tx_id)`,
+// ── Migrations idempotentes — colonnes ajoutées progressivement ───────────────
+const ALTER_MIGRATIONS = [
+    `ALTER TABLE wa_message_queue MODIFY COLUMN message TEXT DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_type VARCHAR(20) DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_url  TEXT DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_b64  TEXT DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_mime VARCHAR(100) DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS media_name VARCHAR(255) DEFAULT NULL`,
+    `ALTER TABLE wa_message_queue ADD COLUMN IF NOT EXISTS tenant_id  VARCHAR(36) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS user_uid           VARCHAR(128) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_enc        TEXT DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_iv         VARCHAR(32) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_tag        VARCHAR(32) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_expires_at DATETIME DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS api_key_hint       VARCHAR(60) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants MODIFY COLUMN phone VARCHAR(30) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS usage_type     VARCHAR(20) NOT NULL DEFAULT 'unlimited'`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_limit  INT DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS messages_sent   INT NOT NULL DEFAULT 0`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS referral_code   VARCHAR(12) DEFAULT NULL`,
+    `ALTER TABLE wa_sessions MODIFY COLUMN phone VARCHAR(50) DEFAULT NULL`,
+    `ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL`,
+    `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL`,
+    `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features    JSON DEFAULT NULL`,
+    `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_popular  TINYINT(1) NOT NULL DEFAULT 0`,
 ]
 
 export async function runMigrations(): Promise<void> {
+    // 1. Créer toutes les tables
     for (const sql of TABLES) {
         await query(sql)
     }
 
-    // Au redémarrage : tout message bloqué en 'sending' → remis en 'queued'
-    const result = await query<{ count: string }>(
-        `UPDATE wa_message_queue SET status = 'queued' WHERE status = 'sending' RETURNING id`
-    )
-    if (result.length > 0) {
-        logger.warn({ component: 'DB', count: result.length }, `${result.length} message(s) remis en file`)
+    // 2. Migrations ALTER TABLE idempotentes
+    for (const sql of ALTER_MIGRATIONS) {
+        await query(sql).catch(() => { /* ignorer si déjà appliqué */ })
     }
 
-    logger.info({ component: 'DB' }, 'Migrations PostgreSQL OK — tables vérifiées')
+    // 3. Remettre en file les messages bloqués en 'sending'
+    const result = await execute(
+        `UPDATE wa_message_queue SET status = 'queued' WHERE status = 'sending'`
+    )
+    if (result.affectedRows > 0) {
+        logger.warn({ component: 'DB', count: result.affectedRows }, `${result.affectedRows} message(s) remis en file`)
+    }
+
+    // 4. Seed admin par défaut (une seule fois, si aucun admin n'existe)
+    const countRows = await query<{ cnt: number }>(
+        `SELECT COUNT(*) AS cnt FROM convessa_admins`
+    )
+    const adminCount = Number(countRows[0]?.cnt ?? 0)
+
+    if (adminCount === 0) {
+        const ADMIN_EMAIL    = 'convessa@service.com'
+        const ADMIN_PASSWORD = 'Convessa@Service_2026'
+        const ADMIN_NAME     = 'Convessa Admin'
+        const passwordHash   = hashPassword(ADMIN_PASSWORD)
+
+        await execute(
+            `INSERT INTO convessa_admins (email, display_name, password_hash) VALUES (?, ?, ?)`,
+            [ADMIN_EMAIL, ADMIN_NAME, passwordHash]
+        )
+        logger.info(
+            { component: 'DB', email: ADMIN_EMAIL },
+            '🔐 Admin par défaut créé — CHANGEZ le mot de passe après la première connexion !'
+        )
+    }
+
+    logger.info({ component: 'DB' }, 'Migrations MySQL OK — tables vérifiées')
 }
 
 // helper exposé pour les stores

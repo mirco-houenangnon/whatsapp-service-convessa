@@ -1,11 +1,10 @@
 /**
- * seed-admin.mjs — Crée l'administrateur Convessa par défaut.
- *
+ * seed-admin.mjs — Script standalone de seed admin (optionnel).
+ * Le seed est aussi intégré directement dans runMigrations() au démarrage.
  * Usage : node scripts/seed-admin.mjs
  */
 
-import pkg from 'pg'
-const { Client } = pkg
+import mysql from 'mysql2/promise'
 import { scryptSync, randomBytes } from 'crypto'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
@@ -24,53 +23,40 @@ function hashPassword(password) {
     return `${salt}:${hash}`
 }
 
-const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+const connection = await mysql.createConnection({
+    host:     process.env.DB_HOST     || '127.0.0.1',
+    port:     parseInt(process.env.DB_PORT || '3306', 10),
+    database: process.env.DB_NAME     || 'convessa',
+    user:     process.env.DB_USER     || 'root',
+    password: process.env.DB_PASS     || '',
+    charset:  'utf8mb4',
+    timezone: 'Z',
 })
 
-await client.connect()
-console.log('✅ Connexion PostgreSQL (Neon) établie')
+console.log('✅ Connexion MySQL établie')
 
-// Créer la table si elle n'existe pas
-await client.query(`
-    CREATE TABLE IF NOT EXISTS convessa_admins (
-        id            SERIAL        PRIMARY KEY,
-        email         VARCHAR(255)  NOT NULL UNIQUE,
-        display_name  VARCHAR(100)  DEFAULT NULL,
-        password_hash VARCHAR(200)  NOT NULL,
-        active        BOOLEAN       NOT NULL DEFAULT TRUE,
-        created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-        last_login_at TIMESTAMPTZ   DEFAULT NULL
-    )
-`)
-console.log('✅ Table convessa_admins vérifiée')
-
-// Vérifier si l'admin existe déjà
-const existing = await client.query(
-    'SELECT id, email FROM convessa_admins WHERE email = $1 LIMIT 1',
+const [existing] = await connection.execute(
+    'SELECT id, email FROM convessa_admins WHERE email = ? LIMIT 1',
     [ADMIN_EMAIL]
 )
 
-if (existing.rows.length > 0) {
-    console.log(`ℹ️  L'admin ${ADMIN_EMAIL} existe déjà (id: ${existing.rows[0].id}) — aucune action.`)
-    await client.end()
+if (existing.length > 0) {
+    console.log(`ℹ️  L'admin ${ADMIN_EMAIL} existe déjà (id: ${existing[0].id}) — aucune action.`)
+    await connection.end()
     process.exit(0)
 }
 
 const passwordHash = hashPassword(ADMIN_PASSWORD)
-const result = await client.query(
-    `INSERT INTO convessa_admins (email, display_name, password_hash) VALUES ($1, $2, $3) RETURNING id`,
+const [result] = await connection.execute(
+    `INSERT INTO convessa_admins (email, display_name, password_hash) VALUES (?, ?, ?)`,
     [ADMIN_EMAIL, ADMIN_NAME, passwordHash]
 )
 
 console.log(`\n🎉 Admin créé avec succès !`)
-console.log(`   ID       : ${result.rows[0].id}`)
+console.log(`   ID       : ${result.insertId}`)
 console.log(`   Email    : ${ADMIN_EMAIL}`)
-console.log(`   Nom      : ${ADMIN_NAME}`)
 console.log(`   Password : ${ADMIN_PASSWORD}`)
 console.log(`\n⚠️  Changez le mot de passe après la première connexion.\n`)
 
-await client.end()
+await connection.end()
 process.exit(0)

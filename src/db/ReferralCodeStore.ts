@@ -1,10 +1,10 @@
 /**
- * ReferralCodeStore.ts — Codes de parrainage — PostgreSQL.
+ * ReferralCodeStore.ts — Codes de parrainage — MySQL.
  */
 
-import { v4 as uuidv4 } from 'uuid'
-import { query }        from './connection.js'
-import { logger }       from '../services/logger.js'
+import { v4 as uuidv4 }   from 'uuid'
+import { query, execute }  from './connection.js'
+import { logger }          from '../services/logger.js'
 
 export type UsageType = 'duration' | 'requests'
 
@@ -14,24 +14,19 @@ export interface ReferralCode {
 }
 
 interface ReferralCodeRow {
-    id: string; code: string; unlimited: boolean
+    id: string; code: string; unlimited: number
     usage_type: UsageType | null; usage_value: number | null; created_at: Date
 }
 
 function rowToReferralCode(row: ReferralCodeRow): ReferralCode {
-    return {
-        id: row.id, code: row.code, unlimited: Boolean(row.unlimited),
-        usageType: row.usage_type, usageValue: row.usage_value, createdAt: row.created_at,
-    }
+    return { id: row.id, code: row.code, unlimited: Boolean(row.unlimited), usageType: row.usage_type, usageValue: row.usage_value, createdAt: row.created_at }
 }
 
-export async function createReferralCode(data: {
-    code: string; unlimited: boolean; usageType?: UsageType | null; usageValue?: number | null
-}): Promise<ReferralCode> {
+export async function createReferralCode(data: { code: string; unlimited: boolean; usageType?: UsageType | null; usageValue?: number | null }): Promise<ReferralCode> {
     const id = uuidv4()
-    await query(
-        `INSERT INTO referral_codes (id, code, unlimited, usage_type, usage_value) VALUES ($1, $2, $3, $4, $5)`,
-        [id, data.code, data.unlimited, data.unlimited ? null : (data.usageType ?? null), data.unlimited ? null : (data.usageValue ?? null)]
+    await execute(
+        `INSERT INTO referral_codes (id, code, unlimited, usage_type, usage_value) VALUES (?, ?, ?, ?, ?)`,
+        [id, data.code, data.unlimited ? 1 : 0, data.unlimited ? null : (data.usageType ?? null), data.unlimited ? null : (data.usageValue ?? null)]
     )
     logger.info({ component: 'ReferralCodeStore', id, code: data.code }, 'Code créé')
     const created = await getReferralCodeById(id)
@@ -40,12 +35,12 @@ export async function createReferralCode(data: {
 }
 
 export async function getReferralCodeById(id: string): Promise<ReferralCode | null> {
-    const rows = await query<ReferralCodeRow>('SELECT * FROM referral_codes WHERE id = $1', [id])
+    const rows = await query<ReferralCodeRow>('SELECT * FROM referral_codes WHERE id = ?', [id])
     return rows[0] ? rowToReferralCode(rows[0]) : null
 }
 
 export async function getReferralCodeByCode(code: string): Promise<ReferralCode | null> {
-    const rows = await query<ReferralCodeRow>('SELECT * FROM referral_codes WHERE code = $1', [code])
+    const rows = await query<ReferralCodeRow>('SELECT * FROM referral_codes WHERE code = ?', [code])
     return rows[0] ? rowToReferralCode(rows[0]) : null
 }
 

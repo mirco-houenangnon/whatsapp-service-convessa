@@ -17,6 +17,9 @@ FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
+# wget pour le healthcheck docker-compose
+RUN apk add --no-cache wget
+
 # Dépendances runtime uniquement (pas les devDependencies)
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
@@ -37,8 +40,5 @@ COPY whatsappservice-50e51-firebase-adminsdk-fbsvc-d35a2c107b.json ./
 # Ne pas copier .env dans l'image !
 
 EXPOSE 3005
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "fetch('http://localhost:3005/api/v1/status').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]

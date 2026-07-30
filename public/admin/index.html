@@ -866,6 +866,201 @@
       color: #6b7280;
       margin-top: 0.125rem;
     }
+
+    /* ══════════════════════════════════════════════════════════════
+       RESPONSIVE — header, nav, tables, footer, modales
+       ══════════════════════════════════════════════════════════════ */
+
+    /* ── Tablette (≤ 1024px) ── */
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      main { padding: 1.5rem; }
+    }
+
+    /* ── Mobile paysage + petite tablette (≤ 900px) ── */
+    @media (max-width: 900px) {
+      /* Header */
+      header {
+        height: auto;
+        flex-wrap: wrap;
+        row-gap: 0;
+        padding: 0.75rem 1rem 0;
+      }
+      .header-brand {
+        padding-right: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+      .header-sub { display: none; }
+      /* Nav barre scrollable sur une ligne dédiée */
+      .header-nav {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0.25rem;
+        padding: 0.5rem 0 0.5rem;
+        border-top: 1px solid rgba(255,255,255,0.15);
+        margin-top: 0.25rem;
+        /* Indicateur de scroll */
+        mask-image: linear-gradient(to right, black 85%, transparent);
+        -webkit-mask-image: linear-gradient(to right, black 85%, transparent);
+      }
+      .header-nav::-webkit-scrollbar { display: none; }
+      .nav-tab {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem;
+        flex-shrink: 0;
+        white-space: nowrap;
+        border-radius: 8px;
+      }
+      /* Droite du header */
+      .header-right { padding-left: 0.75rem; gap: 0.5rem; }
+      .admin-name { display: none; }
+      .admin-profile { padding: 0.4rem; }
+      .btn-logout { padding: 0.4rem 0.75rem; font-size: 0.8125rem; }
+      /* Main */
+      main { padding: 1rem; }
+      /* Panel iframe */
+      #view-panel iframe { height: calc(100vh - 140px - 56px); }
+      /* Section header */
+      .section-header { flex-wrap: wrap; gap: 0.75rem; align-items: flex-start; }
+      /* Recherche utilisateurs */
+      #view-users .section-header > div {
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+      }
+      #userSearchInput { width: 100% !important; min-width: 0 !important; }
+      #userFilterStatus { width: 100%; }
+      /* Footer */
+      footer {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+        justify-content: center;
+        text-align: center;
+      }
+      .footer-left, .footer-right { width: 100%; justify-content: center; }
+      /* Toasts */
+      .toast-container { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; }
+      .toast { min-width: 0; max-width: 100%; width: 100%; }
+      /* DB toolbar */
+      .db-toolbar { flex-wrap: wrap; gap: 0.5rem; }
+      .db-toolbar select { flex: 1 1 calc(50% - 0.25rem); min-width: 140px; }
+      .db-toolbar input[type="text"] { flex: 1 1 100%; min-width: 0; }
+      .db-toolbar .btn-ghost, .db-toolbar .btn-outline-green { flex: 1 1 calc(50% - 0.25rem); justify-content: center; }
+      /* Profil détail header */
+      .profile-detail-header {
+        flex-wrap: wrap;
+        text-align: center;
+        justify-content: center;
+        padding: 1rem;
+        gap: 0.875rem;
+      }
+      .profile-detail-header > div:nth-child(2) { width: 100%; text-align: center; }
+      #pdDeleteBtn { width: 100%; justify-content: center; }
+      /* Account grid */
+      .account-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+    }
+
+    /* ── Mobile portrait (≤ 560px) ── */
+    @media (max-width: 560px) {
+      header { padding: 0.625rem 0.75rem 0; }
+      .header-title { font-size: 1.125rem; }
+      .header-icon-box { width: 36px; height: 36px; border-radius: 10px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+      .stat-card { padding: 1rem; gap: 0.875rem; }
+      .stat-number { font-size: 1.75rem; }
+      .modal-overlay { padding: 0.5rem; }
+      .modal-box { max-width: 100%; border-radius: 16px; }
+      thead th, tbody td { padding: 0.625rem 0.875rem; font-size: 0.8125rem; }
+      .card-body-pad { padding: 1.25rem; }
+      .pagination { flex-wrap: wrap; gap: 0.75rem; padding: 1rem; }
+      .pagination-btn { flex: 1; justify-content: center; }
+      .pagination-info { width: 100%; text-align: center; }
+      .db-mode-switch { width: 100%; }
+      .db-mode-btn { flex: 1; text-align: center; }
+      /* Masquer colonnes peu utiles dans les tables sur petit écran */
+      table { min-width: 480px; }
+      .section-title { font-size: 1.0625rem; }
+      main { padding: 0.75rem; }
+      footer { padding: 0.625rem 0.75rem; }
+    }
+
+    /* ── Très petit écran (≤ 380px) ── */
+    @media (max-width: 380px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .nav-tab { font-size: 0.75rem; padding: 0.4rem 0.75rem; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       ONGLET BASE DE DONNÉES
+       ══════════════════════════════════════════════════════════════ */
+    .db-mode-switch { display: flex; gap: 0.5rem; background: #f3f4f6; padding: 0.3rem; border-radius: 12px; }
+    .db-mode-btn {
+      padding: 0.5rem 1.1rem; border: none; border-radius: 9px; background: transparent;
+      color: #667781; font-size: 0.875rem; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .db-mode-btn.active { background: #fff; color: #128C7E; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .db-subview { display: none; }
+    .db-subview.active { display: block; }
+    .db-toolbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .db-toolbar select, .db-toolbar input[type="text"] {
+      padding: 0.55rem 0.9rem; border: 1.5px solid #e4e6ea; border-radius: 10px;
+      font-size: 0.875rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none;
+    }
+    .db-toolbar select:focus, .db-toolbar input:focus { border-color: #25D366; }
+    .db-toolbar input[type="text"] { flex: 1; min-width: 200px; }
+    .db-warning-banner {
+      display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1.1rem; margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d;
+      border-radius: 12px; color: #92400e; font-size: 0.8125rem; font-weight: 500;
+    }
+    td.cell-editable { cursor: pointer; transition: background 0.15s ease; border-radius: 6px; }
+    td.cell-editable:hover { background: rgba(37,211,102,0.08); box-shadow: inset 0 0 0 1.5px rgba(37,211,102,0.35); }
+    td.cell-readonly { color: #9aa4ad; }
+    td.cell-sensitive { color: #b45309; font-style: italic; font-size: 0.8125rem; }
+    .row-actions-cell { display: flex; gap: 0.4rem; white-space: nowrap; }
+    .btn-icon-sm {
+      width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid #e4e6ea; background: #fff;
+      color: #667781; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .btn-icon-sm:hover.edit { border-color: #25D366; color: #128C7E; background: rgba(37,211,102,0.06); }
+    .btn-icon-sm:hover.danger { border-color: #dc3545; color: #dc3545; background: rgba(220,53,69,0.06); }
+    .btn-danger {
+      display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem;
+      background: linear-gradient(135deg, #dc3545 0%, #b91c2c 100%); color: #fff; border: none;
+      border-radius: 12px; font-size: 0.875rem; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(220,53,69,0.25);
+    }
+    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(220,53,69,0.35); }
+    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .profile-row { cursor: pointer; }
+    .profile-detail-header {
+      display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem;
+      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); border: 1px solid rgba(228,230,234,0.6);
+      border-radius: 16px; margin: 1rem 0 1.5rem;
+    }
+    .profile-detail-name { font-size: 1.25rem; font-weight: 700; color: #111b21; }
+    .profile-detail-sub { font-size: 0.875rem; color: #667781; margin-top: 0.2rem; }
+    .db-section-card { margin-bottom: 1.5rem; }
+    .db-section-title-row {
+      display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid #e4e6ea;
+    }
+    .db-section-title-row .section-title { font-size: 1rem; }
+    .db-empty-note { padding: 1.5rem; color: #667781; font-size: 0.875rem; text-align: center; }
+    .field-edit-form .form-group textarea {
+      padding: 0.75rem 1rem; border: 1.5px solid #e4e6ea; border-radius: 12px; font-size: 0.9375rem;
+      font-family: 'Inter', sans-serif; color: #111b21; resize: vertical; min-height: 90px; outline: none;
+    }
+    .field-edit-form .form-group textarea:focus { border-color: #25D366; box-shadow: 0 0 0 4px rgba(37,211,102,0.12); }
+    .field-edit-form select { padding: 0.75rem 1rem; border: 1.5px solid #e4e6ea; border-radius: 12px; font-size: 0.9375rem; font-family: 'Inter', sans-serif; width: 100%; background: #fff; }
   </style>
 </head>
 <body>
@@ -889,6 +1084,7 @@
       <button class="nav-tab" data-tab="users">Utilisateurs</button>
       <button class="nav-tab" data-tab="referrals">Codes de parrainage</button>
       <button class="nav-tab" data-tab="plans">Plans d'abonnements</button>
+      <button class="nav-tab" data-tab="database">Base de données</button>
       <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
     </nav>
 
@@ -1299,6 +1495,109 @@
       </div>
     </div><!-- end view-plans -->
 
+    <!-- VIEW: BASE DE DONNÉES -->
+    <div class="view" id="view-database">
+      <div class="section-header">
+        <div class="section-title">Base de données</div>
+        <div class="db-mode-switch">
+          <button class="db-mode-btn active" data-mode="tables" id="dbModeTablesBtn">Mode Table (SQL)</button>
+          <button class="db-mode-btn" data-mode="profiles" id="dbModeProfilesBtn">Mode Profils</button>
+        </div>
+      </div>
+
+      <div class="db-warning-banner">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+          <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Accès direct à la base de données de production. Les modifications sont immédiates et irréversibles.
+      </div>
+
+      <!-- SUB-VIEW A : MODE TABLE (façon phpMyAdmin) -->
+      <div class="db-subview active" id="dbSubTables">
+        <div class="db-toolbar">
+          <select id="dbTableSelect"></select>
+          <input type="text" id="dbSearchInput" placeholder="Rechercher dans la table…" />
+          <button class="btn-ghost" id="dbRefreshRowsBtn">Actualiser</button>
+          <button class="btn-outline-green" id="dbNewRowBtn">+ Nouvelle ligne</button>
+        </div>
+        <div class="table-card">
+          <div class="table-wrap">
+            <table id="dbRowsTable">
+              <thead id="dbRowsThead"></thead>
+              <tbody id="dbRowsBody">
+                <tr><td><div class="empty-state">Sélectionnez une table…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="dbRowsPagination" style="display:none;">
+            <button class="pagination-btn" id="dbRowsPrevBtn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Précédent
+            </button>
+            <div class="pagination-info" id="dbRowsPaginationInfo">Page 1 sur 1</div>
+            <button class="pagination-btn" id="dbRowsNextBtn" disabled>
+              Suivant
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW B : MODE PROFILS -->
+      <div class="db-subview" id="dbSubProfiles">
+        <div id="dbProfileListWrap">
+          <div class="db-toolbar">
+            <input type="text" id="profileSearchInput" placeholder="Rechercher un profil (nom, email, téléphone, uid)…" />
+            <button class="btn-ghost" id="dbRefreshProfilesBtn">Actualiser</button>
+          </div>
+          <div class="table-card">
+            <div class="table-wrap">
+              <table id="profilesTable">
+                <thead>
+                  <tr><th>Utilisateur</th><th>Contact</th><th>Comptes WhatsApp</th><th>Statut</th><th>Inscrit le</th></tr>
+                </thead>
+                <tbody id="profilesBody">
+                  <tr><td colspan="5"><div class="empty-state">Chargement…</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" id="profilesPagination" style="display:none;">
+              <button class="pagination-btn" id="profilesPrevBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Précédent
+              </button>
+              <div class="pagination-info" id="profilesPaginationInfo">Page 1 sur 1</div>
+              <button class="pagination-btn" id="profilesNextBtn" disabled>
+                Suivant
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="dbProfileDetailWrap" style="display:none;">
+          <button class="btn-ghost" id="profileBackBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Retour à la liste
+          </button>
+
+          <div class="profile-detail-header">
+            <div class="profile-avatar" id="pdAvatar">?</div>
+            <div>
+              <div class="profile-detail-name" id="pdName">—</div>
+              <div class="profile-detail-sub" id="pdSub">—</div>
+            </div>
+            <button class="btn-danger" id="pdDeleteBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Supprimer ce profil
+            </button>
+          </div>
+
+          <div id="pdSections"></div>
+        </div>
+      </div>
+    </div><!-- end view-database -->
+
     <!-- VIEW 3: PANEL WHATSAPP -->
     <div class="view" id="view-panel">
       <iframe src="/" title="Panel WhatsApp"></iframe>
@@ -1441,6 +1740,76 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL LIGNE (créer / éditer une ligne — mode Table) ── -->
+  <div class="modal-overlay" id="dbRowModal" role="dialog" aria-modal="true" aria-labelledby="dbRowModalTitle">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <span class="modal-title" id="dbRowModalTitle">Éditer la ligne</span>
+        <button class="modal-close" id="dbRowModalCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form id="dbRowForm" class="field-edit-form">
+        <div class="modal-body" id="dbRowFormBody" style="max-height:60vh;overflow-y:auto;"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary" id="dbRowSaveBtn">
+            <div class="spinner" id="dbRowSpinner"></div>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL CHAMP (édition rapide d'une case — mode Profils) ── -->
+  <div class="modal-overlay" id="fieldEditModal" role="dialog" aria-modal="true" aria-labelledby="fieldEditModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="fieldEditModalTitle">Modifier le champ</span>
+        <button class="modal-close" id="fieldEditCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form id="fieldEditForm" class="field-edit-form">
+        <div class="modal-body" id="fieldEditFormBody"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary" id="fieldEditSaveBtn">
+            <div class="spinner" id="fieldEditSpinner"></div>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL CONFIRMATION SUPPRESSION PROFIL ── -->
+  <div class="modal-overlay" id="deleteProfileModal" role="dialog" aria-modal="true" aria-labelledby="deleteProfileModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="deleteProfileModalTitle">Supprimer ce profil ?</span>
+        <button class="modal-close" id="deleteProfileCloseBtn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="color:#dc3545;font-weight:600;">Cette action est irréversible.</p>
+        <br/>
+        <p>Toutes les données de ce profil seront supprimées définitivement : compte, comptes WhatsApp, sessions, groupes, messages et paiements associés.</p>
+        <br/>
+        <div class="form-group">
+          <label for="deleteProfileConfirmInput">Tapez <strong>SUPPRIMER</strong> pour confirmer</label>
+          <input type="text" id="deleteProfileConfirmInput" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-danger" id="deleteProfileConfirmBtn" disabled>
+          <div class="spinner" id="deleteProfileSpinner"></div>
+          Supprimer définitivement
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2101,50 +2470,48 @@
     });
 
     // ── TAB SWITCHING ──
+    // Persisté en localStorage pour survivre à un rechargement de page (F5) :
+    // sans ça, un refresh renvoyait toujours vers l'onglet "dashboard" par défaut.
+    const ACTIVE_TAB_KEY = 'admin_active_tab';
     const views = {
       dashboard: document.getElementById('view-dashboard'),
       users:     document.getElementById('view-users'),
       account:   document.getElementById('view-account'),
       referrals: document.getElementById('view-referrals'),
       plans:     document.getElementById('view-plans'),
+      database:  document.getElementById('view-database'),
       panel:     document.getElementById('view-panel')
     };
     const mainContent = document.getElementById('mainContent');
 
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        const target = this.dataset.tab;
+    function activateTab(target, { persist = true } = {}) {
+      if (!views[target]) target = 'dashboard';
 
-        // Toggle main padding class for panel view
-        if (target === 'panel') {
-          mainContent.classList.add('panel-view');
-        } else {
-          mainContent.classList.remove('panel-view');
-        }
-
-        Object.keys(views).forEach(key => {
-          views[key].classList.remove('active');
-        });
-        if (views[target]) views[target].classList.add('active');
-
-        if (target === 'account') loadProfile();
-        if (target === 'users') loadUsers();
-        if (target === 'referrals') loadReferralCodes();
-        if (target === 'plans') loadPlans();
+      document.querySelectorAll('.nav-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === target);
       });
+
+      // Toggle main padding class for panel view
+      mainContent.classList.toggle('panel-view', target === 'panel');
+
+      Object.keys(views).forEach(key => views[key].classList.remove('active'));
+      views[target].classList.add('active');
+
+      if (persist) sessionStorage.setItem(ACTIVE_TAB_KEY, target);
+
+      if (target === 'account')   loadProfile();
+      if (target === 'users')     loadUsers();
+      if (target === 'referrals') loadReferralCodes();
+      if (target === 'plans')     loadPlans();
+      if (target === 'database')  { if (typeof initDatabaseTab === 'function') initDatabaseTab(); else window.addEventListener('dbTabReady', initDatabaseTab, { once: true }); }
+    }
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', function() { activateTab(this.dataset.tab); });
     });
 
     // ── OPEN PANEL BTN ──
-    document.getElementById('openPanelBtn').addEventListener('click', function() {
-      document.querySelectorAll('.nav-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === 'panel');
-      });
-      mainContent.classList.add('panel-view');
-      Object.keys(views).forEach(key => views[key].classList.remove('active'));
-      views.panel.classList.add('active');
-    });
+    document.getElementById('openPanelBtn').addEventListener('click', function() { activateTab('panel'); });
 
     // ── REFRESH BTN ──
     document.getElementById('refreshBtn').addEventListener('click', function() {
@@ -2227,20 +2594,7 @@
 
     // ── PROFILE LINK (clic sur l'avatar/nom admin) ──
     document.getElementById('profileLink').addEventListener('click', function() {
-      // Désactiver tous les onglets
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      
-      // Retirer la classe panel-view si présente
-      mainContent.classList.remove('panel-view');
-      
-      // Cacher toutes les vues
-      Object.keys(views).forEach(key => views[key].classList.remove('active'));
-      
-      // Afficher la vue account
-      if (views.account) {
-        views.account.classList.add('active');
-        loadProfile();
-      }
+      activateTab('account');
     });
 
     // ── LOGOUT ──
@@ -2256,9 +2610,654 @@
 
     // ── INIT ──
     (async function init() {
+      // Restaurer l'onglet IMMÉDIATEMENT — avant tout chargement async —
+      // pour éviter le flash du dashboard par défaut lors d'un F5.
+      const savedTab = sessionStorage.getItem(ACTIVE_TAB_KEY) || 'dashboard';
+      activateTab(savedTab, { persist: false });
+
       await loadProfile();
       await Promise.all([loadStats(), loadTenants()]);
     })();
+  </script>
+
+  <script>
+  // ══════════════════════════════════════════════════════════════════════
+  // ONGLET "BASE DE DONNÉES" — DB Browser générique + Gestion de profils
+  // ══════════════════════════════════════════════════════════════════════
+  (function () {
+    const state = {
+      initialized: false,
+      tablesMeta:  [],              // métadonnées de toutes les tables (SCHEMA whitelisté côté serveur)
+      currentTable: null,
+      rowsPage:  1,
+      rowsLimit: 25,
+      rowsSearch: '',
+
+      profilesPage: 1,
+      profilesLimit: 20,
+      profilesSearch: '',
+      currentUid: null,
+    };
+
+    function tableMetaByName(name) {
+      return state.tablesMeta.find(t => t.name === name) || null;
+    }
+
+    function inputTypeFor(col) {
+      if (col.type === 'boolean') return 'checkbox';
+      if (col.type === 'number')  return 'number';
+      // 'date' reste en texte libre (format ISO 8601) : les <input type="datetime-local">
+      // n'acceptent pas le format complet renvoyé par Postgres (millisecondes + "Z").
+      return 'text';
+    }
+
+    function formatCellValue(col, value) {
+      if (value === null || value === undefined) return '<span style="color:#c0c6cc;">NULL</span>';
+      if (col.sensitive) return esc(value);
+      if (col.type === 'boolean') return value ? 'Oui' : 'Non';
+      if (col.type === 'date') return esc(formatDate(value));
+      if (col.type === 'json') return '<code style="font-size:0.78rem;">' + esc(JSON.stringify(value)) + '</code>';
+      const str = String(value);
+      return esc(str.length > 80 ? str.slice(0, 80) + '…' : str);
+    }
+
+    // ── INITIALISATION (appelée à la première ouverture de l'onglet) ──
+    async function initDatabaseTab() {
+      if (state.initialized) return;
+      state.initialized = true;
+      try {
+        const res = await apiFetch('/api/admin/db/tables');
+        const data = await res.json();
+        if (data.success) {
+          state.tablesMeta = data.tables;
+          const select = document.getElementById('dbTableSelect');
+          select.innerHTML = state.tablesMeta.map(t => `<option value="${esc(t.name)}">${esc(t.label)}</option>`).join('');
+          state.currentTable = state.tablesMeta[0]?.name || null;
+          if (state.currentTable) loadDbRows(1);
+        }
+      } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Erreur lors du chargement des tables.', 'error');
+      }
+      loadProfilesList(1);
+    }
+    window.initDatabaseTab = initDatabaseTab;
+    // Signale au premier script que initDatabaseTab est maintenant disponible
+    // (utile si l'onglet "database" était actif au moment du rechargement)
+    window.dispatchEvent(new Event('dbTabReady'));
+
+    // ── SWITCH MODE TABLE / PROFILS ──
+    document.getElementById('dbModeTablesBtn').addEventListener('click', () => switchDbMode('tables'));
+    document.getElementById('dbModeProfilesBtn').addEventListener('click', () => switchDbMode('profiles'));
+    function switchDbMode(mode) {
+      document.getElementById('dbModeTablesBtn').classList.toggle('active', mode === 'tables');
+      document.getElementById('dbModeProfilesBtn').classList.toggle('active', mode === 'profiles');
+      document.getElementById('dbSubTables').classList.toggle('active', mode === 'tables');
+      document.getElementById('dbSubProfiles').classList.toggle('active', mode === 'profiles');
+    }
+
+    // ═══════════════════ MODE TABLE (façon phpMyAdmin) ═══════════════════
+
+    document.getElementById('dbTableSelect').addEventListener('change', function () {
+      state.currentTable = this.value;
+      loadDbRows(1);
+    });
+    document.getElementById('dbRefreshRowsBtn').addEventListener('click', () => loadDbRows(state.rowsPage));
+    document.getElementById('dbSearchInput').addEventListener('input', debounce(function () {
+      state.rowsSearch = this.value.trim();
+      loadDbRows(1);
+    }, 350));
+    document.getElementById('dbNewRowBtn').addEventListener('click', () => openDbRowModal('create'));
+    document.getElementById('dbRowsPrevBtn').addEventListener('click', () => loadDbRows(state.rowsPage - 1));
+    document.getElementById('dbRowsNextBtn').addEventListener('click', () => loadDbRows(state.rowsPage + 1));
+
+    function debounce(fn, ms) {
+      let t;
+      return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
+    }
+
+    async function loadDbRows(page = 1) {
+      if (!state.currentTable) return;
+      const thead = document.getElementById('dbRowsThead');
+      const tbody = document.getElementById('dbRowsBody');
+      tbody.innerHTML = `<tr><td><div class="empty-state">Chargement…</div></td></tr>`;
+
+      try {
+        const params = new URLSearchParams({ page, limit: state.rowsLimit });
+        if (state.rowsSearch) params.set('search', state.rowsSearch);
+        const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows?${params}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error?.message || 'Erreur');
+
+        state.rowsPage = page;
+        const meta = data.table;
+
+        thead.innerHTML = '<tr>' + meta.columns.map(c =>
+          `<th>${esc(c.name)}${c.sensitive ? ' 🔒' : ''}${meta.pk.includes(c.name) ? ' 🔑' : ''}</th>`
+        ).join('') + '<th>Actions</th></tr>';
+
+        if (data.rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="${meta.columns.length + 1}"><div class="empty-state">Aucune ligne trouvée.</div></td></tr>`;
+        } else {
+          tbody.innerHTML = data.rows.map(row => {
+            const pkValues = meta.pk.map(c => row[c]);
+            const cells = meta.columns.map(c => {
+              const cls = c.sensitive ? 'cell-sensitive' : (meta.pk.includes(c.name) ? 'cell-readonly' : '');
+              return `<td class="${cls}">${formatCellValue(c, row[c.name])}</td>`;
+            }).join('');
+            const pkEnc = encodeURIComponent(JSON.stringify(pkValues));
+            return `<tr>${cells}<td class="row-actions-cell">
+              <button class="btn-icon-sm edit" title="Éditer" onclick="__dbEditRow('${pkEnc}')">✎</button>
+              <button class="btn-icon-sm danger" title="Supprimer" onclick="__dbDeleteRow('${pkEnc}')">🗑</button>
+            </td></tr>`;
+          }).join('');
+        }
+
+        const pages = Math.max(1, data.meta.pages);
+        document.getElementById('dbRowsPagination').style.display = data.total > state.rowsLimit ? 'flex' : 'none';
+        document.getElementById('dbRowsPaginationInfo').textContent = `Page ${page} sur ${pages} (${data.total} lignes)`;
+        document.getElementById('dbRowsPrevBtn').disabled = page <= 1;
+        document.getElementById('dbRowsNextBtn').disabled = page >= pages;
+      } catch (e) {
+        if (e.message !== 'Unauthorized') {
+          tbody.innerHTML = `<tr><td><div class="empty-state" style="color:#dc3545;">${esc(e.message || 'Erreur lors du chargement.')}</div></td></tr>`;
+        }
+      }
+    }
+
+    window.__dbEditRow = function (pkEnc) { openDbRowModal('edit', JSON.parse(decodeURIComponent(pkEnc))); };
+    window.__dbDeleteRow = async function (pkEnc) {
+      if (!confirm('Supprimer définitivement cette ligne ? Cette action est irréversible.')) return;
+      const pkValues = JSON.parse(decodeURIComponent(pkEnc));
+      try {
+        const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(pkValues))}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) { showToast('Ligne supprimée.', 'success'); loadDbRows(state.rowsPage); }
+        else showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
+      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); }
+    };
+
+    let dbRowModalMode = 'create';
+    let dbRowModalPk = null;
+
+    async function openDbRowModal(mode, pkValues) {
+      const meta = tableMetaByName(state.currentTable);
+      if (!meta) return;
+      dbRowModalMode = mode;
+      dbRowModalPk = pkValues || null;
+
+      document.getElementById('dbRowModalTitle').textContent = mode === 'create'
+        ? `Nouvelle ligne — ${meta.label}` : `Éditer — ${meta.label}`;
+
+      let row = {};
+      if (mode === 'edit') {
+        try {
+          const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(pkValues))}`);
+          const data = await res.json();
+          if (!data.success) { showToast(data.error?.message || 'Ligne introuvable.', 'error'); return; }
+          row = data.row;
+        } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); return; }
+      }
+
+      const body = document.getElementById('dbRowFormBody');
+      body.innerHTML = meta.columns.map(col => {
+        const isPk = meta.pk.includes(col.name);
+        const disabled = col.sensitive || (mode === 'edit' && isPk) || col.generated;
+        const hint = col.sensitive ? 'Champ protégé, non modifiable.' : (col.generated ? 'Généré automatiquement.' : '');
+        const val = row[col.name];
+
+        if (col.type === 'boolean') {
+          return `<div class="form-group"><label><input type="checkbox" data-col="${esc(col.name)}" ${val ? 'checked' : ''} ${disabled ? 'disabled' : ''} style="width:auto;margin-right:0.5rem;" />${esc(col.name)}</label>${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
+        }
+        if (col.type === 'json') {
+          const jsonStr = (val && !col.sensitive) ? JSON.stringify(val, null, 2) : '';
+          return `<div class="form-group"><label>${esc(col.name)}</label><textarea data-col="${esc(col.name)}" data-type="json" ${disabled ? 'disabled' : ''}>${esc(jsonStr)}</textarea>${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
+        }
+        const displayVal = col.sensitive ? '' : (val ?? '');
+        const placeholder = col.sensitive ? '•••••• (non affiché)' : '';
+        return `<div class="form-group"><label>${esc(col.name)}${col.required ? ' *' : ''}</label>
+          <input type="${inputTypeFor(col)}" data-col="${esc(col.name)}" value="${esc(displayVal)}" placeholder="${placeholder}" ${disabled ? 'disabled' : ''} />
+          ${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
+      }).join('');
+
+      document.getElementById('dbRowModal').classList.add('open');
+    }
+
+    document.getElementById('dbRowForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const meta = tableMetaByName(state.currentTable);
+      const inputs = document.querySelectorAll('#dbRowFormBody [data-col]');
+      const payload = {};
+      inputs.forEach(inp => {
+        if (inp.disabled) return;
+        const col = inp.dataset.col;
+        if (inp.type === 'checkbox') { payload[col] = inp.checked; return; }
+        if (inp.dataset.type === 'json') {
+          const raw = inp.value.trim();
+          payload[col] = raw ? JSON.parse(raw) : null;
+          return;
+        }
+        if (inp.value === '') { payload[col] = null; return; }
+        payload[col] = inp.type === 'number' ? Number(inp.value) : inp.value;
+      });
+      if (dbRowModalMode === 'create') {
+        meta.pk.forEach(pkCol => {
+          const pkInput = document.querySelector(`#dbRowFormBody [data-col="${pkCol}"]`);
+          if (pkInput && !pkInput.disabled && !payload[pkCol]) delete payload[pkCol];
+        });
+      }
+
+      const btn = document.getElementById('dbRowSaveBtn');
+      const sp  = document.getElementById('dbRowSpinner');
+      btn.disabled = true; sp.classList.add('active');
+      try {
+        let res;
+        if (dbRowModalMode === 'create') {
+          res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows`, { method: 'POST', body: JSON.stringify(payload) });
+        } else {
+          res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(dbRowModalPk))}`, { method: 'PUT', body: JSON.stringify(payload) });
+        }
+        const data = await res.json();
+        if (data.success) {
+          showToast(dbRowModalMode === 'create' ? 'Ligne créée avec succès.' : 'Ligne mise à jour.', 'success');
+          document.getElementById('dbRowModal').classList.remove('open');
+          loadDbRows(state.rowsPage);
+        } else {
+          showToast(data.error?.message || 'Erreur lors de l\'enregistrement.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast(err instanceof SyntaxError ? 'JSON invalide dans un champ.' : 'Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false; sp.classList.remove('active');
+      }
+    });
+
+    document.getElementById('dbRowModalCloseBtn').addEventListener('click', () => document.getElementById('dbRowModal').classList.remove('open'));
+    document.getElementById('dbRowModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+    // ═══════════════════ MODE PROFILS ═══════════════════
+
+    document.getElementById('profileSearchInput').addEventListener('input', debounce(function () {
+      state.profilesSearch = this.value.trim();
+      loadProfilesList(1);
+    }, 350));
+    document.getElementById('dbRefreshProfilesBtn').addEventListener('click', () => loadProfilesList(state.profilesPage));
+    document.getElementById('profilesPrevBtn').addEventListener('click', () => loadProfilesList(state.profilesPage - 1));
+    document.getElementById('profilesNextBtn').addEventListener('click', () => loadProfilesList(state.profilesPage + 1));
+    document.getElementById('profileBackBtn').addEventListener('click', () => {
+      document.getElementById('dbProfileDetailWrap').style.display = 'none';
+      document.getElementById('dbProfileListWrap').style.display = 'block';
+    });
+
+    async function loadProfilesList(page = 1) {
+      const tbody = document.getElementById('profilesBody');
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Chargement…</div></td></tr>`;
+      try {
+        const params = new URLSearchParams({ page, limit: state.profilesLimit });
+        if (state.profilesSearch) params.set('search', state.profilesSearch);
+        const res = await apiFetch(`/api/admin/profiles?${params}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error?.message || 'Erreur');
+
+        state.profilesPage = page;
+        if (data.profiles.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Aucun profil trouvé.</div></td></tr>`;
+        } else {
+          tbody.innerHTML = data.profiles.map(p => {
+            const isAdmin = p.profile_type === 'admin';
+            const badge = isAdmin
+              ? '<span class="user-badge" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;border:1px solid #fca5a5;">🛡 Admin</span>'
+              : `<span class="user-badge ${p.active ? 'active' : 'inactive'}">${p.active ? 'Actif' : 'Inactif'}</span>`;
+            const tenantsBadge = isAdmin
+              ? '<span style="font-size:0.8rem;color:#667781;">—</span>'
+              : `<span style="font-weight:600;">${p.tenants_count}</span>`;
+            return `
+            <tr class="profile-row" onclick="__openProfile('${esc(p.uid)}')">
+              <td class="user-info-cell">
+                <div class="user-avatar-table" style="${isAdmin ? 'background:linear-gradient(135deg,#dc3545,#991b1b);' : ''}">${esc(initials(p.display_name || p.email))}</div>
+                <div class="user-details">
+                  <span class="user-name">${esc(p.display_name || 'Sans nom')}</span>
+                  <span class="user-id">${esc(p.uid)}</span>
+                </div>
+              </td>
+              <td class="contact-info">
+                <span class="contact-item">${esc(p.email || '—')}</span>
+                <span class="contact-item">${esc(maskPhone(p.phone))}</span>
+              </td>
+              <td>${tenantsBadge}</td>
+              <td>${badge}</td>
+              <td class="date-display">${esc(formatDate(p.created_at))}</td>
+            </tr>`;
+          }).join('');
+        }
+        const pages = Math.max(1, data.meta.pages);
+        document.getElementById('profilesPagination').style.display = data.meta.total > state.profilesLimit ? 'flex' : 'none';
+        document.getElementById('profilesPaginationInfo').textContent = `Page ${page} sur ${pages} (${data.meta.total} profils)`;
+        document.getElementById('profilesPrevBtn').disabled = page <= 1;
+        document.getElementById('profilesNextBtn').disabled = page >= pages;
+      } catch (e) {
+        if (e.message !== 'Unauthorized') tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>`;
+      }
+    }
+
+    window.__openProfile = async function (uid) {
+      state.currentUid = uid;
+      document.getElementById('dbProfileListWrap').style.display = 'none';
+      document.getElementById('dbProfileDetailWrap').style.display = 'block';
+      document.getElementById('pdSections').innerHTML = `<div class="empty-state">Chargement du profil…</div>`;
+      try {
+        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(uid)}`);
+        const data = await res.json();
+        if (!data.success) { showToast(data.error?.message || 'Profil introuvable.', 'error'); return; }
+        renderProfileDetail(data.profile);
+      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); }
+    };
+
+    function renderProfileDetail(profile) {
+      const acc = profile.account || {};
+
+      // ── Profil admin Convessa ──────────────────────────────────────────────
+      if (profile.profile_type === 'admin') {
+        document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
+        document.getElementById('pdName').textContent = acc.display_name || acc.email || 'Admin';
+        document.getElementById('pdSub').textContent = [acc.email, 'Administrateur Convessa'].filter(Boolean).join(' • ');
+
+        const sections = document.getElementById('pdSections');
+        sections.innerHTML = '';
+
+        // Fiche admin avec libellés lisibles
+        sections.appendChild(buildAdminSection('Compte Administrateur', acc));
+        if (profile.adminSession) {
+          sections.appendChild(buildSection('Session Baileys (compte WhatsApp admin)', 'wa_sessions', [profile.adminSession]));
+        } else {
+          const noSession = document.createElement('div');
+          noSession.className = 'table-card db-section-card';
+          noSession.innerHTML = '<div class="db-section-title-row"><span class="section-title">Session Baileys (compte WhatsApp admin)</span></div><div class="db-empty-note">Aucune session Baileys trouvée pour l\'admin (id = "admin").</div>';
+          sections.appendChild(noSession);
+        }
+        return;
+      }
+
+      // ── Profil utilisateur Firebase ────────────────────────────────────────
+      document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
+      document.getElementById('pdName').textContent = acc.display_name || acc.email || acc.uid;
+      document.getElementById('pdSub').textContent = [acc.email, maskPhone(acc.phone)].filter(Boolean).join(' • ');
+
+      const sections = document.getElementById('pdSections');
+      sections.innerHTML = '';
+      sections.appendChild(buildSection('Compte Utilisateur', 'auth_users', acc ? [acc] : []));
+      sections.appendChild(buildSection('Comptes WhatsApp (tenants)', 'wa_tenants', profile.tenants));
+      sections.appendChild(buildSection('Sessions Baileys (credentials WhatsApp)', 'wa_sessions', profile.sessions));
+      sections.appendChild(buildSection('Groupes WhatsApp', 'wa_groups', profile.groups));
+      sections.appendChild(buildSection('Messages envoyés (200 derniers)', 'wa_messages', profile.messages));
+      sections.appendChild(buildSection('Paiements d\'abonnement', 'subscription_payments', profile.payments));
+      sections.appendChild(buildSection('Appareils enregistrés', 'auth_devices', profile.devices));
+      sections.appendChild(buildSection('Journal de sécurité (100 derniers)', 'auth_device_sessions', profile.securityLogs));
+    }
+
+    // ── MAP DE LIBELLÉS lisibles pour les colonnes de toutes les tables ────────
+    const COL_LABELS = {
+      // auth_users
+      uid: 'UID Firebase', email: 'Adresse e-mail', display_name: 'Nom d\'affichage',
+      photo_url: 'Photo URL', provider: 'Fournisseur', phone: 'Téléphone',
+      active: 'Actif', created_at: 'Créé le', last_login_at: 'Dernière connexion',
+      // convessa_admins
+      id: 'ID', password_hash: 'Hash mot de passe (🔒)', updated_at: 'Modifié le',
+      // wa_tenants
+      user_uid: 'UID Utilisateur', name: 'Nom', api_key_hash: 'Hash Clé API (🔒)',
+      api_key_hint: 'Aperçu Clé API', api_key_enc: 'Clé API chiffrée (🔒)',
+      api_key_iv: 'IV chiffrement (🔒)', api_key_tag: 'Tag chiffrement (🔒)',
+      api_key_expires_at: 'Expiration Clé API', webhook_url: 'URL Webhook',
+      status: 'Statut', usage_type: 'Type d\'usage', messages_limit: 'Limite messages',
+      messages_sent: 'Messages envoyés', referral_code: 'Code de parrainage',
+      connected_at: 'Connecté le',
+      // wa_sessions
+      creds_iv: 'IV credentials (🔒)', creds_tag: 'Tag credentials (🔒)',
+      creds_data: 'Données credentials (🔒)',
+      // wa_session_keys
+      session_id: 'ID Session', key_type: 'Type de clé', key_id: 'ID Clé',
+      key_value: 'Valeur (🔒)',
+      // wa_message_queue / wa_messages
+      tenant_id: 'ID Tenant', recipient: 'Destinataire', jid: 'JID WhatsApp',
+      message: 'Message', media_type: 'Type média', media_url: 'URL média',
+      media_b64: 'Média base64 (🔒)', media_mime: 'MIME type', media_name: 'Nom fichier',
+      attempts: 'Tentatives', last_error: 'Dernière erreur', queued_at: 'Mis en file le',
+      sent_at: 'Envoyé le', to_jid: 'Destinataire JID', to_type: 'Type dest.',
+      has_media: 'Contient média', error_code: 'Code erreur', error_message: 'Message d\'erreur',
+      wa_message_id: 'ID message WhatsApp',
+      // wa_groups
+      wa_group_jid: 'JID du groupe', invite_code: 'Code d\'invitation',
+      invite_code_generated_at: 'Invitation générée le', participants_count: 'Nb participants',
+      // auth_devices
+      fingerprint_hash: 'Empreinte appareil', first_ip: 'Première IP',
+      user_agent: 'User-Agent', accept_language: 'Langue', client_hints: 'Client Hints',
+      first_seen_at: 'Première apparition', last_seen_at: 'Dernière apparition',
+      blocked: 'Bloqué', blocked_reason: 'Raison blocage', registered_uid: 'UID enregistré',
+      // auth_device_sessions
+      device_id: 'ID Appareil', user_uid: 'UID Utilisateur', ip: 'Adresse IP',
+      action: 'Action', meta: 'Métadonnées',
+      // subscription_payments
+      plan_id: 'ID Plan', gateway: 'Passerelle', gateway_tx_id: 'ID Transaction',
+      amount: 'Montant', currency: 'Devise',
+      // referral_codes / subscription_plans
+      code: 'Code', unlimited: 'Illimité', usage_value: 'Valeur d\'usage',
+      price: 'Prix', description: 'Description', features: 'Fonctionnalités',
+      is_popular: 'Populaire',
+      // wa_logs
+      level: 'Niveau', component: 'Composant', context: 'Contexte',
+    };
+    function colLabel(name) { return COL_LABELS[name] || name; }
+
+    // ── Fiche lisible pour un admin Convessa ──────────────────────────────────
+    function buildAdminSection(title, acc) {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-card db-section-card';
+
+      const adminMeta = tableMetaByName('convessa_admins');
+      if (!acc || !adminMeta) {
+        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnée.</div>`;
+        return wrap;
+      }
+
+      // Construire une fiche verticale avec champs et libellés lisibles
+      const fields = [
+        { label: 'ID',                  value: acc.id,            editable: false },
+        { label: 'Adresse e-mail',      value: acc.email,         editable: true,  col: 'email',        type: 'text',    pk: [acc.id] },
+        { label: 'Nom d\'affichage',    value: acc.display_name,  editable: true,  col: 'display_name', type: 'text',    pk: [acc.id] },
+        { label: 'Actif',               value: acc.active ? 'Oui' : 'Non', editable: true, col: 'active', type: 'boolean', pk: [acc.id] },
+        { label: 'Hash mot de passe',   value: acc.password_hash, editable: false, sensitive: true },
+        { label: 'Créé le',             value: formatDate(acc.created_at), editable: false },
+        { label: 'Modifié le',          value: formatDate(acc.updated_at), editable: false },
+        { label: 'Dernière connexion',  value: formatDate(acc.last_login_at), editable: false },
+      ];
+
+      let fieldsHtml = fields.map(f => {
+        const valDisplay = f.sensitive
+          ? '<span style="color:#b45309;font-style:italic;">•••••• (protégé)</span>'
+          : (f.value == null ? '<span style="color:#c0c6cc;">—</span>' : esc(String(f.value)));
+
+        if (f.editable) {
+          const rawEnc = esc(JSON.stringify(f.value === undefined ? null : (acc[f.col] ?? null)));
+          return `<tr>
+            <td style="font-weight:600;color:#374151;width:220px;padding:0.875rem 1.25rem;background:#f9fafb;border-right:2px solid #e4e6ea;">${esc(f.label)}</td>
+            <td class="cell-editable"
+                data-pk='${esc(JSON.stringify(f.pk))}'
+                data-raw='${rawEnc}'
+                data-table="convessa_admins"
+                data-col="${esc(f.col)}"
+                data-type="${esc(f.type)}"
+                onclick="__editProfileField(this)"
+                style="padding:0.875rem 1.25rem;">${valDisplay}
+              <span style="float:right;font-size:0.75rem;color:#25D366;opacity:0.7;">✎ modifier</span>
+            </td>
+          </tr>`;
+        }
+        return `<tr>
+          <td style="font-weight:600;color:#374151;width:220px;padding:0.875rem 1.25rem;background:#f9fafb;border-right:2px solid #e4e6ea;">${esc(f.label)}</td>
+          <td class="${f.sensitive ? 'cell-sensitive' : 'cell-readonly'}" style="padding:0.875rem 1.25rem;">${valDisplay}</td>
+        </tr>`;
+      }).join('');
+
+      wrap.innerHTML = `
+        <div class="db-section-title-row">
+          <span class="section-title">${esc(title)}</span>
+          <span style="font-size:0.8rem;color:#667781;background:#fee2e2;color:#991b1b;padding:0.25rem 0.6rem;border-radius:6px;font-weight:600;">🛡 Admin Convessa</span>
+        </div>
+        <div class="table-wrap"><table style="min-width:unset;width:100%;">
+          <tbody>${fieldsHtml}</tbody>
+        </table></div>`;
+      return wrap;
+    }
+
+    function buildSection(title, tableName, rows) {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-card db-section-card';
+      const meta = tableMetaByName(tableName);
+
+      if (!meta || !rows || rows.length === 0) {
+        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnée.</div>`;
+        return wrap;
+      }
+
+      const editableCols = meta.columns.filter(c => !c.sensitive && !meta.pk.includes(c.name));
+      const displayCols = meta.columns; // on affiche toutes les colonnes ; les sensibles sont masquées côté API
+
+      let html = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span><span style="font-size:0.8rem;color:#667781;">${rows.length} ligne(s)</span></div>
+        <div class="table-wrap"><table><thead><tr>${displayCols.map(c => `<th title="${esc(c.name)}">${esc(colLabel(c.name))}</th>`).join('')}</tr></thead><tbody>`;
+
+      rows.forEach(row => {
+        const pkValues = meta.pk.map(c => row[c]);
+        const pkEnc = esc(JSON.stringify(pkValues));
+        html += '<tr>' + displayCols.map(c => {
+          const editable = editableCols.includes(c);
+          if (!editable) {
+            const cls = c.sensitive ? 'cell-sensitive' : 'cell-readonly';
+            return `<td class="${cls}">${formatCellValue(c, row[c.name])}</td>`;
+          }
+          const rawEnc = esc(JSON.stringify(row[c.name] === undefined ? null : row[c.name]));
+          return `<td class="cell-editable" data-pk='${pkEnc}' data-raw='${rawEnc}' data-table="${esc(tableName)}" data-col="${esc(c.name)}" data-type="${esc(c.type)}" onclick="__editProfileField(this)">${formatCellValue(c, row[c.name])}</td>`;
+        }).join('') + '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+      return wrap;
+    }
+
+    window.__editProfileField = function (td) {
+      const table  = td.dataset.table;
+      const column = td.dataset.col;
+      const type   = td.dataset.type;
+      const pk     = JSON.parse(td.dataset.pk);
+      const meta   = tableMetaByName(table);
+      const col    = meta.columns.find(c => c.name === column);
+
+      document.getElementById('fieldEditModalTitle').textContent = `${meta.label} — ${colLabel(column)}`;
+      const body = document.getElementById('fieldEditFormBody');
+
+      // On repart toujours de la valeur brute (non formatée) stockée dans data-raw,
+      // jamais du texte affiché (formaté en fr-FR), pour éviter d'envoyer une date
+      // ou un JSON mal formé au serveur.
+      let rawValue = null;
+      try { rawValue = JSON.parse(td.dataset.raw); } catch { rawValue = null; }
+
+      if (type === 'boolean') {
+        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
+          <select data-value><option value="true">Oui</option><option value="false">Non</option></select></div>`;
+        body.querySelector('[data-value]').value = rawValue ? 'true' : 'false';
+      } else if (type === 'json') {
+        const jsonStr = rawValue !== null ? JSON.stringify(rawValue, null, 2) : '';
+        body.innerHTML = `<div class="form-group"><label>${esc(column)} (JSON)</label><textarea data-value>${esc(jsonStr)}</textarea></div>`;
+      } else if (type === 'date') {
+        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
+          <input type="text" data-value value="${esc(rawValue ?? '')}" placeholder="ex: 2026-07-30T10:00:00.000Z" />
+          <span class="field-hint">Format ISO 8601 (laisser tel quel si non modifié).</span></div>`;
+      } else {
+        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
+          <input type="${inputTypeFor(col)}" data-value value="${esc(rawValue ?? '')}" /></div>`;
+      }
+
+      document.getElementById('fieldEditForm').dataset.table = table;
+      document.getElementById('fieldEditForm').dataset.pk = JSON.stringify(pk);
+      document.getElementById('fieldEditForm').dataset.column = column;
+      document.getElementById('fieldEditForm').dataset.type = type;
+      document.getElementById('fieldEditModal').classList.add('open');
+    };
+
+    document.getElementById('fieldEditForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = this;
+      const table  = form.dataset.table;
+      const pk     = JSON.parse(form.dataset.pk);
+      const column = form.dataset.column;
+      const type   = form.dataset.type;
+      const raw = form.querySelector('[data-value]').value;
+
+      let value = raw;
+      if (type === 'boolean') value = raw === 'true';
+      else if (type === 'number') value = raw === '' ? null : Number(raw);
+      else if (type === 'json') { try { value = raw.trim() ? JSON.parse(raw) : null; } catch { showToast('JSON invalide.', 'error'); return; } }
+      else if (raw === '') value = null;
+
+      const btn = document.getElementById('fieldEditSaveBtn');
+      const sp  = document.getElementById('fieldEditSpinner');
+      btn.disabled = true; sp.classList.add('active');
+      try {
+        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(state.currentUid)}/field`, {
+          method: 'PUT',
+          body: JSON.stringify({ table, pk, column, value })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Champ mis à jour.', 'success');
+          document.getElementById('fieldEditModal').classList.remove('open');
+          window.__openProfile(state.currentUid);
+        } else {
+          showToast(data.error?.message || 'Erreur lors de la mise à jour.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false; sp.classList.remove('active');
+      }
+    });
+    document.getElementById('fieldEditCloseBtn').addEventListener('click', () => document.getElementById('fieldEditModal').classList.remove('open'));
+    document.getElementById('fieldEditModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+    // ── SUPPRESSION TOTALE D'UN PROFIL ──
+    document.getElementById('pdDeleteBtn').addEventListener('click', () => {
+      document.getElementById('deleteProfileConfirmInput').value = '';
+      document.getElementById('deleteProfileConfirmBtn').disabled = true;
+      document.getElementById('deleteProfileModal').classList.add('open');
+    });
+    document.getElementById('deleteProfileConfirmInput').addEventListener('input', function () {
+      document.getElementById('deleteProfileConfirmBtn').disabled = this.value.trim() !== 'SUPPRIMER';
+    });
+    document.getElementById('deleteProfileCloseBtn').addEventListener('click', () => document.getElementById('deleteProfileModal').classList.remove('open'));
+    document.getElementById('deleteProfileModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+    document.getElementById('deleteProfileConfirmBtn').addEventListener('click', async function () {
+      const btn = this;
+      const sp = document.getElementById('deleteProfileSpinner');
+      btn.disabled = true; sp.classList.add('active');
+      try {
+        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(state.currentUid)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Profil supprimé définitivement.', 'success');
+          document.getElementById('deleteProfileModal').classList.remove('open');
+          document.getElementById('dbProfileDetailWrap').style.display = 'none';
+          document.getElementById('dbProfileListWrap').style.display = 'block';
+          loadProfilesList(state.profilesPage);
+        } else {
+          showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
+        }
+      } catch (err) {
+        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+      } finally {
+        btn.disabled = false; sp.classList.remove('active');
+      }
+    });
+  })();
   </script>
 </body>
 </html>

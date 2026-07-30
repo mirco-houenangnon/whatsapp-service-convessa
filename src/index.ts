@@ -36,6 +36,8 @@ import { tenantsRouter }   from './api/routes/tenants.js'
 import { authRouter }      from './api/routes/auth.js'
 import { docsRouter }      from './api/routes/docs.js'
 import { adminRouter }     from './api/routes/admin.js'
+import { adminDbRouter }       from './api/routes/adminDb.js'
+import { adminProfilesRouter } from './api/routes/adminProfiles.js'
 import { sendRouter }      from './api/routes/send.js'
 import { groupsRouter }    from './api/routes/groups.js'
 import { plansRouter }     from './api/routes/plans.js'
@@ -137,6 +139,8 @@ app.use('/api/v1', tenantsRouter(tenantManager))
 app.use('/api/v1', authRouter(waManager))
 app.use('/api/v1', docsRouter())
 app.use('/api/admin', adminRouter())
+app.use('/api/admin/db', adminDbRouter())
+app.use('/api/admin/profiles', adminProfilesRouter())
 app.use('/api/v1', sendRouter(tenantManager))
 app.use('/api/v1', groupsRouter(tenantManager))
 app.use('/api/v1/plans', plansRouter())

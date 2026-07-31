@@ -345,6 +345,17 @@ export async function runMigrations(): Promise<void> {
         )
     }
 
+    // ── Nettoyage des sessions dupliquées — garde seulement la plus récente par user ──
+    // Supprime les anciens doublons 'disconnected' quand un user en a plusieurs
+    await execute(
+        `DELETE t1 FROM wa_tenants t1
+         INNER JOIN wa_tenants t2
+         WHERE t1.user_uid IS NOT NULL
+           AND t1.user_uid = t2.user_uid
+           AND t1.status = 'disconnected'
+           AND t2.created_at > t1.created_at`
+    ).catch(() => { /* ignorer si déjà nettoyé */ })
+
     logger.info({ component: 'DB' }, 'Migrations MySQL OK — tables vérifiées')
 }
 

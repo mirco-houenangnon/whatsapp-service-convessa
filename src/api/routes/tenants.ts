@@ -10,6 +10,7 @@ import {
     getTenantById,
     getTenantApiKey,
     getTenantByUserUid,
+    updateTenantStatus,
     deleteTenant,
     listTenants,
 }                               from '../../db/TenantStore.js'
@@ -20,14 +21,7 @@ import { logger, maskPhone }   from '../../services/logger.js'
 export function tenantsRouter(tenantManager: TenantManager): Router {
     const router = Router()
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // SELF-SERVICE — le tenant gère sa propre session (Firebase Bearer token)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // ── POST /api/v1/tenants — créer SA session ───────────────────────────────
-    // Aucun numéro n'est demandé ici : le tenant scanne directement son QR,
-    // le vrai numéro WhatsApp est déduit automatiquement du compte scanné
-    // (voir TenantManager._initSession → updateTenantPhone).
+   
     router.post('/tenants', rateLimit, requireFirebaseAuth, async (req, res) => {
         const userUid = req.firebaseUser!.uid
 
@@ -40,14 +34,29 @@ export function tenantsRouter(tenantManager: TenantManager): Router {
             // ── Règle : un utilisateur = une seule session WhatsApp ────────────
             const existingForUser = await getTenantByUserUid(userUid)
             if (existingForUser) {
-                res.status(409).json({
-                    success: false,
-                    error: {
-                        code:    'USER_ALREADY_HAS_SESSION',
-                        message: 'Vous possédez déjà une session WhatsApp. Supprimez-la avant d\'en créer une nouvelle.',
-                    },
+                // Si la session est déjà connectée → erreur
+                if (existingForUser.status === 'connected') {
+                    res.status(409).json({
+                        success: false,
+                        error: { code: 'USER_ALREADY_HAS_SESSION', message: 'Votre session WhatsApp est déjà active.' },
+                        tenantId: existingForUser.id,
+                        status:   existingForUser.status,
+                    })
+                    return
+                }
+
+                // Si la session est disconnected ou pending_qr → la réutiliser (relancer le QR)
+                // au lieu de créer un doublon
+                await updateTenantStatus(existingForUser.id, 'pending_qr')
+                tenantManager.createSession(existingForUser.id).catch((err) => {
+                    logger.error({ component: 'API', tenantId: existingForUser.id, err }, 'Erreur relancement session tenant')
+                })
+                logger.info({ component: 'API', tenantId: existingForUser.id, userUid }, 'Session existante relancée (reconnexion)')
+                res.status(200).json({
+                    success:  true,
                     tenantId: existingForUser.id,
-                    status:   existingForUser.status,
+                    status:   'pending_qr',
+                    message:  'Session relancée. Scannez le QR code pour reconnecter.',
                 })
                 return
             }

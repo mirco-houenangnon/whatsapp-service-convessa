@@ -113,7 +113,7 @@ export async function getTenantByPhone(phone: string): Promise<Tenant | null> {
 
 export async function getTenantByUserUid(userUid: string): Promise<Tenant | null> {
     const rows = await query<TenantRow>(
-        `SELECT * FROM wa_tenants WHERE user_uid = ? AND status IN ('pending_qr','connected') ORDER BY created_at DESC LIMIT 1`,
+        `SELECT * FROM wa_tenants WHERE user_uid = ? AND status IN ('pending_qr','connected','disconnected') ORDER BY created_at DESC LIMIT 1`,
         [userUid]
     )
     return rows[0] ? rowToTenant(rows[0]) : null

@@ -10,9 +10,9 @@ import {
     sanitizeAdmin,
 }                            from '../../db/AdminStore.js'
 import { createAdminToken }  from '../../services/adminJwt.js'
-import { listTenants }       from '../../db/TenantStore.js'
+import { listTenants, getTenantById } from '../../db/TenantStore.js'
 import { listUsers }         from '../../db/UserStore.js'
-import { getPool, query }    from '../../db/connection.js'
+import { getPool, query, execute } from '../../db/connection.js'
 import { logger }            from '../../services/logger.js'
 import { config }            from '../../config.js'
 import {
@@ -26,11 +26,12 @@ import {
     listSubscriptionPlans,
     type UsageType as PlanUsageType,
 }                            from '../../db/SubscriptionPlanStore.js'
+import { TenantManager }     from '../../whatsapp/TenantManager.js'
 
 // Durée du cookie : 24h
 const COOKIE_MAX_AGE = 24 * 60 * 60 * 1000
 
-export function adminRouter(): Router {
+export function adminRouter(tenantManager: TenantManager): Router {
     const router = Router()
 
     // ── POST /api/admin/login ─────────────────────────────────────────────────
@@ -415,6 +416,68 @@ export function adminRouter(): Router {
             res.status(201).json({ success: true, plan: created })
         } catch (err) {
             logger.error({ component: 'Admin', err }, 'Erreur création plan')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── POST /api/admin/tenants/:id/suspend — Suspendre un tenant ─────────────────
+    router.post('/tenants/:id/suspend', requireAdminAuth, async (req, res) => {
+        const tenantId = req.params['id'] as string
+        const { reason } = req.body as { reason?: string }
+
+        if (!reason?.trim()) {
+            res.status(400).json({ success: false, error: { code: 'MISSING_REASON', message: 'La raison de suspension est requise' } })
+            return
+        }
+
+        try {
+            const tenant = await getTenantById(tenantId)
+            if (!tenant) {
+                res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant introuvable' } })
+                return
+            }
+
+            // Suspendre en base
+            await execute(
+                `UPDATE wa_tenants SET suspended=1, suspension_reason=?, suspended_at=NOW(), updated_at=NOW() WHERE id=?`,
+                [reason.trim(), tenantId]
+            )
+
+            // Fermer la session WhatsApp
+            await tenantManager.closeSession(tenantId)
+
+            // Notifier le tenant via WhatsApp si son numéro est connu
+            if (tenant.phone) {
+                const msg = `⚠️ *Convessa — Suspension de compte*\n\n` +
+                    `Votre accès à l'API Convessa a été temporairement suspendu.\n\n` +
+                    `*Raison :* ${reason.trim()}\n\n` +
+                    `Si vous pensez qu'il s'agit d'une erreur, contactez notre support sur convessa.dev/contact.`
+
+                tenantManager.sendMessageAsTenantViaAdmin(tenant.phone, msg).catch(() => {})
+            }
+
+            logger.warn({ component: 'Admin', tenantId, reason: reason.trim() }, 'Tenant suspendu')
+            res.json({ success: true, message: 'Tenant suspendu et notifié' })
+
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur suspension tenant')
+            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
+        }
+    })
+
+    // ── POST /api/admin/tenants/:id/unsuspend — Réactiver un tenant ───────────────
+    router.post('/tenants/:id/unsuspend', requireAdminAuth, async (req, res) => {
+        const tenantId = req.params['id'] as string
+
+        try {
+            await execute(
+                `UPDATE wa_tenants SET suspended=0, suspension_reason=NULL, suspended_at=NULL, updated_at=NOW() WHERE id=?`,
+                [tenantId]
+            )
+            logger.info({ component: 'Admin', tenantId }, 'Tenant réactivé')
+            res.json({ success: true, message: 'Tenant réactivé' })
+        } catch (err) {
+            logger.error({ component: 'Admin', err }, 'Erreur réactivation tenant')
             res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
         }
     })

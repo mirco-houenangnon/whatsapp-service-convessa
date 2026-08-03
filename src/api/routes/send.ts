@@ -58,6 +58,47 @@ function sanitizePhone(raw: string): string {
 // Un groupId interne est un UUID v4 (jamais un numéro de téléphone)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+async function _checkAndNotifyQuota(
+    tenantManager: TenantManager,
+    tenantId: string,
+    phone: string | null
+): Promise<void> {
+    if (!phone) return
+    try {
+        const { getTenantById } = await import('../../db/TenantStore.js')
+        const updated = await getTenantById(tenantId)
+        if (!updated) return
+
+        if (updated.usageType === 'requests' && updated.messagesLimit !== null) {
+            const remaining = updated.messagesLimit - updated.messagesSent
+            const pct = updated.messagesSent / updated.messagesLimit
+
+            let notifMsg: string | null = null
+
+            if (remaining === 0) {
+                notifMsg = `⚠️ *Convessa — Quota épuisé*\n\nVous avez utilisé la totalité de vos ${updated.messagesLimit.toLocaleString('fr-FR')} messages.\n\nPassez à un abonnement supérieur pour continuer :\nhttps://convessa.dev/pricing`
+            } else if (remaining <= 10 || pct >= 0.9) {
+                notifMsg = `📊 *Convessa — Quota presque épuisé*\n\nIl vous reste *${remaining} message${remaining > 1 ? 's' : ''}* sur ${updated.messagesLimit.toLocaleString('fr-FR')}.\n\nPensez à renouveler votre abonnement :\nhttps://convessa.dev/pricing`
+            } else if (remaining === 50 || remaining === 100) {
+                notifMsg = `📊 *Convessa — Rappel quota*\n\nIl vous reste *${remaining} messages* sur votre forfait de ${updated.messagesLimit.toLocaleString('fr-FR')}.\n\nVoir les offres : https://convessa.dev/pricing`
+            }
+
+            if (notifMsg) {
+                await tenantManager.sendMessageAsTenantViaAdmin(phone, notifMsg).catch(() => {})
+            }
+        } else if (updated.usageType === 'duration' && updated.apiKeyExpiresAt) {
+            const daysLeft = Math.ceil((updated.apiKeyExpiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
+            if (daysLeft === 3 || daysLeft === 1) {
+                const msg = daysLeft === 1
+                    ? `⚠️ *Convessa — Abonnement expire demain !*\n\nVotre accès expire dans *1 jour*.\n\nRenouvelez maintenant pour ne pas perdre l'accès :\nhttps://convessa.dev/pricing`
+                    : `📅 *Convessa — Abonnement bientôt expiré*\n\nVotre accès expire dans *3 jours*.\n\nRenouvelez ici : https://convessa.dev/pricing`
+                await tenantManager.sendMessageAsTenantViaAdmin(phone, msg).catch(() => {})
+            }
+        }
+    } catch { /* notifications non bloquantes */ }
+}
+
 export function sendRouter(tenantManager: TenantManager): Router {
     const router = Router()
 
@@ -282,6 +323,13 @@ export function sendRouter(tenantManager: TenantManager): Router {
             // mais on évite l'écriture DB inutile pour 'unlimited'/'duration'.
             if (tenant.usageType === 'requests') {
                 await incrementMessagesSent(tenant.id)
+                // Notifier le tenant si son quota approche ou est expiré
+                await _checkAndNotifyQuota(tenantManager, tenant.id, tenant.phone)
+            }
+
+            // Vérifier aussi l'expiration pour les abonnements durée
+            if (tenant.usageType === 'duration') {
+                await _checkAndNotifyQuota(tenantManager, tenant.id, tenant.phone)
             }
 
             dispatchInBackground(messageId, tenant.id, tenant.phone, jid, messageTrimmed ?? null, mediaPayload, tenant.webhookUrl)

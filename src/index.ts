@@ -42,6 +42,7 @@ import { sendRouter }      from './api/routes/send.js'
 import { groupsRouter }    from './api/routes/groups.js'
 import { plansRouter }     from './api/routes/plans.js'
 import { paymentsRouter }  from './api/routes/payments.js'
+import { contactRouter }   from './api/routes/contact.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -138,13 +139,14 @@ app.use('/api/v1', messagesRouter(waManager))
 app.use('/api/v1', tenantsRouter(tenantManager))
 app.use('/api/v1', authRouter(waManager))
 app.use('/api/v1', docsRouter())
-app.use('/api/admin', adminRouter())
+app.use('/api/admin', adminRouter(tenantManager))
 app.use('/api/admin/db', adminDbRouter())
 app.use('/api/admin/profiles', adminProfilesRouter())
 app.use('/api/v1', sendRouter(tenantManager))
 app.use('/api/v1', groupsRouter(tenantManager))
 app.use('/api/v1/plans', plansRouter())
 app.use('/api/v1', paymentsRouter(tenantManager))
+app.use('/api/v1', contactRouter(waManager))
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

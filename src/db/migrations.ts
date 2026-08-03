@@ -275,6 +275,35 @@ const TABLES = [
         CONSTRAINT fk_payments_tenant FOREIGN KEY (tenant_id) REFERENCES wa_tenants(id) ON DELETE CASCADE,
         CONSTRAINT fk_payments_plan   FOREIGN KEY (plan_id)   REFERENCES subscription_plans(id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Membres communauté Convessa ────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS community_members (
+        id            VARCHAR(36)   NOT NULL,
+        first_name    VARCHAR(100)  NOT NULL,
+        last_name     VARCHAR(100)  NOT NULL,
+        phone         VARCHAR(30)   NOT NULL,
+        email         VARCHAR(255)  DEFAULT NULL,
+        user_uid      VARCHAR(128)  DEFAULT NULL COMMENT 'FK auth_users.uid si connecté',
+        joined_at     DATETIME      NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_community_phone (phone),
+        INDEX idx_community_user_uid (user_uid)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Messages de contact ────────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS contact_messages (
+        id            VARCHAR(36)   NOT NULL,
+        name          VARCHAR(150)  NOT NULL,
+        email         VARCHAR(255)  NOT NULL,
+        phone         VARCHAR(30)   DEFAULT NULL,
+        subject       VARCHAR(255)  NOT NULL,
+        message       TEXT          NOT NULL,
+        status        VARCHAR(20)   NOT NULL DEFAULT 'unread'
+                          COMMENT 'unread | read | replied',
+        created_at    DATETIME      NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (id),
+        INDEX idx_contact_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
 // ── Migrations idempotentes — colonnes ajoutées progressivement ───────────────
@@ -302,6 +331,10 @@ const ALTER_MIGRATIONS = [
     `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL`,
     `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features    JSON DEFAULT NULL`,
     `ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_popular  TINYINT(1) NOT NULL DEFAULT 0`,
+    // ── Suspension tenant par admin ────────────────────────────────────────────
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended         TINYINT(1)  NOT NULL DEFAULT 0`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(500) DEFAULT NULL`,
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended_at      DATETIME    DEFAULT NULL`,
 ]
 
 export async function runMigrations(): Promise<void> {

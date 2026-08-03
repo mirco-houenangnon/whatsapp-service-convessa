@@ -299,6 +299,32 @@ export class TenantManager extends EventEmitter {
         const phoneToMask = session?.phone ?? tenant.phone ?? ''
         const expiresIso  = privileges.expiresAt ? privileges.expiresAt.toISOString() : null
 
+        // ── Message de bienvenue WhatsApp ─────────────────────────────────────────────
+        const phoneForWelcome = session?.phone ?? tenant.phone ?? ''
+        if (phoneForWelcome) {
+            const usageMsg = privileges.usageType === 'unlimited'
+                ? 'Vous bénéficiez d\'un accès *illimité* à l\'API.'
+                : privileges.usageType === 'requests'
+                ? `Vous disposez de *${privileges.messagesLimit?.toLocaleString('fr-FR')} messages* à utiliser.`
+                : privileges.expiresAt
+                ? `Votre accès est valable jusqu'au *${privileges.expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}*.`
+                : ''
+
+            const welcomeText = `🎉 *Bienvenue sur Convessa !*\n\n` +
+                `Votre compte WhatsApp API est maintenant actif.\n\n` +
+                `${usageMsg}\n\n` +
+                `📖 Documentation : https://convessa.dev/docs\n` +
+                `💬 Support : https://convessa.dev/contact\n\n` +
+                `Votre clé API commence par : *${hint}*\n\n` +
+                `_Gardez votre clé secrète et ne la partagez jamais._`
+
+            try {
+                await this.sendMessageAsTenantViaAdmin(phoneForWelcome, welcomeText)
+            } catch (err) {
+                logger.warn({ component: 'TenantManager', tenantId, err }, 'Impossible d\'envoyer le message de bienvenue WhatsApp')
+            }
+        }
+
         if (tenant.webhookUrl) {
             this._callWebhook(tenant.webhookUrl, {
                 event:           'tenant.connected',
@@ -590,5 +616,11 @@ export class TenantManager extends EventEmitter {
         try { sock.end(undefined) } catch { /* déjà fermé */ }
 
         logger.info({ component: 'TenantManager', tenantId }, 'Session tenant fermée')
+    }
+
+    // ── Envoyer un message via le numéro admin (pour notifications système) ────────
+    async sendMessageAsTenantViaAdmin(phone: string, text: string): Promise<void> {
+        const jid = `${phone.replace(/[^0-9]/g, '')}@s.whatsapp.net`
+        await this.adminManager.sendMessage(jid, text)
     }
 }

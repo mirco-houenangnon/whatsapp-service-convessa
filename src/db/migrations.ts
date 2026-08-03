@@ -80,7 +80,7 @@ const TABLES = [
         id            VARCHAR(64)   NOT NULL,
         creds_iv      VARCHAR(32)   NOT NULL DEFAULT '',
         creds_tag     VARCHAR(32)   NOT NULL DEFAULT '',
-        creds_data    TEXT          NOT NULL DEFAULT '',
+        creds_data    TEXT          NOT NULL,
         phone         VARCHAR(50)   DEFAULT NULL,
         display_name  VARCHAR(100)  DEFAULT NULL,
         status        VARCHAR(20)   NOT NULL DEFAULT 'disconnected',

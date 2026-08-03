@@ -69,6 +69,9 @@ app.use(helmet({
     // popups Firebase OAuth (Google, GitHub) de communiquer avec la fenêtre parente.
     crossOriginOpenerPolicy: { policy: 'unsafe-none' },
 
+    // Autoriser l'iframe depuis le même domaine (admin → panel whatsapp)
+    frameguard: { action: 'sameorigin' },
+
     contentSecurityPolicy: config.enableDashboard
         ? {
             directives: {
@@ -89,6 +92,8 @@ app.use(helmet({
                 frameSrc:      ["'self'",
                                 'https://whatsappservice-50e51.firebaseapp.com',
                                 'https://accounts.google.com'],
+                // Autoriser la page à être chargée dans une iframe du même domaine
+                frameAncestors: ["'self'"],
             },
         }
         : false,

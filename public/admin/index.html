@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Convessa Backoffice</title>
+  <title>Convessa | Backoffice Admin</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -18,7 +19,7 @@
       flex-direction: column; 
     }
 
-    /* ── HEADER ── */
+    /* â”€â”€ HEADER â”€â”€ */
     header { 
       background: linear-gradient(135deg, #25D366 0%, #1fa855 50%, #128C7E 100%); 
       display: flex; 
@@ -194,7 +195,7 @@
       box-shadow: 0 4px 16px rgba(220,53,69,0.4);
     }
 
-    /* ── MAIN ── */
+    /* â”€â”€ MAIN â”€â”€ */
     main { 
       flex: 1; 
       padding: 2rem; 
@@ -208,7 +209,7 @@
       max-width: 100%;
     }
 
-    /* ── VIEWS ── */
+    /* â”€â”€ VIEWS â”€â”€ */
     .view { display: none; animation: fadeIn 0.3s ease; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -225,7 +226,7 @@
       display: block;
     }
 
-    /* ── STATS GRID ── */
+    /* â”€â”€ STATS GRID â”€â”€ */
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
     @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
@@ -284,7 +285,7 @@
     .skeleton-lbl { width: 80px; height: 12px; margin-top: 4px; }
     @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
 
-    /* ── SECTION HEADER ── */
+    /* â”€â”€ SECTION HEADER â”€â”€ */
     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
     .section-title { font-size: 1.25rem; font-weight: 700; color: #111b21; letter-spacing: -0.02em; }
     .btn-ghost { 
@@ -310,7 +311,7 @@
       box-shadow: 0 4px 12px rgba(37,211,102,0.15);
     }
 
-    /* ── TABLE CARD ── */
+    /* â”€â”€ TABLE CARD â”€â”€ */
     .table-card { 
       background: #fff; 
       border: 1px solid rgba(228,230,234,0.6); 
@@ -434,7 +435,7 @@
       box-shadow: 0 8px 24px rgba(37,211,102,0.25);
     }
 
-    /* ── ACCOUNT VIEW ── */
+    /* â”€â”€ ACCOUNT VIEW â”€â”€ */
     .account-grid { display: grid; grid-template-columns: 400px 1fr; gap: 2rem; }
     @media (max-width: 900px) { .account-grid { grid-template-columns: 1fr; } }
     .card { 
@@ -589,7 +590,7 @@
     }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* ── MODAL ── */
+    /* â”€â”€ MODAL â”€â”€ */
     .modal-overlay { 
       position: fixed; 
       inset: 0; 
@@ -639,7 +640,7 @@
     .modal-body a:hover { text-decoration: underline; }
     .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #e4e6ea; display: flex; justify-content: flex-end; }
 
-    /* ── RADIO GROUP (Oui/Non, Durée/Requêtes) ── */
+    /* â”€â”€ RADIO GROUP (Oui/Non, DurÃ©e/RequÃªtes) â”€â”€ */
     .radio-group { display: flex; gap: 1.25rem; }
     .radio-option { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #111b21; cursor: pointer; }
     .radio-option input { accent-color: #25D366; cursor: pointer; width: 15px; height: 15px; }
@@ -648,11 +649,11 @@
     .field-hint { font-size: 0.72rem; color: #667781; }
     .form-group select { padding: 0.55rem 0.85rem; border: 1px solid #e4e6ea; border-radius: 10px; font-size: 0.87rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none; }
 
-    /* ── USAGE BADGE ── */
+    /* â”€â”€ USAGE BADGE â”€â”€ */
     .badge-usage { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; }
     .badge-usage.unlimited { background: #f0faf4; color: #128C7E; }
 
-    /* ── TOAST ── */
+    /* â”€â”€ TOAST â”€â”€ */
     .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.75rem; }
     .toast { 
       background: #fff; 
@@ -676,7 +677,7 @@
     .toast-msg { flex: 1; font-weight: 500; }
     @keyframes toast-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* ── SPINNER ── */
+    /* â”€â”€ SPINNER â”€â”€ */
     .spinner { 
       width: 16px; 
       height: 16px; 
@@ -689,7 +690,7 @@
     .spinner.active { display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── FOOTER ── */
+    /* â”€â”€ FOOTER â”€â”€ */
     footer { 
       min-height: 56px;
       height: auto;
@@ -738,7 +739,7 @@
       opacity: 0.5;
     }
 
-    /* ── PAGINATION ── */
+    /* â”€â”€ PAGINATION â”€â”€ */
     .pagination {
       display: flex;
       align-items: center;
@@ -788,7 +789,7 @@
       border: 1px solid #e5e7eb;
     }
 
-    /* ── BADGES STATUT UTILISATEUR ── */
+    /* â”€â”€ BADGES STATUT UTILISATEUR â”€â”€ */
     .user-badge {
       display: inline-flex;
       align-items: center;
@@ -815,7 +816,7 @@
       height: 12px;
     }
 
-    /* ── USER AVATAR IN TABLE ── */
+    /* â”€â”€ USER AVATAR IN TABLE â”€â”€ */
     .user-avatar-table {
       width: 40px;
       height: 40px;
@@ -878,11 +879,11 @@
       margin-top: 0.125rem;
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       RESPONSIVE — header, nav, tables, footer, modales
-       ══════════════════════════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       RESPONSIVE â€” header, nav, tables, footer, modales
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-    /* Bouton hamburger — caché par défaut sur desktop */
+    /* Bouton hamburger â€” cachÃ© par dÃ©faut sur desktop */
     .hamburger-btn {
       display: none;
       background: rgba(255,255,255,0.15);
@@ -1007,7 +1008,7 @@
     }
     .mobile-btn-logout-full:hover { background: rgba(220,53,69,0.4); }
 
-    /* ── Tablette (≤ 1024px) ── */
+    /* â”€â”€ Tablette (â‰¤ 1024px) â”€â”€ */
     @media (max-width: 1024px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       main { padding: 1.5rem; }
@@ -1015,7 +1016,7 @@
       .nav-tab { padding: 0.5rem 1rem; font-size: 0.875rem; }
     }
 
-    /* ── Mobile (≤ 768px) — hamburger menu ── */
+    /* â”€â”€ Mobile (â‰¤ 768px) â€” hamburger menu â”€â”€ */
     @media (max-width: 768px) {
       /* Header */
       header {
@@ -1035,7 +1036,7 @@
       .header-nav { display: none; }
       .hamburger-btn { display: flex; }
 
-      /* Header right — masquer le nom, garder avatar + logout */
+      /* Header right â€” masquer le nom, garder avatar + logout */
       .header-right { padding-left: 0; border-left: none; gap: 0.375rem; }
       .admin-name { display: none; }
       .admin-profile { padding: 0.375rem 0.5rem; }
@@ -1096,7 +1097,7 @@
       #pdDeleteBtn { width: 100%; justify-content: center; }
     }
 
-    /* ── Très petit mobile (≤ 400px) ── */
+    /* â”€â”€ TrÃ¨s petit mobile (â‰¤ 400px) â”€â”€ */
     @media (max-width: 400px) {
       header { padding: 0 0.75rem; }
       .header-title { font-size: 1rem; }
@@ -1109,9 +1110,9 @@
       footer { padding: 0.5rem 0.75rem; }
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       ONGLET BASE DE DONNÉES
-       ══════════════════════════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       ONGLET BASE DE DONNÃ‰ES
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     .db-mode-switch { display: flex; gap: 0.5rem; background: #f3f4f6; padding: 0.3rem; border-radius: 12px; }
     .db-mode-btn {
       padding: 0.5rem 1.1rem; border: none; border-radius: 9px; background: transparent;
@@ -1178,7 +1179,7 @@
 </head>
 <body>
 
-  <!-- ── HEADER ── -->
+  <!-- â”€â”€ HEADER â”€â”€ -->
   <header>
     <div class="header-brand">
       <div class="header-icon-box">
@@ -1197,7 +1198,7 @@
       <button class="nav-tab" data-tab="users">Utilisateurs</button>
       <button class="nav-tab" data-tab="referrals">Codes de parrainage</button>
       <button class="nav-tab" data-tab="plans">Plans d'abonnements</button>
-      <button class="nav-tab" data-tab="database">Base de données</button>
+      <button class="nav-tab" data-tab="database">Base de donnÃ©es</button>
       <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
     </nav>
 
@@ -1211,15 +1212,15 @@
     </button>
 
     <div class="header-right">
-      <div class="admin-profile" id="profileLink" style="cursor:pointer;" title="Aller à Mon compte">
+      <div class="admin-profile" id="profileLink" style="cursor:pointer;" title="Aller Ã  Mon compte">
         <div class="admin-avatar" id="adminAvatar">A</div>
         <span class="admin-name" id="adminName">Admin</span>
       </div>
-      <button class="btn-logout" id="logoutBtn">Déconnexion</button>
+      <button class="btn-logout" id="logoutBtn">DÃ©connexion</button>
     </div>
   </header>
 
-  <!-- ── DRAWER NAVIGATION MOBILE ── -->
+  <!-- â”€â”€ DRAWER NAVIGATION MOBILE â”€â”€ -->
   <div class="mobile-nav-drawer" id="mobileDrawer">
     <div class="mobile-nav-overlay" id="mobileOverlay"></div>
     <div class="mobile-nav-panel">
@@ -1258,7 +1259,7 @@
         </button>
         <button class="mobile-nav-tab" data-tab="database">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3" stroke="currentColor" stroke-width="2"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" stroke="currentColor" stroke-width="2"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" stroke="currentColor" stroke-width="2"/></svg>
-          Base de données
+          Base de donnÃ©es
         </button>
         <button class="mobile-nav-tab" data-tab="panel">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" stroke="currentColor" stroke-width="2"/></svg>
@@ -1268,13 +1269,13 @@
       <div class="mobile-nav-footer">
         <button class="mobile-btn-logout-full" id="mobileLogoutBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="white" stroke-width="2"/><polyline points="16 17 21 12 16 7" stroke="white" stroke-width="2"/><line x1="21" y1="12" x2="9" y2="12" stroke="white" stroke-width="2"/></svg>
-          Se déconnecter
+          Se dÃ©connecter
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ── MAIN ── -->
+  <!-- â”€â”€ MAIN â”€â”€ -->
   <main id="mainContent">
 
     <!-- VIEW 1: DASHBOARD -->
@@ -1297,7 +1298,7 @@
             <div class="stat-label">Total Tenants</div>
           </div>
         </div>
-        <!-- Connectés -->
+        <!-- ConnectÃ©s -->
         <div class="stat-card">
           <div class="stat-icon green">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1306,7 +1307,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-number" id="statConnected"><span class="skeleton skeleton-num"></span></div>
-            <div class="stat-label">Connectés</div>
+            <div class="stat-label">ConnectÃ©s</div>
           </div>
         </div>
         <!-- Utilisateurs -->
@@ -1355,11 +1356,11 @@
           <table id="tenantsTable">
             <thead>
               <tr>
-                <th>Téléphone</th>
+                <th>TÃ©lÃ©phone</th>
                 <th>Nom</th>
                 <th>Statut</th>
-                <th>Connecté le</th>
-                <th>Créé le</th>
+                <th>ConnectÃ© le</th>
+                <th>CrÃ©Ã© le</th>
                 <th>QR</th>
                 <th>Suspension</th>
               </tr>
@@ -1371,7 +1372,7 @@
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                       <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Chargement…
+                    Chargementâ€¦
                   </div>
                 </td>
               </tr>
@@ -1401,14 +1402,14 @@
           <div class="card">
             <div class="profile-summary">
               <div class="profile-avatar" id="profileAvatar">A</div>
-              <div class="profile-name" id="profileName">—</div>
-              <div class="profile-email" id="profileEmail">—</div>
+              <div class="profile-name" id="profileName">â€”</div>
+              <div class="profile-email" id="profileEmail">â€”</div>
               <div class="profile-last">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="#667781" stroke-width="2"/>
                   <path d="M12 6v6l4 2" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                <span id="profileLastLogin">—</span>
+                <span id="profileLastLogin">â€”</span>
               </div>
             </div>
           </div>
@@ -1451,27 +1452,27 @@
                 <rect x="5" y="11" width="14" height="10" rx="2" stroke="#667781" stroke-width="2"/>
                 <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <span class="card-header-title">Sécurité</span>
+              <span class="card-header-title">SÃ©curitÃ©</span>
             </div>
             <form id="passwordForm">
               <div class="card-body-pad">
                 <div class="form-group">
                   <label for="currentPwd">Mot de passe actuel</label>
-                  <input type="password" id="currentPwd" placeholder="••••••••" autocomplete="current-password" />
+                  <input type="password" id="currentPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" />
                 </div>
                 <div class="form-group">
                   <label for="newPwd">Nouveau mot de passe</label>
-                  <input type="password" id="newPwd" placeholder="••••••••" autocomplete="new-password" />
+                  <input type="password" id="newPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password" />
                 </div>
                 <div class="form-group">
                   <label for="confirmPwd">Confirmer</label>
-                  <input type="password" id="confirmPwd" placeholder="••••••••" autocomplete="new-password" />
+                  <input type="password" id="confirmPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password" />
                 </div>
               </div>
               <div class="card-footer-pad">
                 <button type="submit" class="btn-primary" id="savePwdBtn">
                   <div class="spinner" id="spinnerPwd"></div>
-                  Mettre à jour
+                  Mettre Ã  jour
                 </button>
               </div>
             </form>
@@ -1488,7 +1489,7 @@
           <input 
             type="text" 
             id="userSearchInput" 
-            placeholder="Rechercher par email ou téléphone..."
+            placeholder="Rechercher par email ou tÃ©lÃ©phone..."
             style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:8px;font-size:0.875rem;width:280px;font-family:'Inter',sans-serif;"
           />
           <select 
@@ -1570,7 +1571,7 @@
                 <th>Contact</th>
                 <th>Statut</th>
                 <th>Inscription</th>
-                <th>Dernière connexion</th>
+                <th>DerniÃ¨re connexion</th>
               </tr>
             </thead>
             <tbody id="usersTableBody">
@@ -1589,7 +1590,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Précédent
+            PrÃ©cÃ©dent
           </button>
           <div class="pagination-info" id="usersPaginationInfo">Page 1 sur 1</div>
           <button class="pagination-btn" id="usersNextBtn" disabled>
@@ -1622,13 +1623,13 @@
               <tr>
                 <th>Code</th>
                 <th>Usage</th>
-                <th>Créé le</th>
+                <th>CrÃ©Ã© le</th>
               </tr>
             </thead>
             <tbody id="referralCodesBody">
               <tr>
                 <td colspan="3">
-                  <div class="empty-state">Chargement…</div>
+                  <div class="empty-state">Chargementâ€¦</div>
                 </td>
               </tr>
             </tbody>
@@ -1658,13 +1659,13 @@
                 <th>Nom</th>
                 <th>Prix</th>
                 <th>Usage</th>
-                <th>Créé le</th>
+                <th>CrÃ©Ã© le</th>
               </tr>
             </thead>
             <tbody id="plansBody">
               <tr>
                 <td colspan="4">
-                  <div class="empty-state">Chargement…</div>
+                  <div class="empty-state">Chargementâ€¦</div>
                 </td>
               </tr>
             </tbody>
@@ -1673,10 +1674,10 @@
       </div>
     </div><!-- end view-plans -->
 
-    <!-- VIEW: BASE DE DONNÉES -->
+    <!-- VIEW: BASE DE DONNÃ‰ES -->
     <div class="view" id="view-database">
       <div class="section-header">
-        <div class="section-title">Base de données</div>
+        <div class="section-title">Base de donnÃ©es</div>
         <div class="db-mode-switch">
           <button class="db-mode-btn active" data-mode="tables" id="dbModeTablesBtn">Mode Table (SQL)</button>
           <button class="db-mode-btn" data-mode="profiles" id="dbModeProfilesBtn">Mode Profils</button>
@@ -1687,14 +1688,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
           <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Accès direct à la base de données de production. Les modifications sont immédiates et irréversibles.
+        AccÃ¨s direct Ã  la base de donnÃ©es de production. Les modifications sont immÃ©diates et irrÃ©versibles.
       </div>
 
-      <!-- SUB-VIEW A : MODE TABLE (façon phpMyAdmin) -->
+      <!-- SUB-VIEW A : MODE TABLE (faÃ§on phpMyAdmin) -->
       <div class="db-subview active" id="dbSubTables">
         <div class="db-toolbar">
           <select id="dbTableSelect"></select>
-          <input type="text" id="dbSearchInput" placeholder="Rechercher dans la table…" />
+          <input type="text" id="dbSearchInput" placeholder="Rechercher dans la tableâ€¦" />
           <button class="btn-ghost" id="dbRefreshRowsBtn">Actualiser</button>
           <button class="btn-outline-green" id="dbNewRowBtn">+ Nouvelle ligne</button>
         </div>
@@ -1703,14 +1704,14 @@
             <table id="dbRowsTable">
               <thead id="dbRowsThead"></thead>
               <tbody id="dbRowsBody">
-                <tr><td><div class="empty-state">Sélectionnez une table…</div></td></tr>
+                <tr><td><div class="empty-state">SÃ©lectionnez une tableâ€¦</div></td></tr>
               </tbody>
             </table>
           </div>
           <div class="pagination" id="dbRowsPagination" style="display:none;">
             <button class="pagination-btn" id="dbRowsPrevBtn" disabled>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              Précédent
+              PrÃ©cÃ©dent
             </button>
             <div class="pagination-info" id="dbRowsPaginationInfo">Page 1 sur 1</div>
             <button class="pagination-btn" id="dbRowsNextBtn" disabled>
@@ -1725,7 +1726,7 @@
       <div class="db-subview" id="dbSubProfiles">
         <div id="dbProfileListWrap">
           <div class="db-toolbar">
-            <input type="text" id="profileSearchInput" placeholder="Rechercher un profil (nom, email, téléphone, uid)…" />
+            <input type="text" id="profileSearchInput" placeholder="Rechercher un profil (nom, email, tÃ©lÃ©phone, uid)â€¦" />
             <button class="btn-ghost" id="dbRefreshProfilesBtn">Actualiser</button>
           </div>
           <div class="table-card">
@@ -1735,14 +1736,14 @@
                   <tr><th>Utilisateur</th><th>Contact</th><th>Comptes WhatsApp</th><th>Statut</th><th>Inscrit le</th></tr>
                 </thead>
                 <tbody id="profilesBody">
-                  <tr><td colspan="5"><div class="empty-state">Chargement…</div></td></tr>
+                  <tr><td colspan="5"><div class="empty-state">Chargementâ€¦</div></td></tr>
                 </tbody>
               </table>
             </div>
             <div class="pagination" id="profilesPagination" style="display:none;">
               <button class="pagination-btn" id="profilesPrevBtn" disabled>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Précédent
+                PrÃ©cÃ©dent
               </button>
               <div class="pagination-info" id="profilesPaginationInfo">Page 1 sur 1</div>
               <button class="pagination-btn" id="profilesNextBtn" disabled>
@@ -1756,14 +1757,14 @@
         <div id="dbProfileDetailWrap" style="display:none;">
           <button class="btn-ghost" id="profileBackBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Retour à la liste
+            Retour Ã  la liste
           </button>
 
           <div class="profile-detail-header">
             <div class="profile-avatar" id="pdAvatar">?</div>
             <div>
-              <div class="profile-detail-name" id="pdName">—</div>
-              <div class="profile-detail-sub" id="pdSub">—</div>
+              <div class="profile-detail-name" id="pdName">â€”</div>
+              <div class="profile-detail-sub" id="pdSub">â€”</div>
             </div>
             <button class="btn-danger" id="pdDeleteBtn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1778,12 +1779,12 @@
 
     <!-- VIEW 3: PANEL WHATSAPP -->
     <div class="view" id="view-panel">
-      <iframe id="panelIframe" src="" title="Panel WhatsApp" style="width:100%;border:none;display:block;height:calc(100vh - 72px - 56px);"></iframe>
+      <iframe id="panelIframe" title="Panel WhatsApp" style="width:100%;border:none;display:block;height:calc(100vh - 72px - 56px);"></iframe>
     </div>
 
   </main><!-- end main -->
 
-  <!-- ── MODAL QR ── -->
+  <!-- â”€â”€ MODAL QR â”€â”€ -->
   <div class="modal-overlay" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1796,12 +1797,12 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>Pour connecter ce compte WhatsApp, rendez-vous sur le <a href="/" target="_blank">Panel WhatsApp</a>, puis scannez le QR code affiché avec votre téléphone.</p>
+        <p>Pour connecter ce compte WhatsApp, rendez-vous sur le <a href="/" target="_blank">Panel WhatsApp</a>, puis scannez le QR code affichÃ© avec votre tÃ©lÃ©phone.</p>
         <br/>
         <p style="color:#111b21;font-weight:500;">Comment faire :</p>
         <ol style="margin:0.5rem 0 0 1.2rem;line-height:1.8;">
-          <li>Ouvrez WhatsApp sur votre téléphone</li>
-          <li>Allez dans <strong>Appareils connectés</strong></li>
+          <li>Ouvrez WhatsApp sur votre tÃ©lÃ©phone</li>
+          <li>Allez dans <strong>Appareils connectÃ©s</strong></li>
           <li>Appuyez sur <strong>Connecter un appareil</strong></li>
           <li>Scannez le QR code sur le panel</li>
         </ol>
@@ -1812,7 +1813,7 @@
     </div>
   </div>
 
-  <!-- ── MODAL NOUVEAU CODE DE PARRAINAGE ── -->
+  <!-- â”€â”€ MODAL NOUVEAU CODE DE PARRAINAGE â”€â”€ -->
   <div class="modal-overlay" id="newCodeModal" role="dialog" aria-modal="true" aria-labelledby="newCodeModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1829,11 +1830,11 @@
           <div class="form-group">
             <label for="codeInput">Code</label>
             <input type="text" id="codeInput" placeholder="ex: BIENVENUE10" minlength="4" maxlength="12" required />
-            <span class="field-hint">Entre 4 et 12 caractères.</span>
+            <span class="field-hint">Entre 4 et 12 caractÃ¨res.</span>
           </div>
 
           <div class="form-group">
-            <label>Est-ce un code à usage indéterminé ?</label>
+            <label>Est-ce un code Ã  usage indÃ©terminÃ© ?</label>
             <div class="radio-group">
               <label class="radio-option"><input type="radio" name="codeUnlimited" value="yes" checked /> Oui</label>
               <label class="radio-option"><input type="radio" name="codeUnlimited" value="no" /> Non</label>
@@ -1844,12 +1845,12 @@
             <div class="form-group">
               <label>Utilisation</label>
               <div class="radio-group">
-                <label class="radio-option"><input type="radio" name="codeUsageType" value="duration" checked /> Durée</label>
-                <label class="radio-option"><input type="radio" name="codeUsageType" value="requests" /> Nombre de requêtes</label>
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="duration" checked /> DurÃ©e</label>
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="requests" /> Nombre de requÃªtes</label>
               </div>
             </div>
             <div class="form-group">
-              <label for="codeUsageValue" id="codeUsageValueLabel">Durée (en jours)</label>
+              <label for="codeUsageValue" id="codeUsageValueLabel">DurÃ©e (en jours)</label>
               <input type="number" id="codeUsageValue" min="1" step="1" placeholder="ex: 30" />
             </div>
           </div>
@@ -1857,14 +1858,14 @@
         <div class="modal-footer">
           <button type="submit" class="btn-primary" id="saveCodeBtn">
             <div class="spinner" id="spinnerCode"></div>
-            Créer le code
+            CrÃ©er le code
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ── MODAL NOUVEAU PLAN D'ABONNEMENT ── -->
+  <!-- â”€â”€ MODAL NOUVEAU PLAN D'ABONNEMENT â”€â”€ -->
   <div class="modal-overlay" id="newPlanModal" role="dialog" aria-modal="true" aria-labelledby="newPlanModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1880,7 +1881,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="planNameInput">Nom du plan</label>
-            <input type="text" id="planNameInput" placeholder="ex: Gratuit, Professionnel…" maxlength="100" required />
+            <input type="text" id="planNameInput" placeholder="ex: Gratuit, Professionnelâ€¦" maxlength="100" required />
           </div>
 
           <div class="form-group">
@@ -1890,7 +1891,7 @@
           </div>
 
           <div class="form-group">
-            <label>Est-ce un plan à usage indéterminé ?</label>
+            <label>Est-ce un plan Ã  usage indÃ©terminÃ© ?</label>
             <div class="radio-group">
               <label class="radio-option"><input type="radio" name="planUnlimited" value="yes" checked /> Oui</label>
               <label class="radio-option"><input type="radio" name="planUnlimited" value="no" /> Non</label>
@@ -1901,12 +1902,12 @@
             <div class="form-group">
               <label>Utilisation</label>
               <div class="radio-group">
-                <label class="radio-option"><input type="radio" name="planUsageType" value="duration" checked /> Durée</label>
-                <label class="radio-option"><input type="radio" name="planUsageType" value="requests" /> Nombre de requêtes</label>
+                <label class="radio-option"><input type="radio" name="planUsageType" value="duration" checked /> DurÃ©e</label>
+                <label class="radio-option"><input type="radio" name="planUsageType" value="requests" /> Nombre de requÃªtes</label>
               </div>
             </div>
             <div class="form-group">
-              <label for="planUsageValue" id="planUsageValueLabel">Durée (en jours)</label>
+              <label for="planUsageValue" id="planUsageValueLabel">DurÃ©e (en jours)</label>
               <input type="number" id="planUsageValue" min="1" step="1" placeholder="ex: 30" />
             </div>
           </div>
@@ -1914,18 +1915,18 @@
         <div class="modal-footer">
           <button type="submit" class="btn-primary" id="savePlanBtn">
             <div class="spinner" id="spinnerPlan"></div>
-            Créer le plan
+            CrÃ©er le plan
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ── MODAL LIGNE (créer / éditer une ligne — mode Table) ── -->
+  <!-- â”€â”€ MODAL LIGNE (crÃ©er / Ã©diter une ligne â€” mode Table) â”€â”€ -->
   <div class="modal-overlay" id="dbRowModal" role="dialog" aria-modal="true" aria-labelledby="dbRowModalTitle">
     <div class="modal-box" style="max-width:560px;">
       <div class="modal-header">
-        <span class="modal-title" id="dbRowModalTitle">Éditer la ligne</span>
+        <span class="modal-title" id="dbRowModalTitle">Ã‰diter la ligne</span>
         <button class="modal-close" id="dbRowModalCloseBtn" aria-label="Fermer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
@@ -1942,7 +1943,7 @@
     </div>
   </div>
 
-  <!-- ── MODAL CHAMP (édition rapide d'une case — mode Profils) ── -->
+  <!-- â”€â”€ MODAL CHAMP (Ã©dition rapide d'une case â€” mode Profils) â”€â”€ -->
   <div class="modal-overlay" id="fieldEditModal" role="dialog" aria-modal="true" aria-labelledby="fieldEditModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1963,7 +1964,7 @@
     </div>
   </div>
 
-  <!-- ── MODAL CONFIRMATION SUPPRESSION PROFIL ── -->
+  <!-- â”€â”€ MODAL CONFIRMATION SUPPRESSION PROFIL â”€â”€ -->
   <div class="modal-overlay" id="deleteProfileModal" role="dialog" aria-modal="true" aria-labelledby="deleteProfileModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1973,9 +1974,9 @@
         </button>
       </div>
       <div class="modal-body">
-        <p style="color:#dc3545;font-weight:600;">Cette action est irréversible.</p>
+        <p style="color:#dc3545;font-weight:600;">Cette action est irrÃ©versible.</p>
         <br/>
-        <p>Toutes les données de ce profil seront supprimées définitivement : compte, comptes WhatsApp, sessions, groupes, messages et paiements associés.</p>
+        <p>Toutes les donnÃ©es de ce profil seront supprimÃ©es dÃ©finitivement : compte, comptes WhatsApp, sessions, groupes, messages et paiements associÃ©s.</p>
         <br/>
         <div class="form-group">
           <label for="deleteProfileConfirmInput">Tapez <strong>SUPPRIMER</strong> pour confirmer</label>
@@ -1985,13 +1986,13 @@
       <div class="modal-footer">
         <button type="button" class="btn-danger" id="deleteProfileConfirmBtn" disabled>
           <div class="spinner" id="deleteProfileSpinner"></div>
-          Supprimer définitivement
+          Supprimer dÃ©finitivement
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ── MODAL SUSPENSION TENANT ── -->
+  <!-- â”€â”€ MODAL SUSPENSION TENANT â”€â”€ -->
   <div class="modal-overlay" id="suspendModal">
     <div class="modal-box">
       <div class="modal-header" style="border-bottom:2px solid #fee2e2;">
@@ -2007,7 +2008,7 @@
       </div>
       <div class="modal-body">
         <p style="margin-bottom:1rem;color:#374151;">
-          La session WhatsApp sera fermée et le tenant recevra un message de notification sur son numéro WhatsApp.
+          La session WhatsApp sera fermÃ©e et le tenant recevra un message de notification sur son numÃ©ro WhatsApp.
         </p>
         <div class="form-group">
           <label for="suspendReason" style="font-size:0.875rem;font-weight:600;color:#111b21;">
@@ -2016,7 +2017,7 @@
           <textarea
             id="suspendReason"
             rows="4"
-            placeholder="Ex: Violation des conditions d'utilisation — envoi de spam détecté..."
+            placeholder="Ex: Violation des conditions d'utilisation â€” envoi de spam dÃ©tectÃ©..."
             style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e4e6ea;border-radius:12px;font-size:0.9375rem;font-family:'Inter',sans-serif;resize:vertical;outline:none;margin-top:0.5rem;"
             onfocus="this.style.borderColor='#dc3545'"
             onblur="this.style.borderColor='#e4e6ea'"
@@ -2040,10 +2041,10 @@
     </div>
   </div>
 
-  <!-- ── TOAST CONTAINER ── -->
+  <!-- â”€â”€ TOAST CONTAINER â”€â”€ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- ── FOOTER ── -->
+  <!-- â”€â”€ FOOTER â”€â”€ -->
   <footer>
     <div class="footer-left">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -2055,9 +2056,9 @@
   </footer>
 
   <script>
-    // ── AUTH CHECK ──
+    // â”€â”€ AUTH CHECK â”€â”€
     const token = sessionStorage.getItem('admin_token');
-    if (!token) window.location.replace('/admin/login.html');
+    if (!token) window.location.replace('/admin/login');
 
     async function apiFetch(path, opts = {}) {
       const res = await fetch(path, {
@@ -2071,13 +2072,13 @@
       });
       if (res.status === 401) {
         sessionStorage.removeItem('admin_token');
-        window.location.replace('/admin/login.html');
+        window.location.replace('/admin/login');
         throw new Error('Unauthorized');
       }
       return res;
     }
 
-    // ── HELPERS ──
+    // â”€â”€ HELPERS â”€â”€
     function esc(str) {
       if (str == null) return '';
       return String(str)
@@ -2094,24 +2095,24 @@
     }
 
     function formatDate(dateStr) {
-      if (!dateStr) return '—';
+      if (!dateStr) return 'â€”';
       try {
         const d = new Date(dateStr);
         return d.toLocaleString('fr-FR', {
           day: '2-digit', month: '2-digit', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
         });
-      } catch (_) { return '—'; }
+      } catch (_) { return 'â€”'; }
     }
 
     function maskPhone(phone) {
-      if (!phone) return '—';
+      if (!phone) return 'â€”';
       const s = String(phone).replace(/\D/g, '');
       if (s.length <= 7) return s;
       return s.slice(0, 4) + '****' + s.slice(-3);
     }
 
-    // ── TOAST SYSTEM ──
+    // â”€â”€ TOAST SYSTEM â”€â”€
     function showToast(msg, type = 'info') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
@@ -2132,7 +2133,7 @@
       }, 4000);
     }
 
-    // ── LOAD PROFILE ──
+    // â”€â”€ LOAD PROFILE â”€â”€
     async function loadProfile() {
       try {
         const res = await apiFetch('/api/admin/me');
@@ -2146,10 +2147,10 @@
           document.getElementById('adminName').textContent = a.displayName || a.email || 'Admin';
           // Profile card
           document.getElementById('profileAvatar').textContent = ini;
-          document.getElementById('profileName').textContent = a.displayName || '—';
-          document.getElementById('profileEmail').textContent = a.email || '—';
+          document.getElementById('profileName').textContent = a.displayName || 'â€”';
+          document.getElementById('profileEmail').textContent = a.email || 'â€”';
           document.getElementById('profileLastLogin').textContent =
-            a.lastLoginAt ? 'Dernière connexion : ' + formatDate(a.lastLoginAt) : 'Jamais connecté';
+            a.lastLoginAt ? 'DerniÃ¨re connexion : ' + formatDate(a.lastLoginAt) : 'Jamais connectÃ©';
           // Pre-fill form
           document.getElementById('editName').value = a.displayName || '';
           document.getElementById('editEmail').value = a.email || '';
@@ -2159,7 +2160,7 @@
       }
     }
 
-    // ── LOAD STATS ──
+    // â”€â”€ LOAD STATS â”€â”€
     async function loadStats() {
       try {
         const res = await apiFetch('/api/admin/stats');
@@ -2174,30 +2175,30 @@
       } catch (e) {
         if (e.message !== 'Unauthorized') {
           ['statTotal','statConnected','statUsers','statMessages'].forEach(id => {
-            document.getElementById(id).textContent = '—';
+            document.getElementById(id).textContent = 'â€”';
           });
         }
       }
     }
 
-    // ── STATUS BADGE HTML ──
+    // â”€â”€ STATUS BADGE HTML â”€â”€
     function statusBadge(status, suspended) {
       if (suspended) {
         return '<span class="badge" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;"><span class="badge-dot" style="background:#dc3545;"></span>Suspendu</span>';
       }
       const map = {
-        connected: { cls: 'badge-connected', label: 'Connecté' },
+        connected: { cls: 'badge-connected', label: 'ConnectÃ©' },
         pending_qr: { cls: 'badge-pending', label: 'En attente QR' },
-        disconnected: { cls: 'badge-disconnected', label: 'Déconnecté' }
+        disconnected: { cls: 'badge-disconnected', label: 'DÃ©connectÃ©' }
       };
       const s = map[status] || { cls: 'badge-disconnected', label: esc(status || 'Inconnu') };
       return '<span class="badge ' + s.cls + '"><span class="badge-dot"></span>' + s.label + '</span>';
     }
 
-    // ── LOAD TENANTS ──
+    // â”€â”€ LOAD TENANTS â”€â”€
     async function loadTenants() {
       const tbody = document.getElementById('tenantsBody');
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#e4e6ea" stroke-width="2"/></svg>Chargement…</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#e4e6ea" stroke-width="2"/></svg>Chargementâ€¦</div></td></tr>';
       try {
         const res = await apiFetch('/api/admin/tenants');
         const data = await res.json();
@@ -2209,12 +2210,12 @@
 
             const isSuspended = t.suspended || t.suspended === 1;
             const suspendBtn = isSuspended
-              ? '<button class="btn-sm" style="border-color:#25D366;color:#128C7E;" onclick="unsuspendTenant(\'' + esc(t.tenantId || t.id) + '\')">Réactiver</button>'
+              ? '<button class="btn-sm" style="border-color:#25D366;color:#128C7E;" onclick="unsuspendTenant(\'' + esc(t.tenantId || t.id) + '\')">RÃ©activer</button>'
               : '<button class="btn-sm" style="border-color:#dc3545;color:#dc3545;" onclick="openSuspendModal(\'' + esc(t.tenantId || t.id) + '\',\'' + esc(t.name || '') + '\')">Suspendre</button>';
 
             return '<tr>' +
               '<td class="td-phone">' + esc(maskPhone(t.phone)) + '</td>' +
-              '<td class="td-name">' + esc(t.name || '—') + '</td>' +
+              '<td class="td-name">' + esc(t.name || 'â€”') + '</td>' +
               '<td>' + statusBadge(t.status, isSuspended) + '</td>' +
               '<td>' + esc(formatDate(t.connectedAt)) + '</td>' +
               '<td>' + esc(formatDate(t.createdAt)) + '</td>' +
@@ -2225,7 +2226,7 @@
         } else {
           tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">' +
             '<svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-            'Aucun compte WhatsApp trouvé.</div></td></tr>';
+            'Aucun compte WhatsApp trouvÃ©.</div></td></tr>';
         }
       } catch (e) {
         if (e.message !== 'Unauthorized') {
@@ -2234,7 +2235,7 @@
       }
     }
 
-    // ── MODAL ──
+    // â”€â”€ MODAL â”€â”€
     function openQrModal(btn) {
       document.getElementById('qrModal').classList.add('open');
     }
@@ -2247,28 +2248,28 @@
       if (e.target === this) closeQrModal();
     });
 
-    // ── USAGE BADGE HTML (codes de parrainage / plans) ──
+    // â”€â”€ USAGE BADGE HTML (codes de parrainage / plans) â”€â”€
     function usageBadge(item) {
       if (item.unlimited) {
-        return '<span class="badge-usage unlimited">Illimité</span>';
+        return '<span class="badge-usage unlimited">IllimitÃ©</span>';
       }
       if (item.usageType === 'duration') {
         return '<span class="badge-usage">' + esc(item.usageValue) + ' jour(s)</span>';
       }
       if (item.usageType === 'requests') {
-        return '<span class="badge-usage">' + esc(item.usageValue) + ' requête(s)</span>';
+        return '<span class="badge-usage">' + esc(item.usageValue) + ' requÃªte(s)</span>';
       }
-      return '<span class="badge-usage">—</span>';
+      return '<span class="badge-usage">â€”</span>';
     }
 
     function formatPrice(price) {
       return Number(price || 0).toLocaleString('fr-FR') + ' Frs CFA';
     }
 
-    // ── LOAD REFERRAL CODES ──
+    // â”€â”€ LOAD REFERRAL CODES â”€â”€
     async function loadReferralCodes() {
       const tbody = document.getElementById('referralCodesBody');
-      tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Chargement…</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Chargementâ€¦</div></td></tr>';
       try {
         const res = await apiFetch('/api/admin/referral-codes');
         const data = await res.json();
@@ -2281,7 +2282,7 @@
             '</tr>'
           ).join('');
         } else {
-          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Aucun code de parrainage trouvé.</div></td></tr>';
+          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Aucun code de parrainage trouvÃ©.</div></td></tr>';
         }
       } catch (e) {
         if (e.message !== 'Unauthorized') {
@@ -2290,10 +2291,10 @@
       }
     }
 
-    // ── LOAD PLANS ──
+    // â”€â”€ LOAD PLANS â”€â”€
     async function loadPlans() {
       const tbody = document.getElementById('plansBody');
-      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Chargement…</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Chargementâ€¦</div></td></tr>';
       try {
         const res = await apiFetch('/api/admin/plans');
         const data = await res.json();
@@ -2307,7 +2308,7 @@
             '</tr>'
           ).join('');
         } else {
-          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Aucun plan trouvé.</div></td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Aucun plan trouvÃ©.</div></td></tr>';
         }
       } catch (e) {
         if (e.message !== 'Unauthorized') {
@@ -2316,7 +2317,7 @@
       }
     }
 
-    // ── LOAD USERS ──
+    // â”€â”€ LOAD USERS â”€â”€
     let currentUsersPage = 1;
     let currentUsersLimit = 20;
     let allUsersData = null;
@@ -2346,24 +2347,24 @@
           const active = data.data.filter(u => u.active).length;
           const inactive = total - active;
           
-          // Calculer nouveaux ce mois (approximation - créés dans les 30 derniers jours)
+          // Calculer nouveaux ce mois (approximation - crÃ©Ã©s dans les 30 derniers jours)
           const thirtyDaysAgo = new Date();
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
           const newThisMonth = data.data.filter(u => new Date(u.created_at) > thirtyDaysAgo).length;
 
-          // Mettre à jour les stats
+          // Mettre Ã  jour les stats
           document.getElementById('statUsersTotal').textContent = total;
           document.getElementById('statUsersActive').textContent = active;
           document.getElementById('statUsersInactive').textContent = inactive;
           document.getElementById('statUsersNewMonth').textContent = newThisMonth;
 
-          // Générer les lignes du tableau
+          // GÃ©nÃ©rer les lignes du tableau
           tbody.innerHTML = data.data.map(user => {
             const initial = (user.display_name || user.email || '?')[0].toUpperCase();
             const displayName = user.display_name || 'Utilisateur';
             const userId = user.firebase_uid ? user.firebase_uid.substring(0, 8) : user.id;
-            const email = user.email || '—';
-            const phone = user.phone ? maskPhone(user.phone) : '—';
+            const email = user.email || 'â€”';
+            const phone = user.phone ? maskPhone(user.phone) : 'â€”';
             const statusClass = user.active ? 'active' : 'inactive';
             const statusLabel = user.active ? 'Actif' : 'Inactif';
             const statusIcon = user.active 
@@ -2416,7 +2417,7 @@
             `;
           }).join('');
 
-          // Gérer la pagination
+          // GÃ©rer la pagination
           const { page: currentPage, pages: totalPages } = data.meta;
           paginationInfo.textContent = `Page ${currentPage} sur ${totalPages}`;
           prevBtn.disabled = currentPage <= 1;
@@ -2424,9 +2425,9 @@
           pagination.style.display = 'flex';
 
         } else {
-          tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#e4e6ea" stroke-width="2"/><circle cx="9" cy="7" r="4" stroke="#e4e6ea" stroke-width="2"/></svg>Aucun utilisateur trouvé.</div></td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#e4e6ea" stroke-width="2"/><circle cx="9" cy="7" r="4" stroke="#e4e6ea" stroke-width="2"/></svg>Aucun utilisateur trouvÃ©.</div></td></tr>';
           
-          // Stats à 0
+          // Stats Ã  0
           document.getElementById('statUsersTotal').textContent = '0';
           document.getElementById('statUsersActive').textContent = '0';
           document.getElementById('statUsersInactive').textContent = '0';
@@ -2487,17 +2488,17 @@
       });
 
       if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Aucun utilisateur ne correspond aux critères.</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Aucun utilisateur ne correspond aux critÃ¨res.</div></td></tr>';
         return;
       }
 
-      // Régénérer le tableau avec les résultats filtrés
+      // RÃ©gÃ©nÃ©rer le tableau avec les rÃ©sultats filtrÃ©s
       tbody.innerHTML = filteredUsers.map(user => {
         const initial = (user.display_name || user.email || '?')[0].toUpperCase();
         const displayName = user.display_name || 'Utilisateur';
         const userId = user.firebase_uid ? user.firebase_uid.substring(0, 8) : user.id;
-        const email = user.email || '—';
-        const phone = user.phone ? maskPhone(user.phone) : '—';
+        const email = user.email || 'â€”';
+        const phone = user.phone ? maskPhone(user.phone) : 'â€”';
         const statusClass = user.active ? 'active' : 'inactive';
         const statusLabel = user.active ? 'Actif' : 'Inactif';
         const statusIcon = user.active 
@@ -2551,7 +2552,7 @@
       }).join('');
     }
 
-    // ── MODAL: NOUVEAU CODE DE PARRAINAGE ──
+    // â”€â”€ MODAL: NOUVEAU CODE DE PARRAINAGE â”€â”€
     const newCodeModal      = document.getElementById('newCodeModal');
     const newCodeForm       = document.getElementById('newCodeForm');
     const codeUsageFields   = document.getElementById('codeUsageFields');
@@ -2561,7 +2562,7 @@
     function openNewCodeModal() {
       newCodeForm.reset();
       codeUsageFields.classList.remove('visible');
-      codeUsageValueLbl.textContent = 'Durée (en jours)';
+      codeUsageValueLbl.textContent = 'DurÃ©e (en jours)';
       newCodeModal.classList.add('open');
     }
     function closeNewCodeModal() { newCodeModal.classList.remove('open'); }
@@ -2577,7 +2578,7 @@
     });
     document.getElementsByName('codeUsageType').forEach(radio => {
       radio.addEventListener('change', function() {
-        codeUsageValueLbl.textContent = this.value === 'duration' ? 'Durée (en jours)' : 'Nombre de requêtes';
+        codeUsageValueLbl.textContent = this.value === 'duration' ? 'DurÃ©e (en jours)' : 'Nombre de requÃªtes';
       });
     });
 
@@ -2588,7 +2589,7 @@
       const unlimited = document.querySelector('input[name="codeUnlimited"]:checked').value === 'yes';
 
       if (code.length < 4 || code.length > 12) {
-        showToast('Le code doit contenir entre 4 et 12 caractères.', 'error');
+        showToast('Le code doit contenir entre 4 et 12 caractÃ¨res.', 'error');
         return;
       }
 
@@ -2597,7 +2598,7 @@
         const usageType = document.querySelector('input[name="codeUsageType"]:checked').value;
         const value = parseInt(codeUsageValue.value, 10);
         if (!Number.isInteger(value) || value < 1) {
-          showToast('Veuillez préciser une valeur valide (nombre entier positif).', 'error');
+          showToast('Veuillez prÃ©ciser une valeur valide (nombre entier positif).', 'error');
           return;
         }
         payload.usageType  = usageType;
@@ -2612,21 +2613,21 @@
         const res  = await apiFetch('/api/admin/referral-codes', { method: 'POST', body: JSON.stringify(payload) });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('Code de parrainage créé avec succès.', 'success');
+          showToast('Code de parrainage crÃ©Ã© avec succÃ¨s.', 'success');
           closeNewCodeModal();
           await loadReferralCodes();
         } else {
-          showToast(data.error?.message || 'Erreur lors de la création du code.', 'error');
+          showToast(data.error?.message || 'Erreur lors de la crÃ©ation du code.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false;
         sp.classList.remove('active');
       }
     });
 
-    // ── MODAL: NOUVEAU PLAN D'ABONNEMENT ──
+    // â”€â”€ MODAL: NOUVEAU PLAN D'ABONNEMENT â”€â”€
     const newPlanModal      = document.getElementById('newPlanModal');
     const newPlanForm       = document.getElementById('newPlanForm');
     const planUsageFields   = document.getElementById('planUsageFields');
@@ -2636,7 +2637,7 @@
     function openNewPlanModal() {
       newPlanForm.reset();
       planUsageFields.classList.remove('visible');
-      planUsageValueLbl.textContent = 'Durée (en jours)';
+      planUsageValueLbl.textContent = 'DurÃ©e (en jours)';
       newPlanModal.classList.add('open');
     }
     function closeNewPlanModal() { newPlanModal.classList.remove('open'); }
@@ -2652,7 +2653,7 @@
     });
     document.getElementsByName('planUsageType').forEach(radio => {
       radio.addEventListener('change', function() {
-        planUsageValueLbl.textContent = this.value === 'duration' ? 'Durée (en jours)' : 'Nombre de requêtes';
+        planUsageValueLbl.textContent = this.value === 'duration' ? 'DurÃ©e (en jours)' : 'Nombre de requÃªtes';
       });
     });
 
@@ -2668,7 +2669,7 @@
         return;
       }
       if (!Number.isInteger(price) || price < 0 || price > 1000000) {
-        showToast('Le prix doit être compris entre 0 et 1 000 000 Frs CFA.', 'error');
+        showToast('Le prix doit Ãªtre compris entre 0 et 1 000 000 Frs CFA.', 'error');
         return;
       }
 
@@ -2677,7 +2678,7 @@
         const usageType = document.querySelector('input[name="planUsageType"]:checked').value;
         const value = parseInt(planUsageValue.value, 10);
         if (!Number.isInteger(value) || value < 1) {
-          showToast('Veuillez préciser une valeur valide (nombre entier positif).', 'error');
+          showToast('Veuillez prÃ©ciser une valeur valide (nombre entier positif).', 'error');
           return;
         }
         payload.usageType  = usageType;
@@ -2692,23 +2693,23 @@
         const res  = await apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(payload) });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('Plan créé avec succès.', 'success');
+          showToast('Plan crÃ©Ã© avec succÃ¨s.', 'success');
           closeNewPlanModal();
           await loadPlans();
         } else {
-          showToast(data.error?.message || 'Erreur lors de la création du plan.', 'error');
+          showToast(data.error?.message || 'Erreur lors de la crÃ©ation du plan.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false;
         sp.classList.remove('active');
       }
     });
 
-    // ── TAB SWITCHING ──
-    // Persisté en localStorage pour survivre à un rechargement de page (F5) :
-    // sans ça, un refresh renvoyait toujours vers l'onglet "dashboard" par défaut.
+    // â”€â”€ TAB SWITCHING â”€â”€
+    // PersistÃ© en localStorage pour survivre Ã  un rechargement de page (F5) :
+    // sans Ã§a, un refresh renvoyait toujours vers l'onglet "dashboard" par dÃ©faut.
     const ACTIVE_TAB_KEY = 'admin_active_tab';
     const views = {
       dashboard: document.getElementById('view-dashboard'),
@@ -2736,13 +2737,13 @@
 
       if (persist) sessionStorage.setItem(ACTIVE_TAB_KEY, target);
 
-      // Lazy-load Panel WhatsApp — on charge l'iframe uniquement au premier clic
-      // pour éviter qu'elle soit vide. Le panel est servi par Express sur le même
+      // Lazy-load Panel WhatsApp â€” on charge l'iframe uniquement au premier clic
+      // pour Ã©viter qu'elle soit vide. Le panel est servi par Express sur le mÃªme
       // domaine/port que l'admin, donc window.location.origin fonctionne.
       if (target === 'panel') {
         const iframe = document.getElementById('panelIframe');
-        if (iframe && !iframe.src) {
-          iframe.src = window.location.origin + '/index.html';
+        if (iframe && !iframe.getAttribute('src')) {
+          iframe.src = window.location.origin + '/whatsapp-panel';
         }
       }
 
@@ -2757,9 +2758,9 @@
       tab.addEventListener('click', function() { activateTab(this.dataset.tab); });
     });
 
-    // ── OPEN PANEL BTN ──
+    // â”€â”€ OPEN PANEL BTN â”€â”€
     document.getElementById('openPanelBtn').addEventListener('click', function() { activateTab('panel'); });
-    // ── REFRESH BTN ──
+    // â”€â”€ REFRESH BTN â”€â”€
     document.getElementById('refreshBtn').addEventListener('click', function() {
       this.disabled = true;
       Promise.all([loadStats(), loadTenants()]).finally(() => {
@@ -2767,7 +2768,7 @@
       });
     });
 
-    // ── PROFILE FORM ──
+    // â”€â”€ PROFILE FORM â”€â”€
     document.getElementById('profileForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.getElementById('saveProfileBtn');
@@ -2784,20 +2785,20 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('Profil mis à jour avec succès.', 'success');
+          showToast('Profil mis Ã  jour avec succÃ¨s.', 'success');
           await loadProfile();
         } else {
-          showToast(data.message || 'Erreur lors de la mise à jour.', 'error');
+          showToast(data.message || 'Erreur lors de la mise Ã  jour.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false;
         sp.classList.remove('active');
       }
     });
 
-    // ── PASSWORD FORM ──
+    // â”€â”€ PASSWORD FORM â”€â”€
     document.getElementById('passwordForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const currentPwd = document.getElementById('currentPwd').value;
@@ -2808,7 +2809,7 @@
         showToast('Veuillez remplir tous les champs.', 'error'); return;
       }
       if (newPwd.length < 8) {
-        showToast('Le nouveau mot de passe doit contenir au moins 8 caractères.', 'error'); return;
+        showToast('Le nouveau mot de passe doit contenir au moins 8 caractÃ¨res.', 'error'); return;
       }
       if (newPwd !== confirmPwd) {
         showToast('Les mots de passe ne correspondent pas.', 'error'); return;
@@ -2825,36 +2826,36 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('Mot de passe mis à jour avec succès.', 'success');
+          showToast('Mot de passe mis Ã  jour avec succÃ¨s.', 'success');
           document.getElementById('passwordForm').reset();
         } else {
-          showToast(data.message || 'Erreur lors de la mise à jour.', 'error');
+          showToast(data.message || 'Erreur lors de la mise Ã  jour.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false;
         sp.classList.remove('active');
       }
     });
 
-    // ── PROFILE LINK (clic sur l'avatar/nom admin) ──
+    // â”€â”€ PROFILE LINK (clic sur l'avatar/nom admin) â”€â”€
     document.getElementById('profileLink').addEventListener('click', function() {
       activateTab('account');
     });
 
-    // ── LOGOUT ──
+    // â”€â”€ LOGOUT â”€â”€
     document.getElementById('logoutBtn').addEventListener('click', async function() {
       this.disabled = true;
       try {
         await apiFetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
       } finally {
         sessionStorage.removeItem('admin_token');
-        window.location.replace('/admin/login.html');
+        window.location.replace('/admin/login');
       }
     });
 
-    // ── HAMBURGER DRAWER MOBILE ──
+    // â”€â”€ HAMBURGER DRAWER MOBILE â”€â”€
     const hamburgerBtn   = document.getElementById('hamburgerBtn');
     const mobileDrawer   = document.getElementById('mobileDrawer');
     const mobileOverlay  = document.getElementById('mobileOverlay');
@@ -2868,19 +2869,19 @@
     if (mobileClose)  mobileClose.addEventListener('click', closeDrawer);
     if (mobileOverlay) mobileOverlay.addEventListener('click', closeDrawer);
 
-    // Onglets mobiles → même action que les onglets desktop + fermeture du drawer
+    // Onglets mobiles â†’ mÃªme action que les onglets desktop + fermeture du drawer
     document.querySelectorAll('.mobile-nav-tab').forEach(btn => {
       btn.addEventListener('click', function() {
         const tab = this.dataset.tab;
         activateTab(tab);
-        // Mettre à jour l'état actif dans le drawer
+        // Mettre Ã  jour l'Ã©tat actif dans le drawer
         document.querySelectorAll('.mobile-nav-tab').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         closeDrawer();
       });
     });
 
-    // Synchroniser l'état actif du drawer quand un onglet desktop est cliqué
+    // Synchroniser l'Ã©tat actif du drawer quand un onglet desktop est cliquÃ©
     document.querySelectorAll('.nav-tab').forEach(btn => {
       btn.addEventListener('click', function() {
         const tab = this.dataset.tab;
@@ -2895,17 +2896,17 @@
       mobileLogout.addEventListener('click', async function() {
         this.disabled = true;
         try { await apiFetch('/api/admin/logout', { method: 'POST' }).catch(() => {}); }
-        finally { sessionStorage.removeItem('admin_token'); window.location.replace('/admin/login.html'); }
+        finally { sessionStorage.removeItem('admin_token'); window.location.replace('/admin/login'); }
       });
     }
 
-    // ── INIT ──
+    // â”€â”€ INIT â”€â”€
     (async function init() {
-      // Restaurer l'onglet IMMÉDIATEMENT — avant tout chargement async —
-      // pour éviter le flash du dashboard par défaut lors d'un F5.
+      // Restaurer l'onglet IMMÃ‰DIATEMENT â€” avant tout chargement async â€”
+      // pour Ã©viter le flash du dashboard par dÃ©faut lors d'un F5.
       const savedTab = sessionStorage.getItem(ACTIVE_TAB_KEY) || 'dashboard';
       activateTab(savedTab, { persist: false });
-      // Synchroniser l'état actif dans le drawer mobile
+      // Synchroniser l'Ã©tat actif dans le drawer mobile
       document.querySelectorAll('.mobile-nav-tab').forEach(b => {
         b.classList.toggle('active', b.dataset.tab === savedTab);
       });
@@ -2916,13 +2917,13 @@
   </script>
 
   <script>
-  // ══════════════════════════════════════════════════════════════════════
-  // ONGLET "BASE DE DONNÉES" — DB Browser générique + Gestion de profils
-  // ══════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ONGLET "BASE DE DONNÃ‰ES" â€” DB Browser gÃ©nÃ©rique + Gestion de profils
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   (function () {
     const state = {
       initialized: false,
-      tablesMeta:  [],              // métadonnées de toutes les tables (SCHEMA whitelisté côté serveur)
+      tablesMeta:  [],              // mÃ©tadonnÃ©es de toutes les tables (SCHEMA whitelistÃ© cÃ´tÃ© serveur)
       currentTable: null,
       rowsPage:  1,
       rowsLimit: 25,
@@ -2942,7 +2943,7 @@
       if (col.type === 'boolean') return 'checkbox';
       if (col.type === 'number')  return 'number';
       // 'date' reste en texte libre (format ISO 8601) : les <input type="datetime-local">
-      // n'acceptent pas le format complet renvoyé par Postgres (millisecondes + "Z").
+      // n'acceptent pas le format complet renvoyÃ© par Postgres (millisecondes + "Z").
       return 'text';
     }
 
@@ -2953,10 +2954,10 @@
       if (col.type === 'date') return esc(formatDate(value));
       if (col.type === 'json') return '<code style="font-size:0.78rem;">' + esc(JSON.stringify(value)) + '</code>';
       const str = String(value);
-      return esc(str.length > 80 ? str.slice(0, 80) + '…' : str);
+      return esc(str.length > 80 ? str.slice(0, 80) + 'â€¦' : str);
     }
 
-    // ── INITIALISATION (appelée à la première ouverture de l'onglet) ──
+    // â”€â”€ INITIALISATION (appelÃ©e Ã  la premiÃ¨re ouverture de l'onglet) â”€â”€
     async function initDatabaseTab() {
       if (state.initialized) return;
       state.initialized = true;
@@ -2977,10 +2978,10 @@
     }
     window.initDatabaseTab = initDatabaseTab;
     // Signale au premier script que initDatabaseTab est maintenant disponible
-    // (utile si l'onglet "database" était actif au moment du rechargement)
+    // (utile si l'onglet "database" Ã©tait actif au moment du rechargement)
     window.dispatchEvent(new Event('dbTabReady'));
 
-    // ── SWITCH MODE TABLE / PROFILS ──
+    // â”€â”€ SWITCH MODE TABLE / PROFILS â”€â”€
     document.getElementById('dbModeTablesBtn').addEventListener('click', () => switchDbMode('tables'));
     document.getElementById('dbModeProfilesBtn').addEventListener('click', () => switchDbMode('profiles'));
     function switchDbMode(mode) {
@@ -2990,7 +2991,7 @@
       document.getElementById('dbSubProfiles').classList.toggle('active', mode === 'profiles');
     }
 
-    // ═══════════════════ MODE TABLE (façon phpMyAdmin) ═══════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODE TABLE (faÃ§on phpMyAdmin) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     document.getElementById('dbTableSelect').addEventListener('change', function () {
       state.currentTable = this.value;
@@ -3014,7 +3015,7 @@
       if (!state.currentTable) return;
       const thead = document.getElementById('dbRowsThead');
       const tbody = document.getElementById('dbRowsBody');
-      tbody.innerHTML = `<tr><td><div class="empty-state">Chargement…</div></td></tr>`;
+      tbody.innerHTML = `<tr><td><div class="empty-state">Chargementâ€¦</div></td></tr>`;
 
       try {
         const params = new URLSearchParams({ page, limit: state.rowsLimit });
@@ -3027,11 +3028,11 @@
         const meta = data.table;
 
         thead.innerHTML = '<tr>' + meta.columns.map(c =>
-          `<th>${esc(c.name)}${c.sensitive ? ' 🔒' : ''}${meta.pk.includes(c.name) ? ' 🔑' : ''}</th>`
+          `<th>${esc(c.name)}${c.sensitive ? ' ðŸ”’' : ''}${meta.pk.includes(c.name) ? ' ðŸ”‘' : ''}</th>`
         ).join('') + '<th>Actions</th></tr>';
 
         if (data.rows.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="${meta.columns.length + 1}"><div class="empty-state">Aucune ligne trouvée.</div></td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="${meta.columns.length + 1}"><div class="empty-state">Aucune ligne trouvÃ©e.</div></td></tr>`;
         } else {
           tbody.innerHTML = data.rows.map(row => {
             const pkValues = meta.pk.map(c => row[c]);
@@ -3041,8 +3042,8 @@
             }).join('');
             const pkEnc = encodeURIComponent(JSON.stringify(pkValues));
             return `<tr>${cells}<td class="row-actions-cell">
-              <button class="btn-icon-sm edit" title="Éditer" onclick="__dbEditRow('${pkEnc}')">✎</button>
-              <button class="btn-icon-sm danger" title="Supprimer" onclick="__dbDeleteRow('${pkEnc}')">🗑</button>
+              <button class="btn-icon-sm edit" title="Ã‰diter" onclick="__dbEditRow('${pkEnc}')">âœŽ</button>
+              <button class="btn-icon-sm danger" title="Supprimer" onclick="__dbDeleteRow('${pkEnc}')">ðŸ—‘</button>
             </td></tr>`;
           }).join('');
         }
@@ -3061,14 +3062,14 @@
 
     window.__dbEditRow = function (pkEnc) { openDbRowModal('edit', JSON.parse(decodeURIComponent(pkEnc))); };
     window.__dbDeleteRow = async function (pkEnc) {
-      if (!confirm('Supprimer définitivement cette ligne ? Cette action est irréversible.')) return;
+      if (!confirm('Supprimer dÃ©finitivement cette ligne ? Cette action est irrÃ©versible.')) return;
       const pkValues = JSON.parse(decodeURIComponent(pkEnc));
       try {
         const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(pkValues))}`, { method: 'DELETE' });
         const data = await res.json();
-        if (data.success) { showToast('Ligne supprimée.', 'success'); loadDbRows(state.rowsPage); }
+        if (data.success) { showToast('Ligne supprimÃ©e.', 'success'); loadDbRows(state.rowsPage); }
         else showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
-      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); }
+      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); }
     };
 
     let dbRowModalMode = 'create';
@@ -3081,7 +3082,7 @@
       dbRowModalPk = pkValues || null;
 
       document.getElementById('dbRowModalTitle').textContent = mode === 'create'
-        ? `Nouvelle ligne — ${meta.label}` : `Éditer — ${meta.label}`;
+        ? `Nouvelle ligne â€” ${meta.label}` : `Ã‰diter â€” ${meta.label}`;
 
       let row = {};
       if (mode === 'edit') {
@@ -3090,14 +3091,14 @@
           const data = await res.json();
           if (!data.success) { showToast(data.error?.message || 'Ligne introuvable.', 'error'); return; }
           row = data.row;
-        } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); return; }
+        } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); return; }
       }
 
       const body = document.getElementById('dbRowFormBody');
       body.innerHTML = meta.columns.map(col => {
         const isPk = meta.pk.includes(col.name);
         const disabled = col.sensitive || (mode === 'edit' && isPk) || col.generated;
-        const hint = col.sensitive ? 'Champ protégé, non modifiable.' : (col.generated ? 'Généré automatiquement.' : '');
+        const hint = col.sensitive ? 'Champ protÃ©gÃ©, non modifiable.' : (col.generated ? 'GÃ©nÃ©rÃ© automatiquement.' : '');
         const val = row[col.name];
 
         if (col.type === 'boolean') {
@@ -3108,7 +3109,7 @@
           return `<div class="form-group"><label>${esc(col.name)}</label><textarea data-col="${esc(col.name)}" data-type="json" ${disabled ? 'disabled' : ''}>${esc(jsonStr)}</textarea>${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
         }
         const displayVal = col.sensitive ? '' : (val ?? '');
-        const placeholder = col.sensitive ? '•••••• (non affiché)' : '';
+        const placeholder = col.sensitive ? 'â€¢â€¢â€¢â€¢â€¢â€¢ (non affichÃ©)' : '';
         return `<div class="form-group"><label>${esc(col.name)}${col.required ? ' *' : ''}</label>
           <input type="${inputTypeFor(col)}" data-col="${esc(col.name)}" value="${esc(displayVal)}" placeholder="${placeholder}" ${disabled ? 'disabled' : ''} />
           ${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
@@ -3153,14 +3154,14 @@
         }
         const data = await res.json();
         if (data.success) {
-          showToast(dbRowModalMode === 'create' ? 'Ligne créée avec succès.' : 'Ligne mise à jour.', 'success');
+          showToast(dbRowModalMode === 'create' ? 'Ligne crÃ©Ã©e avec succÃ¨s.' : 'Ligne mise Ã  jour.', 'success');
           document.getElementById('dbRowModal').classList.remove('open');
           loadDbRows(state.rowsPage);
         } else {
           showToast(data.error?.message || 'Erreur lors de l\'enregistrement.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast(err instanceof SyntaxError ? 'JSON invalide dans un champ.' : 'Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast(err instanceof SyntaxError ? 'JSON invalide dans un champ.' : 'Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false; sp.classList.remove('active');
       }
@@ -3169,7 +3170,7 @@
     document.getElementById('dbRowModalCloseBtn').addEventListener('click', () => document.getElementById('dbRowModal').classList.remove('open'));
     document.getElementById('dbRowModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 
-    // ═══════════════════ MODE PROFILS ═══════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODE PROFILS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     document.getElementById('profileSearchInput').addEventListener('input', debounce(function () {
       state.profilesSearch = this.value.trim();
@@ -3185,7 +3186,7 @@
 
     async function loadProfilesList(page = 1) {
       const tbody = document.getElementById('profilesBody');
-      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Chargement…</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Chargementâ€¦</div></td></tr>`;
       try {
         const params = new URLSearchParams({ page, limit: state.profilesLimit });
         if (state.profilesSearch) params.set('search', state.profilesSearch);
@@ -3195,15 +3196,15 @@
 
         state.profilesPage = page;
         if (data.profiles.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Aucun profil trouvé.</div></td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Aucun profil trouvÃ©.</div></td></tr>`;
         } else {
           tbody.innerHTML = data.profiles.map(p => {
             const isAdmin = p.profile_type === 'admin';
             const badge = isAdmin
-              ? '<span class="user-badge" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;border:1px solid #fca5a5;">🛡 Admin</span>'
+              ? '<span class="user-badge" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;border:1px solid #fca5a5;">ðŸ›¡ Admin</span>'
               : `<span class="user-badge ${p.active ? 'active' : 'inactive'}">${p.active ? 'Actif' : 'Inactif'}</span>`;
             const tenantsBadge = isAdmin
-              ? '<span style="font-size:0.8rem;color:#667781;">—</span>'
+              ? '<span style="font-size:0.8rem;color:#667781;">â€”</span>'
               : `<span style="font-weight:600;">${p.tenants_count}</span>`;
             return `
             <tr class="profile-row" onclick="__openProfile('${esc(p.uid)}')">
@@ -3215,7 +3216,7 @@
                 </div>
               </td>
               <td class="contact-info">
-                <span class="contact-item">${esc(p.email || '—')}</span>
+                <span class="contact-item">${esc(p.email || 'â€”')}</span>
                 <span class="contact-item">${esc(maskPhone(p.phone))}</span>
               </td>
               <td>${tenantsBadge}</td>
@@ -3238,44 +3239,44 @@
       state.currentUid = uid;
       document.getElementById('dbProfileListWrap').style.display = 'none';
       document.getElementById('dbProfileDetailWrap').style.display = 'block';
-      document.getElementById('pdSections').innerHTML = `<div class="empty-state">Chargement du profil…</div>`;
+      document.getElementById('pdSections').innerHTML = `<div class="empty-state">Chargement du profilâ€¦</div>`;
       try {
         const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(uid)}`);
         const data = await res.json();
         if (!data.success) { showToast(data.error?.message || 'Profil introuvable.', 'error'); return; }
         renderProfileDetail(data.profile);
-      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur réseau.', 'error'); }
+      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); }
     };
 
     function renderProfileDetail(profile) {
       const acc = profile.account || {};
 
-      // ── Profil admin Convessa ──────────────────────────────────────────────
+      // â”€â”€ Profil admin Convessa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (profile.profile_type === 'admin') {
         document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
         document.getElementById('pdName').textContent = acc.display_name || acc.email || 'Admin';
-        document.getElementById('pdSub').textContent = [acc.email, 'Administrateur Convessa'].filter(Boolean).join(' • ');
+        document.getElementById('pdSub').textContent = [acc.email, 'Administrateur Convessa'].filter(Boolean).join(' â€¢ ');
 
         const sections = document.getElementById('pdSections');
         sections.innerHTML = '';
 
-        // Fiche admin avec libellés lisibles
+        // Fiche admin avec libellÃ©s lisibles
         sections.appendChild(buildAdminSection('Compte Administrateur', acc));
         if (profile.adminSession) {
           sections.appendChild(buildSection('Session Baileys (compte WhatsApp admin)', 'wa_sessions', [profile.adminSession]));
         } else {
           const noSession = document.createElement('div');
           noSession.className = 'table-card db-section-card';
-          noSession.innerHTML = '<div class="db-section-title-row"><span class="section-title">Session Baileys (compte WhatsApp admin)</span></div><div class="db-empty-note">Aucune session Baileys trouvée pour l\'admin (id = "admin").</div>';
+          noSession.innerHTML = '<div class="db-section-title-row"><span class="section-title">Session Baileys (compte WhatsApp admin)</span></div><div class="db-empty-note">Aucune session Baileys trouvÃ©e pour l\'admin (id = "admin").</div>';
           sections.appendChild(noSession);
         }
         return;
       }
 
-      // ── Profil utilisateur Firebase ────────────────────────────────────────
+      // â”€â”€ Profil utilisateur Firebase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
       document.getElementById('pdName').textContent = acc.display_name || acc.email || acc.uid;
-      document.getElementById('pdSub').textContent = [acc.email, maskPhone(acc.phone)].filter(Boolean).join(' • ');
+      document.getElementById('pdSub').textContent = [acc.email, maskPhone(acc.phone)].filter(Boolean).join(' â€¢ ');
 
       const sections = document.getElementById('pdSections');
       sections.innerHTML = '';
@@ -3283,92 +3284,92 @@
       sections.appendChild(buildSection('Comptes WhatsApp (tenants)', 'wa_tenants', profile.tenants));
       sections.appendChild(buildSection('Sessions Baileys (credentials WhatsApp)', 'wa_sessions', profile.sessions));
       sections.appendChild(buildSection('Groupes WhatsApp', 'wa_groups', profile.groups));
-      sections.appendChild(buildSection('Messages envoyés (200 derniers)', 'wa_messages', profile.messages));
+      sections.appendChild(buildSection('Messages envoyÃ©s (200 derniers)', 'wa_messages', profile.messages));
       sections.appendChild(buildSection('Paiements d\'abonnement', 'subscription_payments', profile.payments));
-      sections.appendChild(buildSection('Appareils enregistrés', 'auth_devices', profile.devices));
-      sections.appendChild(buildSection('Journal de sécurité (100 derniers)', 'auth_device_sessions', profile.securityLogs));
+      sections.appendChild(buildSection('Appareils enregistrÃ©s', 'auth_devices', profile.devices));
+      sections.appendChild(buildSection('Journal de sÃ©curitÃ© (100 derniers)', 'auth_device_sessions', profile.securityLogs));
     }
 
-    // ── MAP DE LIBELLÉS lisibles pour les colonnes de toutes les tables ────────
+    // â”€â”€ MAP DE LIBELLÃ‰S lisibles pour les colonnes de toutes les tables â”€â”€â”€â”€â”€â”€â”€â”€
     const COL_LABELS = {
       // auth_users
       uid: 'UID Firebase', email: 'Adresse e-mail', display_name: 'Nom d\'affichage',
-      photo_url: 'Photo URL', provider: 'Fournisseur', phone: 'Téléphone',
-      active: 'Actif', created_at: 'Créé le', last_login_at: 'Dernière connexion',
+      photo_url: 'Photo URL', provider: 'Fournisseur', phone: 'TÃ©lÃ©phone',
+      active: 'Actif', created_at: 'CrÃ©Ã© le', last_login_at: 'DerniÃ¨re connexion',
       // convessa_admins
-      id: 'ID', password_hash: 'Hash mot de passe (🔒)', updated_at: 'Modifié le',
+      id: 'ID', password_hash: 'Hash mot de passe (ðŸ”’)', updated_at: 'ModifiÃ© le',
       // wa_tenants
-      user_uid: 'UID Utilisateur', name: 'Nom', api_key_hash: 'Hash Clé API (🔒)',
-      api_key_hint: 'Aperçu Clé API', api_key_enc: 'Clé API chiffrée (🔒)',
-      api_key_iv: 'IV chiffrement (🔒)', api_key_tag: 'Tag chiffrement (🔒)',
-      api_key_expires_at: 'Expiration Clé API', webhook_url: 'URL Webhook',
+      user_uid: 'UID Utilisateur', name: 'Nom', api_key_hash: 'Hash ClÃ© API (ðŸ”’)',
+      api_key_hint: 'AperÃ§u ClÃ© API', api_key_enc: 'ClÃ© API chiffrÃ©e (ðŸ”’)',
+      api_key_iv: 'IV chiffrement (ðŸ”’)', api_key_tag: 'Tag chiffrement (ðŸ”’)',
+      api_key_expires_at: 'Expiration ClÃ© API', webhook_url: 'URL Webhook',
       status: 'Statut', usage_type: 'Type d\'usage', messages_limit: 'Limite messages',
-      messages_sent: 'Messages envoyés', referral_code: 'Code de parrainage',
-      connected_at: 'Connecté le',
+      messages_sent: 'Messages envoyÃ©s', referral_code: 'Code de parrainage',
+      connected_at: 'ConnectÃ© le',
       // wa_sessions
-      creds_iv: 'IV credentials (🔒)', creds_tag: 'Tag credentials (🔒)',
-      creds_data: 'Données credentials (🔒)',
+      creds_iv: 'IV credentials (ðŸ”’)', creds_tag: 'Tag credentials (ðŸ”’)',
+      creds_data: 'DonnÃ©es credentials (ðŸ”’)',
       // wa_session_keys
-      session_id: 'ID Session', key_type: 'Type de clé', key_id: 'ID Clé',
-      key_value: 'Valeur (🔒)',
+      session_id: 'ID Session', key_type: 'Type de clÃ©', key_id: 'ID ClÃ©',
+      key_value: 'Valeur (ðŸ”’)',
       // wa_message_queue / wa_messages
       tenant_id: 'ID Tenant', recipient: 'Destinataire', jid: 'JID WhatsApp',
-      message: 'Message', media_type: 'Type média', media_url: 'URL média',
-      media_b64: 'Média base64 (🔒)', media_mime: 'MIME type', media_name: 'Nom fichier',
-      attempts: 'Tentatives', last_error: 'Dernière erreur', queued_at: 'Mis en file le',
-      sent_at: 'Envoyé le', to_jid: 'Destinataire JID', to_type: 'Type dest.',
-      has_media: 'Contient média', error_code: 'Code erreur', error_message: 'Message d\'erreur',
+      message: 'Message', media_type: 'Type mÃ©dia', media_url: 'URL mÃ©dia',
+      media_b64: 'MÃ©dia base64 (ðŸ”’)', media_mime: 'MIME type', media_name: 'Nom fichier',
+      attempts: 'Tentatives', last_error: 'DerniÃ¨re erreur', queued_at: 'Mis en file le',
+      sent_at: 'EnvoyÃ© le', to_jid: 'Destinataire JID', to_type: 'Type dest.',
+      has_media: 'Contient mÃ©dia', error_code: 'Code erreur', error_message: 'Message d\'erreur',
       wa_message_id: 'ID message WhatsApp',
       // wa_groups
       wa_group_jid: 'JID du groupe', invite_code: 'Code d\'invitation',
-      invite_code_generated_at: 'Invitation générée le', participants_count: 'Nb participants',
+      invite_code_generated_at: 'Invitation gÃ©nÃ©rÃ©e le', participants_count: 'Nb participants',
       // auth_devices
-      fingerprint_hash: 'Empreinte appareil', first_ip: 'Première IP',
+      fingerprint_hash: 'Empreinte appareil', first_ip: 'PremiÃ¨re IP',
       user_agent: 'User-Agent', accept_language: 'Langue', client_hints: 'Client Hints',
-      first_seen_at: 'Première apparition', last_seen_at: 'Dernière apparition',
-      blocked: 'Bloqué', blocked_reason: 'Raison blocage', registered_uid: 'UID enregistré',
+      first_seen_at: 'PremiÃ¨re apparition', last_seen_at: 'DerniÃ¨re apparition',
+      blocked: 'BloquÃ©', blocked_reason: 'Raison blocage', registered_uid: 'UID enregistrÃ©',
       // auth_device_sessions
       device_id: 'ID Appareil', user_uid: 'UID Utilisateur', ip: 'Adresse IP',
-      action: 'Action', meta: 'Métadonnées',
+      action: 'Action', meta: 'MÃ©tadonnÃ©es',
       // subscription_payments
       plan_id: 'ID Plan', gateway: 'Passerelle', gateway_tx_id: 'ID Transaction',
       amount: 'Montant', currency: 'Devise',
       // referral_codes / subscription_plans
-      code: 'Code', unlimited: 'Illimité', usage_value: 'Valeur d\'usage',
-      price: 'Prix', description: 'Description', features: 'Fonctionnalités',
+      code: 'Code', unlimited: 'IllimitÃ©', usage_value: 'Valeur d\'usage',
+      price: 'Prix', description: 'Description', features: 'FonctionnalitÃ©s',
       is_popular: 'Populaire',
       // wa_logs
       level: 'Niveau', component: 'Composant', context: 'Contexte',
     };
     function colLabel(name) { return COL_LABELS[name] || name; }
 
-    // ── Fiche lisible pour un admin Convessa ──────────────────────────────────
+    // â”€â”€ Fiche lisible pour un admin Convessa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function buildAdminSection(title, acc) {
       const wrap = document.createElement('div');
       wrap.className = 'table-card db-section-card';
 
       const adminMeta = tableMetaByName('convessa_admins');
       if (!acc || !adminMeta) {
-        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnée.</div>`;
+        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnÃ©e.</div>`;
         return wrap;
       }
 
-      // Construire une fiche verticale avec champs et libellés lisibles
+      // Construire une fiche verticale avec champs et libellÃ©s lisibles
       const fields = [
         { label: 'ID',                  value: acc.id,            editable: false },
         { label: 'Adresse e-mail',      value: acc.email,         editable: true,  col: 'email',        type: 'text',    pk: [acc.id] },
         { label: 'Nom d\'affichage',    value: acc.display_name,  editable: true,  col: 'display_name', type: 'text',    pk: [acc.id] },
         { label: 'Actif',               value: acc.active ? 'Oui' : 'Non', editable: true, col: 'active', type: 'boolean', pk: [acc.id] },
         { label: 'Hash mot de passe',   value: acc.password_hash, editable: false, sensitive: true },
-        { label: 'Créé le',             value: formatDate(acc.created_at), editable: false },
-        { label: 'Modifié le',          value: formatDate(acc.updated_at), editable: false },
-        { label: 'Dernière connexion',  value: formatDate(acc.last_login_at), editable: false },
+        { label: 'CrÃ©Ã© le',             value: formatDate(acc.created_at), editable: false },
+        { label: 'ModifiÃ© le',          value: formatDate(acc.updated_at), editable: false },
+        { label: 'DerniÃ¨re connexion',  value: formatDate(acc.last_login_at), editable: false },
       ];
 
       let fieldsHtml = fields.map(f => {
         const valDisplay = f.sensitive
-          ? '<span style="color:#b45309;font-style:italic;">•••••• (protégé)</span>'
-          : (f.value == null ? '<span style="color:#c0c6cc;">—</span>' : esc(String(f.value)));
+          ? '<span style="color:#b45309;font-style:italic;">â€¢â€¢â€¢â€¢â€¢â€¢ (protÃ©gÃ©)</span>'
+          : (f.value == null ? '<span style="color:#c0c6cc;">â€”</span>' : esc(String(f.value)));
 
         if (f.editable) {
           const rawEnc = esc(JSON.stringify(f.value === undefined ? null : (acc[f.col] ?? null)));
@@ -3382,7 +3383,7 @@
                 data-type="${esc(f.type)}"
                 onclick="__editProfileField(this)"
                 style="padding:0.875rem 1.25rem;">${valDisplay}
-              <span style="float:right;font-size:0.75rem;color:#25D366;opacity:0.7;">✎ modifier</span>
+              <span style="float:right;font-size:0.75rem;color:#25D366;opacity:0.7;">âœŽ modifier</span>
             </td>
           </tr>`;
         }
@@ -3395,7 +3396,7 @@
       wrap.innerHTML = `
         <div class="db-section-title-row">
           <span class="section-title">${esc(title)}</span>
-          <span style="font-size:0.8rem;color:#667781;background:#fee2e2;color:#991b1b;padding:0.25rem 0.6rem;border-radius:6px;font-weight:600;">🛡 Admin Convessa</span>
+          <span style="font-size:0.8rem;color:#667781;background:#fee2e2;color:#991b1b;padding:0.25rem 0.6rem;border-radius:6px;font-weight:600;">ðŸ›¡ Admin Convessa</span>
         </div>
         <div class="table-wrap"><table style="min-width:unset;width:100%;">
           <tbody>${fieldsHtml}</tbody>
@@ -3409,12 +3410,12 @@
       const meta = tableMetaByName(tableName);
 
       if (!meta || !rows || rows.length === 0) {
-        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnée.</div>`;
+        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnÃ©e.</div>`;
         return wrap;
       }
 
       const editableCols = meta.columns.filter(c => !c.sensitive && !meta.pk.includes(c.name));
-      const displayCols = meta.columns; // on affiche toutes les colonnes ; les sensibles sont masquées côté API
+      const displayCols = meta.columns; // on affiche toutes les colonnes ; les sensibles sont masquÃ©es cÃ´tÃ© API
 
       let html = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span><span style="font-size:0.8rem;color:#667781;">${rows.length} ligne(s)</span></div>
         <div class="table-wrap"><table><thead><tr>${displayCols.map(c => `<th title="${esc(c.name)}">${esc(colLabel(c.name))}</th>`).join('')}</tr></thead><tbody>`;
@@ -3446,12 +3447,12 @@
       const meta   = tableMetaByName(table);
       const col    = meta.columns.find(c => c.name === column);
 
-      document.getElementById('fieldEditModalTitle').textContent = `${meta.label} — ${colLabel(column)}`;
+      document.getElementById('fieldEditModalTitle').textContent = `${meta.label} â€” ${colLabel(column)}`;
       const body = document.getElementById('fieldEditFormBody');
 
-      // On repart toujours de la valeur brute (non formatée) stockée dans data-raw,
-      // jamais du texte affiché (formaté en fr-FR), pour éviter d'envoyer une date
-      // ou un JSON mal formé au serveur.
+      // On repart toujours de la valeur brute (non formatÃ©e) stockÃ©e dans data-raw,
+      // jamais du texte affichÃ© (formatÃ© en fr-FR), pour Ã©viter d'envoyer une date
+      // ou un JSON mal formÃ© au serveur.
       let rawValue = null;
       try { rawValue = JSON.parse(td.dataset.raw); } catch { rawValue = null; }
 
@@ -3465,7 +3466,7 @@
       } else if (type === 'date') {
         body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
           <input type="text" data-value value="${esc(rawValue ?? '')}" placeholder="ex: 2026-07-30T10:00:00.000Z" />
-          <span class="field-hint">Format ISO 8601 (laisser tel quel si non modifié).</span></div>`;
+          <span class="field-hint">Format ISO 8601 (laisser tel quel si non modifiÃ©).</span></div>`;
       } else {
         body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
           <input type="${inputTypeFor(col)}" data-value value="${esc(rawValue ?? '')}" /></div>`;
@@ -3503,14 +3504,14 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast('Champ mis à jour.', 'success');
+          showToast('Champ mis Ã  jour.', 'success');
           document.getElementById('fieldEditModal').classList.remove('open');
           window.__openProfile(state.currentUid);
         } else {
-          showToast(data.error?.message || 'Erreur lors de la mise à jour.', 'error');
+          showToast(data.error?.message || 'Erreur lors de la mise Ã  jour.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false; sp.classList.remove('active');
       }
@@ -3518,7 +3519,7 @@
     document.getElementById('fieldEditCloseBtn').addEventListener('click', () => document.getElementById('fieldEditModal').classList.remove('open'));
     document.getElementById('fieldEditModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 
-    // ── SUPPRESSION TOTALE D'UN PROFIL ──
+    // â”€â”€ SUPPRESSION TOTALE D'UN PROFIL â”€â”€
     document.getElementById('pdDeleteBtn').addEventListener('click', () => {
       document.getElementById('deleteProfileConfirmInput').value = '';
       document.getElementById('deleteProfileConfirmBtn').disabled = true;
@@ -3538,7 +3539,7 @@
         const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(state.currentUid)}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
-          showToast('Profil supprimé définitivement.', 'success');
+          showToast('Profil supprimÃ© dÃ©finitivement.', 'success');
           document.getElementById('deleteProfileModal').classList.remove('open');
           document.getElementById('dbProfileDetailWrap').style.display = 'none';
           document.getElementById('dbProfileListWrap').style.display = 'block';
@@ -3547,7 +3548,7 @@
           showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
         }
       } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur réseau.', 'error');
+        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
       } finally {
         btn.disabled = false; sp.classList.remove('active');
       }
@@ -3558,14 +3559,14 @@
 </html>
 
 <script>
-// ── SUSPENSION / RÉACTIVATION TENANT ────────────────────────────────────────
+// â”€â”€ SUSPENSION / RÃ‰ACTIVATION TENANT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 (function() {
   let _suspendTenantId = null;
 
   window.openSuspendModal = function(tenantId, tenantName) {
     _suspendTenantId = tenantId;
     document.getElementById('suspendModalTitle').textContent =
-      'Suspendre : ' + (tenantName || tenantId.slice(0, 8) + '…');
+      'Suspendre : ' + (tenantName || tenantId.slice(0, 8) + 'â€¦');
     document.getElementById('suspendReason').value = '';
     document.getElementById('suspendError').style.display = 'none';
     document.getElementById('suspendModal').classList.add('open');
@@ -3608,9 +3609,9 @@
       if (!res.ok || !data.success) throw new Error(data.error?.message || 'Erreur');
 
       window.closeSuspendModal();
-      // Rafraîchir la liste des tenants
+      // RafraÃ®chir la liste des tenants
       if (typeof loadTenants === 'function') loadTenants();
-      if (typeof showToast === 'function') showToast('Compte suspendu. Le tenant a été notifié via WhatsApp.', 'success');
+      if (typeof showToast === 'function') showToast('Compte suspendu. Le tenant a Ã©tÃ© notifiÃ© via WhatsApp.', 'success');
     } catch (e) {
       errEl.textContent = e.message || 'Erreur lors de la suspension.';
       errEl.style.display = 'block';
@@ -3620,7 +3621,7 @@
   };
 
   window.unsuspendTenant = async function(tenantId) {
-    if (!confirm('Réactiver ce compte WhatsApp ?')) return;
+    if (!confirm('RÃ©activer ce compte WhatsApp ?')) return;
     try {
       const token = sessionStorage.getItem('admin_token') || '';
       const res = await fetch('/api/admin/tenants/' + tenantId + '/unsuspend', {
@@ -3631,10 +3632,11 @@
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error?.message || 'Erreur');
       if (typeof loadTenants === 'function') loadTenants();
-      if (typeof showToast === 'function') showToast('Compte réactivé avec succès.', 'success');
+      if (typeof showToast === 'function') showToast('Compte rÃ©activÃ© avec succÃ¨s.', 'success');
     } catch (e) {
-      if (typeof showToast === 'function') showToast(e.message || 'Erreur lors de la réactivation.', 'error');
+      if (typeof showToast === 'function') showToast(e.message || 'Erreur lors de la rÃ©activation.', 'error');
     }
   };
 })();
 </script>
+

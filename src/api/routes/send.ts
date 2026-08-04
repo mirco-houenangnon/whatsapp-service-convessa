@@ -71,34 +71,115 @@ async function _checkAndNotifyQuota(
     if (!phone) return
     try {
         const { getTenantById } = await import('../../db/TenantStore.js')
+        const { query, execute } = await import('../../db/connection.js')
         const updated = await getTenantById(tenantId)
         if (!updated) return
 
-        if (updated.usageType === 'requests' && updated.messagesLimit !== null) {
-            const remaining = updated.messagesLimit - updated.messagesSent
-            const pct = updated.messagesSent / updated.messagesLimit
+        // ── Vérifier si on a déjà envoyé cette notification (anti-spam) ──────
+        async function alreadyNotified(key: string): Promise<boolean> {
+            try {
+                const rows = await query<{ val: string }>(
+                    `SELECT 1 AS val FROM wa_tenants WHERE id = ? AND JSON_CONTAINS(COALESCE(notif_sent, '[]'), JSON_QUOTE(?))`,
+                    [tenantId, key]
+                )
+                return rows.length > 0
+            } catch { return false }
+        }
 
-            let notifMsg: string | null = null
+        async function markNotified(key: string): Promise<void> {
+            try {
+                await execute(
+                    `UPDATE wa_tenants SET notif_sent = JSON_ARRAY_APPEND(COALESCE(notif_sent, '[]'), '$', ?) WHERE id = ?`,
+                    [key, tenantId]
+                )
+            } catch { /* colonne peut ne pas encore exister — ignoré */ }
+        }
 
-            if (remaining === 0) {
-                notifMsg = `⚠️ *Convessa — Quota épuisé*\n\nVous avez utilisé la totalité de vos ${updated.messagesLimit.toLocaleString('fr-FR')} messages.\n\nPassez à un abonnement supérieur pour continuer :\nhttps://convessa.dev/pricing`
-            } else if (remaining <= 10 || pct >= 0.9) {
-                notifMsg = `📊 *Convessa — Quota presque épuisé*\n\nIl vous reste *${remaining} message${remaining > 1 ? 's' : ''}* sur ${updated.messagesLimit.toLocaleString('fr-FR')}.\n\nPensez à renouveler votre abonnement :\nhttps://convessa.dev/pricing`
-            } else if (remaining === 50 || remaining === 100) {
-                notifMsg = `📊 *Convessa — Rappel quota*\n\nIl vous reste *${remaining} messages* sur votre forfait de ${updated.messagesLimit.toLocaleString('fr-FR')}.\n\nVoir les offres : https://convessa.dev/pricing`
+        const PRICING_URL = process.env['FRONTEND_URL']
+            ? `${process.env['FRONTEND_URL']}/pricing`
+            : 'https://convessa.dev/pricing'
+
+        if (updated.usageType === 'requests' && updated.messagesLimit !== null && updated.messagesLimit > 0) {
+            const used      = updated.messagesSent
+            const limit     = updated.messagesLimit
+            const remaining = limit - used
+            const pct       = used / limit  // 0..1
+
+            // Seuils : 75%, 90%, 95%, 100%
+            let notifKey:  string | null = null
+            let notifMsg:  string | null = null
+
+            if (remaining <= 0) {
+                notifKey = `quota_100_${limit}`
+                notifMsg =
+                    `🚫 *Convessa — Quota épuisé*\n\n` +
+                    `Vous avez utilisé la totalité de vos *${limit.toLocaleString('fr-FR')} messages* inclus.\n\n` +
+                    `⚡ *Passez à un abonnement supérieur pour continuer à envoyer :*\n${PRICING_URL}`
+            } else if (pct >= 0.95 && remaining > 0) {
+                notifKey = `quota_95_${limit}`
+                notifMsg =
+                    `⚠️ *Convessa — Quota à 95%*\n\n` +
+                    `Il ne vous reste que *${remaining} message${remaining > 1 ? 's' : ''}* sur ${limit.toLocaleString('fr-FR')}.\n\n` +
+                    `Renouvelez maintenant pour éviter toute interruption :\n${PRICING_URL}`
+            } else if (pct >= 0.90) {
+                notifKey = `quota_90_${limit}`
+                notifMsg =
+                    `📊 *Convessa — Quota à 90%*\n\n` +
+                    `Il vous reste *${remaining} message${remaining > 1 ? 's' : ''}* sur ${limit.toLocaleString('fr-FR')}.\n\n` +
+                    `Pensez à renouveler votre forfait :\n${PRICING_URL}`
+            } else if (pct >= 0.75) {
+                notifKey = `quota_75_${limit}`
+                notifMsg =
+                    `📈 *Convessa — Quota à 75%*\n\n` +
+                    `Vous avez utilisé *${Math.round(pct * 100)}%* de votre forfait.\n` +
+                    `Il vous reste *${remaining.toLocaleString('fr-FR')} messages*.\n\n` +
+                    `Voir les offres disponibles :\n${PRICING_URL}`
             }
 
-            if (notifMsg) {
+            if (notifKey && notifMsg && !(await alreadyNotified(notifKey))) {
                 await tenantManager.sendMessageAsTenantViaAdmin(phone, notifMsg).catch(() => {})
+                await markNotified(notifKey)
+                logger.info({ component: 'SendRoute', tenantId, notifKey }, 'Notification quota envoyée')
             }
-        } else if (updated.usageType === 'duration' && updated.apiKeyExpiresAt) {
-            const daysLeft = Math.ceil((updated.apiKeyExpiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-            if (daysLeft === 3 || daysLeft === 1) {
-                const msg = daysLeft === 1
-                    ? `⚠️ *Convessa — Abonnement expire demain !*\n\nVotre accès expire dans *1 jour*.\n\nRenouvelez maintenant pour ne pas perdre l'accès :\nhttps://convessa.dev/pricing`
-                    : `📅 *Convessa — Abonnement bientôt expiré*\n\nVotre accès expire dans *3 jours*.\n\nRenouvelez ici : https://convessa.dev/pricing`
+        } else if (updated.usageType === 'duration' && updated.apiKeyExpiresAt) {
+            const msLeft   = updated.apiKeyExpiresAt.getTime() - Date.now()
+            const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
+            const expStr   = updated.apiKeyExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+            let notifKey: string | null = null
+            let msg: string | null = null
+
+            if (msLeft <= 0) {
+                notifKey = `expiry_0_${updated.apiKeyExpiresAt.toISOString().slice(0, 10)}`
+                msg =
+                    `🚫 *Convessa — Abonnement expiré*\n\n` +
+                    `Votre accès a expiré le *${expStr}*.\n\n` +
+                    `Renouvelez maintenant pour reprendre l'envoi de messages :\n${PRICING_URL}`
+            } else if (daysLeft <= 1) {
+                notifKey = `expiry_1d_${updated.apiKeyExpiresAt.toISOString().slice(0, 10)}`
+                msg =
+                    `⚠️ *Convessa — Abonnement expire demain !*\n\n` +
+                    `Votre accès expire le *${expStr}*.\n\n` +
+                    `Renouvelez maintenant pour ne pas perdre l'accès :\n${PRICING_URL}`
+            } else if (daysLeft <= 3) {
+                notifKey = `expiry_3d_${updated.apiKeyExpiresAt.toISOString().slice(0, 10)}`
+                msg =
+                    `📅 *Convessa — Abonnement bientôt expiré*\n\n` +
+                    `Votre accès expire dans *${daysLeft} jours* (le ${expStr}).\n\n` +
+                    `Renouvelez votre abonnement ici :\n${PRICING_URL}`
+            } else if (daysLeft <= 7) {
+                notifKey = `expiry_7d_${updated.apiKeyExpiresAt.toISOString().slice(0, 10)}`
+                msg =
+                    `🔔 *Convessa — Rappel d'abonnement*\n\n` +
+                    `Votre abonnement expire dans *${daysLeft} jours* (le ${expStr}).\n\n` +
+                    `Pensez à le renouveler pour assurer la continuité :\n${PRICING_URL}`
+            }
+
+            if (notifKey && msg && !(await alreadyNotified(notifKey))) {
                 await tenantManager.sendMessageAsTenantViaAdmin(phone, msg).catch(() => {})
+                await markNotified(notifKey)
+                logger.info({ component: 'SendRoute', tenantId, notifKey }, 'Notification expiration envoyée')
             }
         }
     } catch { /* notifications non bloquantes */ }
@@ -121,6 +202,9 @@ export function sendRouter(tenantManager: TenantManager): Router {
         tenantManager.sendMessageAsTenant(tenantId, remoteJid, text, media)
             .then(async ({ waMessageId }) => {
                 await markMessageSent(messageId, waMessageId)
+                // Incrémenter le compteur + vérifier/notifier le quota
+                await incrementMessagesSent(tenantId).catch(() => {})
+                await _checkAndNotifyQuota(tenantManager, tenantId, tenantPhone)
                 logger.info(
                     { component: 'SendRoute', tenantId, messageId, from: maskPhone(tenantPhone), to: maskPhone(remoteJid) },
                     'Message tenant envoyé (confirmé)'

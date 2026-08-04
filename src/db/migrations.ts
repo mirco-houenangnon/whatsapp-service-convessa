@@ -371,6 +371,8 @@ const ALTER_MIGRATIONS = [
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended         TINYINT(1)  NOT NULL DEFAULT 0`,
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(500) DEFAULT NULL`,
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended_at      DATETIME    DEFAULT NULL`,
+    // ── Suivi des notifications quota envoyées (anti-spam) ─────────────────────
+    `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS notif_sent JSON DEFAULT NULL`,
     // ── Messagerie "Contact" — espace admin (fil de discussion + suivi) ────────
     `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_notified_at        DATETIME DEFAULT NULL`,
     `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS admin_group_notified_at DATETIME DEFAULT NULL`,

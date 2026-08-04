@@ -8,1178 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%); 
-      color: #111b21; 
-      min-height: 100vh; 
-      display: flex; 
-      flex-direction: column; 
-    }
-
-    /* â”€â”€ HEADER â”€â”€ */
-    header { 
-      background: linear-gradient(135deg, #25D366 0%, #1fa855 50%, #128C7E 100%); 
-      display: flex; 
-      align-items: center; 
-      padding: 0 1.5rem; 
-      position: sticky; 
-      top: 0; 
-      z-index: 200; 
-      gap: 1rem; 
-      box-shadow: 0 4px 20px rgba(37, 211, 102, 0.2), 0 1px 3px rgba(0,0,0,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      min-height: 64px;
-      flex-wrap: nowrap;
-      overflow: hidden;
-    }
-    .header-brand { 
-      display: flex; 
-      align-items: center; 
-      gap: 0.75rem; 
-      flex-shrink: 0; 
-      padding-right: 1rem;
-      border-right: 1px solid rgba(255,255,255,0.15);
-    }
-    .header-icon-box { 
-      width: 44px; 
-      height: 44px; 
-      border-radius: 12px; 
-      background: rgba(255,255,255,0.2); 
-      backdrop-filter: blur(12px);
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-    }
-    .header-title { 
-      font-size: 1.375rem; 
-      font-weight: 800; 
-      color: #fff; 
-      line-height: 1; 
-      letter-spacing: -0.03em; 
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header-sub { 
-      font-size: 0.8125rem; 
-      color: rgba(255,255,255,0.85); 
-      font-weight: 600; 
-      margin-top: 4px; 
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .header-nav { 
-      flex: 1; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 0.25rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      min-width: 0;
-    }
-    .header-nav::-webkit-scrollbar { display: none; }
-    .nav-tab { 
-      padding: 0.5rem 0.875rem; 
-      border-radius: 10px; 
-      border: none; 
-      background: rgba(255,255,255,0); 
-      color: rgba(255,255,255,0.9); 
-      font-size: 0.8125rem; 
-      font-weight: 500; 
-      font-family: 'Inter', sans-serif; 
-      cursor: pointer; 
-      transition: all 0.25s ease; 
-      white-space: nowrap;
-      position: relative;
-      flex-shrink: 0;
-    }
-    .nav-tab::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 2px;
-      background: #fff;
-      transition: width 0.25s ease;
-    }
-    .nav-tab:hover { 
-      background: rgba(255,255,255,0.15); 
-      color: #fff; 
-      transform: translateY(-2px);
-    }
-    .nav-tab:hover::after {
-      width: 60%;
-    }
-    .nav-tab.active { 
-      background: rgba(255,255,255,0.25); 
-      color: #fff; 
-      font-weight: 600; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-    .nav-tab.active::after {
-      width: 80%;
-    }
-    .header-right { 
-      display: flex; 
-      align-items: center; 
-      gap: 0.75rem; 
-      flex-shrink: 0; 
-      padding-left: 1rem;
-      border-left: 1px solid rgba(255,255,255,0.15);
-    }
-    .admin-profile {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 1rem;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.2);
-      transition: all 0.2s ease;
-    }
-    .admin-profile:hover {
-      background: rgba(255,255,255,0.25);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .admin-avatar { 
-      width: 38px; 
-      height: 38px; 
-      border-radius: 50%; 
-      background: rgba(255,255,255,0.3); 
-      backdrop-filter: blur(10px);
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      font-size: 0.875rem; 
-      font-weight: 700; 
-      color: #fff; 
-      flex-shrink: 0; 
-      border: 2px solid rgba(255,255,255,0.5);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    .admin-name { 
-      font-size: 0.9375rem; 
-      color: #fff; 
-      font-weight: 600;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-    .btn-logout { 
-      padding: 0.5rem 1.25rem; 
-      background: rgba(220,53,69,0.25); 
-      border: 1.5px solid rgba(220,53,69,0.5); 
-      border-radius: 12px; 
-      color: #fff; 
-      font-size: 0.875rem; 
-      font-weight: 600; 
-      font-family: 'Inter', sans-serif; 
-      cursor: pointer; 
-      transition: all 0.25s ease; 
-      backdrop-filter: blur(10px);
-      box-shadow: 0 2px 8px rgba(220,53,69,0.2);
-    }
-    .btn-logout:hover { 
-      background: #dc3545; 
-      border-color: #dc3545; 
-      color: #fff; 
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(220,53,69,0.4);
-    }
-
-    /* â”€â”€ MAIN â”€â”€ */
-    main { 
-      flex: 1; 
-      padding: 2rem; 
-      max-width: 1280px; 
-      margin: 0 auto; 
-      width: 100%;
-      transition: all 0.3s ease;
-    }
-    main.panel-view {
-      padding: 0;
-      max-width: 100%;
-    }
-
-    /* â”€â”€ VIEWS â”€â”€ */
-    .view { display: none; animation: fadeIn 0.3s ease; }
-    .view.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    #view-panel { 
-      padding: 0; 
-      margin: 0;
-      display: none; 
-    }
-    #view-panel.active { display: block; }
-    #view-panel iframe {
-      width: 100%;
-      height: calc(100vh - 72px - 56px);
-      border: none;
-      display: block;
-    }
-
-    /* â”€â”€ STATS GRID â”€â”€ */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
-    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
-    .stat-card { 
-      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); 
-      border: 1px solid rgba(228,230,234,0.6); 
-      border-radius: 16px; 
-      padding: 1.5rem; 
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06); 
-      display: flex; 
-      align-items: center; 
-      gap: 1.25rem; 
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #25D366, #128C7E);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .stat-card:hover { 
-      transform: translateY(-4px); 
-      box-shadow: 0 8px 24px rgba(37,211,102,0.15); 
-      border-color: rgba(37,211,102,0.3);
-    }
-    .stat-card:hover::before { opacity: 1; }
-    .stat-icon { 
-      width: 48px; 
-      height: 48px; 
-      border-radius: 14px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      flex-shrink: 0; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .stat-icon.green { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); }
-    .stat-icon.blue { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); }
-    .stat-icon.orange { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
-    .stat-icon.purple { background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); }
-    .stat-icon.red { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); }
-    .stat-info { display: flex; flex-direction: column; gap: 0.25rem; }
-    .stat-number { font-size: 2.25rem; font-weight: 800; color: #111b21; line-height: 1; letter-spacing: -0.03em; }
-    .stat-label { font-size: 0.9375rem; color: #667781; font-weight: 500; }
-
-    /* SKELETON */
-    .skeleton { background: #e4e6ea; border-radius: 6px; animation: shimmer 1.4s infinite; }
-    .skeleton-num { width: 60px; height: 28px; }
-    .skeleton-lbl { width: 80px; height: 12px; margin-top: 4px; }
-    @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
-
-    /* â”€â”€ SECTION HEADER â”€â”€ */
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-    .section-title { font-size: 1.25rem; font-weight: 700; color: #111b21; letter-spacing: -0.02em; }
-    .btn-ghost { 
-      display: flex; 
-      align-items: center; 
-      gap: 0.5rem; 
-      padding: 0.5rem 1rem; 
-      border: 1.5px solid #e4e6ea; 
-      border-radius: 10px; 
-      background: #fff; 
-      color: #667781; 
-      font-size: 0.9375rem; 
-      font-family: 'Inter', sans-serif; 
-      cursor: pointer; 
-      transition: all 0.2s ease; 
-      font-weight: 500;
-    }
-    .btn-ghost:hover { 
-      border-color: #25D366; 
-      color: #25D366; 
-      background: rgba(37,211,102,0.05);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(37,211,102,0.15);
-    }
-
-    /* â”€â”€ TABLE CARD â”€â”€ */
-    .table-card { 
-      background: #fff; 
-      border: 1px solid rgba(228,230,234,0.6); 
-      border-radius: 16px; 
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06); 
-      overflow: hidden; 
-    }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 600px; }
-    thead th { 
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
-      padding: 0.875rem 1.25rem; 
-      text-align: left; 
-      font-size: 0.75rem; 
-      font-weight: 700; 
-      color: #667781; 
-      text-transform: uppercase; 
-      letter-spacing: 0.08em; 
-      border-bottom: 2px solid #e4e6ea; 
-    }
-    tbody tr { 
-      border-bottom: 1px solid rgba(228,230,234,0.5); 
-      transition: all 0.2s ease; 
-    }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { 
-      background: linear-gradient(135deg, rgba(37,211,102,0.03) 0%, rgba(18,140,126,0.02) 100%); 
-      transform: scale(1.002);
-    }
-    tbody td { padding: 1rem 1.25rem; font-size: 0.9375rem; color: #111b21; vertical-align: middle; }
-    .td-phone { font-family: 'Courier New', monospace; color: #667781; font-size: 0.875rem; font-weight: 500; }
-    .td-name { font-weight: 600; }
-
-    /* STATUS BADGE */
-    .badge { 
-      display: inline-flex; 
-      align-items: center; 
-      gap: 0.45rem; 
-      padding: 0.375rem 0.875rem; 
-      border-radius: 999px; 
-      font-size: 0.8125rem; 
-      font-weight: 600; 
-      border: 1.5px solid;
-    }
-    .badge-connected { 
-      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); 
-      color: #128C7E; 
-      border-color: #86efac;
-    }
-    .badge-pending { 
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
-      color: #92400e; 
-      border-color: #fcd34d;
-    }
-    .badge-disconnected { 
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); 
-      color: #991b1b; 
-      border-color: #fca5a5;
-    }
-    .badge-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .badge-connected .badge-dot { background: #25D366; animation: pulse-green 2s infinite; box-shadow: 0 0 8px #25D366; }
-    .badge-pending .badge-dot { background: #f59e0b; }
-    .badge-disconnected .badge-dot { background: #dc3545; }
-    @keyframes pulse-green { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
-
-    /* SMALL BUTTONS */
-    .btn-sm { 
-      padding: 0.375rem 0.875rem; 
-      border-radius: 10px; 
-      font-size: 0.8125rem; 
-      font-weight: 600; 
-      font-family: 'Inter', sans-serif; 
-      cursor: pointer; 
-      border: 1.5px solid #e4e6ea; 
-      background: #fff; 
-      color: #667781; 
-      transition: all 0.2s ease; 
-    }
-    .btn-sm:hover { 
-      border-color: #25D366; 
-      color: #128C7E; 
-      background: rgba(37,211,102,0.05);
-      transform: translateY(-2px);
-    }
-    .btn-sm.hidden { display: none; }
-
-    /* EMPTY STATE */
-    .empty-state { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 0.75rem; 
-      padding: 4rem 1rem; 
-      color: #667781; 
-      font-size: 0.875rem; 
-    }
-
-    /* ACTION ROW */
-    .action-row { margin-top: 1.5rem; display: flex; gap: 1rem; }
-    .btn-outline-green { 
-      display: inline-flex; 
-      align-items: center; 
-      gap: 0.5rem; 
-      padding: 0.625rem 1.5rem; 
-      border: 2px solid #25D366; 
-      border-radius: 12px; 
-      background: #fff; 
-      color: #25D366; 
-      font-size: 0.9375rem; 
-      font-weight: 600; 
-      font-family: 'Inter', sans-serif; 
-      cursor: pointer; 
-      transition: all 0.2s ease; 
-      text-decoration: none; 
-    }
-    .btn-outline-green:hover { 
-      background: #25D366; 
-      color: #fff; 
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(37,211,102,0.25);
-    }
-
-    /* â”€â”€ ACCOUNT VIEW â”€â”€ */
-    .account-grid { display: grid; grid-template-columns: 400px 1fr; gap: 2rem; }
-    @media (max-width: 900px) { .account-grid { grid-template-columns: 1fr; } }
-    .card { 
-      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); 
-      border: 1px solid rgba(228,230,234,0.6); 
-      border-radius: 20px; 
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06); 
-      overflow: hidden; 
-      transition: all 0.3s ease;
-      position: relative;
-    }
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #25D366, #128C7E, #25D366);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .card:hover {
-      box-shadow: 0 12px 32px rgba(37,211,102,0.15);
-      transform: translateY(-4px);
-      border-color: rgba(37,211,102,0.3);
-    }
-    .card:hover::before {
-      opacity: 1;
-    }
-    .card-header { 
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
-      border-bottom: 2px solid #e4e6ea; 
-      padding: 1.25rem 1.75rem; 
-      display: flex; 
-      align-items: center; 
-      gap: 0.75rem; 
-    }
-    .card-header svg {
-      color: #25D366;
-      filter: drop-shadow(0 2px 4px rgba(37,211,102,0.2));
-    }
-    .card-header-title { 
-      font-size: 1.0625rem; 
-      font-weight: 700; 
-      color: #111b21; 
-      letter-spacing: -0.01em; 
-    }
-    .card-body-pad { padding: 2rem; }
-    .profile-summary { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 1rem; 
-      padding: 2.5rem 2rem 2rem; 
-      text-align: center; 
-      background: linear-gradient(135deg, rgba(37,211,102,0.03) 0%, rgba(18,140,126,0.02) 100%);
-      border-radius: 16px;
-      margin: 1.5rem;
-    }
-    .profile-avatar { 
-      width: 80px; 
-      height: 80px; 
-      border-radius: 50%; 
-      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      font-size: 1.75rem; 
-      font-weight: 700; 
-      color: #fff; 
-      box-shadow: 0 8px 24px rgba(37,211,102,0.3), 0 0 0 4px rgba(37,211,102,0.1);
-      position: relative;
-    }
-    .profile-avatar::after {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      border: 2px solid rgba(37,211,102,0.2);
-    }
-    .profile-name { 
-      font-size: 1.25rem; 
-      font-weight: 700; 
-      color: #111b21; 
-      letter-spacing: -0.02em; 
-    }
-    .profile-email { 
-      font-size: 0.9375rem; 
-      color: #667781; 
-      background: rgba(255,255,255,0.8);
-      padding: 0.375rem 1rem;
-      border-radius: 8px;
-      border: 1px solid #e4e6ea;
-    }
-    .profile-last { 
-      display: flex; 
-      align-items: center; 
-      gap: 0.5rem; 
-      font-size: 0.875rem; 
-      color: #667781; 
-      margin-top: 0.5rem; 
-      padding: 0.5rem 1rem;
-      background: rgba(255,255,255,0.6);
-      border-radius: 8px;
-    }
-    .profile-divider { 
-      width: 100%; 
-      height: 2px; 
-      background: linear-gradient(90deg, transparent, #e4e6ea, transparent); 
-      margin: 1rem 0;
-    }
-    .form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
-    .form-group:last-of-type { margin-bottom: 0; }
-    .form-group label { font-size: 0.875rem; font-weight: 600; color: #111b21; }
-    .form-group input { 
-      padding: 0.75rem 1rem; 
-      border: 1.5px solid #e4e6ea; 
-      border-radius: 12px; 
-      font-size: 0.9375rem; 
-      font-family: 'Inter', sans-serif; 
-      color: #111b21; 
-      background: #fff; 
-      outline: none; 
-      transition: all 0.2s ease; 
-    }
-    .form-group input:focus { 
-      border-color: #25D366; 
-      box-shadow: 0 0 0 4px rgba(37,211,102,0.12); 
-      transform: translateY(-1px);
-    }
-    .card-footer-pad { padding: 1rem 1.5rem; border-top: 2px solid #e4e6ea; background: #fff; display: flex; justify-content: flex-end; }
-    .btn-primary { 
-      padding: 0.625rem 1.5rem; 
-      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); 
-      color: #fff; 
-      font-size: 0.9375rem; 
-      font-weight: 600; 
-      font-family: 'Inter', sans-serif; 
-      border: none; 
-      border-radius: 12px; 
-      cursor: pointer; 
-      display: inline-flex; 
-      align-items: center; 
-      gap: 0.5rem; 
-      transition: all 0.2s ease; 
-      box-shadow: 0 4px 12px rgba(37,211,102,0.2);
-    }
-    .btn-primary:hover { 
-      transform: translateY(-2px); 
-      box-shadow: 0 8px 24px rgba(37,211,102,0.3);
-    }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-    /* â”€â”€ MODAL â”€â”€ */
-    .modal-overlay { 
-      position: fixed; 
-      inset: 0; 
-      background: rgba(0,0,0,0.5); 
-      backdrop-filter: blur(4px);
-      z-index: 500; 
-      display: none; 
-      align-items: center; 
-      justify-content: center; 
-      padding: 1rem; 
-      animation: fadeIn 0.2s ease;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal-box { 
-      background: #fff; 
-      border-radius: 20px; 
-      max-width: 480px; 
-      width: 100%; 
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
-      overflow: hidden; 
-      animation: slideUp 0.3s ease;
-    }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .modal-header { 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      padding: 1.25rem 1.5rem; 
-      border-bottom: 2px solid #e4e6ea; 
-    }
-    .modal-title { font-size: 1.0625rem; font-weight: 700; color: #111b21; letter-spacing: -0.01em; }
-    .modal-close { 
-      background: none; 
-      border: none; 
-      cursor: pointer; 
-      color: #667781; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      border-radius: 8px; 
-      padding: 0.375rem; 
-      transition: all 0.2s ease; 
-    }
-    .modal-close:hover { color: #dc3545; background: rgba(220,53,69,0.1); }
-    .modal-body { padding: 1.5rem; font-size: 0.875rem; color: #667781; line-height: 1.7; }
-    .modal-body a { color: #25D366; font-weight: 600; text-decoration: none; }
-    .modal-body a:hover { text-decoration: underline; }
-    .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #e4e6ea; display: flex; justify-content: flex-end; }
-
-    /* â”€â”€ RADIO GROUP (Oui/Non, DurÃ©e/RequÃªtes) â”€â”€ */
-    .radio-group { display: flex; gap: 1.25rem; }
-    .radio-option { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #111b21; cursor: pointer; }
-    .radio-option input { accent-color: #25D366; cursor: pointer; width: 15px; height: 15px; }
-    .conditional-fields { display: none; flex-direction: column; gap: 1rem; padding-top: 0.85rem; margin-top: 0.15rem; border-top: 1px dashed #e4e6ea; }
-    .conditional-fields.visible { display: flex; }
-    .field-hint { font-size: 0.72rem; color: #667781; }
-    .form-group select { padding: 0.55rem 0.85rem; border: 1px solid #e4e6ea; border-radius: 10px; font-size: 0.87rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none; }
-
-    /* â”€â”€ USAGE BADGE â”€â”€ */
-    .badge-usage { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; }
-    .badge-usage.unlimited { background: #f0faf4; color: #128C7E; }
-
-    /* â”€â”€ TOAST â”€â”€ */
-    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.75rem; }
-    .toast { 
-      background: #fff; 
-      border: 1px solid #e4e6ea; 
-      border-radius: 14px; 
-      padding: 1rem 1.25rem; 
-      font-size: 0.875rem; 
-      color: #111b21; 
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15); 
-      display: flex; 
-      align-items: center; 
-      gap: 0.75rem; 
-      min-width: 280px; 
-      max-width: 380px; 
-      border-left-width: 4px; 
-      animation: toast-in 0.3s ease; 
-    }
-    .toast.success { border-left-color: #25D366; }
-    .toast.error { border-left-color: #dc3545; }
-    .toast.info { border-left-color: #3b82f6; }
-    .toast-msg { flex: 1; font-weight: 500; }
-    @keyframes toast-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
-
-    /* â”€â”€ SPINNER â”€â”€ */
-    .spinner { 
-      width: 16px; 
-      height: 16px; 
-      border: 2.5px solid rgba(255,255,255,0.3); 
-      border-top-color: #fff; 
-      border-radius: 50%; 
-      animation: spin 0.6s linear infinite; 
-      display: none; 
-    }
-    .spinner.active { display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* â”€â”€ FOOTER â”€â”€ */
-    footer { 
-      min-height: 56px;
-      height: auto;
-      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-      border-top: 2px solid #e4e6ea; 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      padding: 0.75rem 1.5rem; 
-      position: sticky; 
-      bottom: 0; 
-      z-index: 100;
-      box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .footer-left { 
-      display: flex; 
-      align-items: center; 
-      gap: 0.625rem; 
-      font-size: 0.875rem; 
-      font-weight: 600; 
-      color: #128C7E;
-      padding: 0.5rem 1rem;
-      background: linear-gradient(135deg, rgba(37,211,102,0.08) 0%, rgba(18,140,126,0.05) 100%);
-      border-radius: 10px;
-      border: 1px solid rgba(37,211,102,0.15);
-    }
-    .footer-left svg {
-      filter: drop-shadow(0 1px 2px rgba(37,211,102,0.3));
-    }
-    .footer-right { 
-      font-size: 0.8125rem; 
-      color: #667781; 
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .footer-right::before {
-      content: '';
-      width: 4px;
-      height: 4px;
-      background: #667781;
-      border-radius: 50%;
-      opacity: 0.5;
-    }
-
-    /* â”€â”€ PAGINATION â”€â”€ */
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
-      padding: 1.5rem 2rem;
-      border-top: 1px solid #e4e6ea;
-      background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-    }
-    .pagination-btn {
-      padding: 0.625rem 1.25rem;
-      border: 1px solid #d1d5db;
-      background: #fff;
-      color: #374151;
-      border-radius: 10px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .pagination-btn:hover:not(:disabled) {
-      background: #f9fafb;
-      border-color: #25D366;
-      color: #25D366;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(37,211,102,0.15);
-    }
-    .pagination-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      background: #f3f4f6;
-    }
-    .pagination-info {
-      font-size: 0.875rem;
-      color: #374151;
-      font-weight: 600;
-      min-width: 120px;
-      text-align: center;
-      padding: 0.5rem 1rem;
-      background: #fff;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-
-    /* â”€â”€ BADGES STATUT UTILISATEUR â”€â”€ */
-    .user-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      padding: 0.375rem 0.875rem;
-      border-radius: 8px;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-    }
-    .user-badge.active {
-      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-      color: #065f46;
-      border: 1px solid #6ee7b7;
-    }
-    .user-badge.inactive {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      color: #991b1b;
-      border: 1px solid #fca5a5;
-    }
-    .user-badge svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    /* â”€â”€ USER AVATAR IN TABLE â”€â”€ */
-    .user-avatar-table {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.875rem;
-      box-shadow: 0 2px 8px rgba(37,211,102,0.25);
-      border: 2px solid #fff;
-    }
-    .user-info-cell {
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-    }
-    .user-details {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    .user-name {
-      font-weight: 600;
-      color: #111b21;
-      font-size: 0.9375rem;
-    }
-    .user-id {
-      font-size: 0.75rem;
-      color: #667781;
-      font-family: 'Monaco', 'Courier New', monospace;
-    }
-    .contact-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    .contact-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      color: #374151;
-    }
-    .contact-item svg {
-      width: 14px;
-      height: 14px;
-      color: #6b7280;
-    }
-    .date-display {
-      font-size: 0.875rem;
-      color: #374151;
-      font-weight: 500;
-    }
-    .date-time {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 0.125rem;
-    }
-
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       RESPONSIVE â€” header, nav, tables, footer, modales
-       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-
-    /* Bouton hamburger â€” cachÃ© par dÃ©faut sur desktop */
-    .hamburger-btn {
-      display: none;
-      background: rgba(255,255,255,0.15);
-      border: 1.5px solid rgba(255,255,255,0.3);
-      border-radius: 10px;
-      padding: 0.5rem;
-      cursor: pointer;
-      color: #fff;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.2s ease;
-    }
-    .hamburger-btn:hover { background: rgba(255,255,255,0.25); }
-
-    /* Drawer mobile nav */
-    .mobile-nav-drawer {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 300;
-    }
-    .mobile-nav-drawer.open { display: flex; }
-    .mobile-nav-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-    }
-    .mobile-nav-panel {
-      position: relative;
-      z-index: 1;
-      width: 280px;
-      max-width: 85vw;
-      height: 100%;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      animation: slideInLeft 0.25s ease;
-    }
-    @keyframes slideInLeft {
-      from { transform: translateX(-100%); }
-      to   { transform: translateX(0); }
-    }
-    .mobile-nav-header {
-      padding: 1.25rem 1.25rem 1rem;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .mobile-nav-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .mobile-nav-close {
-      background: rgba(255,255,255,0.1);
-      border: none;
-      border-radius: 8px;
-      padding: 0.4rem;
-      color: rgba(255,255,255,0.8);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    .mobile-nav-close:hover { background: rgba(255,255,255,0.2); }
-    .mobile-nav-links {
-      padding: 1rem 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.375rem;
-      flex: 1;
-    }
-    .mobile-nav-tab {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      border: none;
-      background: transparent;
-      color: rgba(255,255,255,0.75);
-      font-size: 0.9375rem;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      cursor: pointer;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      transition: all 0.2s ease;
-    }
-    .mobile-nav-tab:hover { background: rgba(255,255,255,0.08); color: #fff; }
-    .mobile-nav-tab.active {
-      background: linear-gradient(135deg, rgba(37,211,102,0.25) 0%, rgba(18,140,126,0.2) 100%);
-      color: #fff;
-      font-weight: 600;
-      border: 1px solid rgba(37,211,102,0.3);
-    }
-    .mobile-nav-footer {
-      padding: 1rem 0.75rem;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    .mobile-btn-logout-full {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      background: rgba(220,53,69,0.2);
-      border: 1.5px solid rgba(220,53,69,0.4);
-      border-radius: 10px;
-      color: #fff;
-      font-size: 0.875rem;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-    }
-    .mobile-btn-logout-full:hover { background: rgba(220,53,69,0.4); }
-
-    /* â”€â”€ Tablette (â‰¤ 1024px) â”€â”€ */
-    @media (max-width: 1024px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      main { padding: 1.5rem; }
-      .header-nav { gap: 0.25rem; }
-      .nav-tab { padding: 0.5rem 1rem; font-size: 0.875rem; }
-    }
-
-    /* â”€â”€ Mobile (â‰¤ 768px) â€” hamburger menu â”€â”€ */
-    @media (max-width: 768px) {
-      /* Header */
-      header {
-        height: 60px;
-        padding: 0 1rem;
-        gap: 0.75rem;
-      }
-      .header-brand {
-        padding-right: 0;
-        border-right: none;
-      }
-      .header-sub { display: none; }
-      .header-title { font-size: 1.125rem; }
-      .header-icon-box { width: 36px; height: 36px; border-radius: 10px; }
-
-      /* Cacher la nav desktop, montrer le hamburger */
-      .header-nav { display: none; }
-      .hamburger-btn { display: flex; }
-
-      /* Header right â€” masquer le nom, garder avatar + logout */
-      .header-right { padding-left: 0; border-left: none; gap: 0.375rem; }
-      .admin-name { display: none; }
-      .admin-profile { padding: 0.375rem 0.5rem; }
-      .btn-logout { padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
-
-      /* Main */
-      main { padding: 1rem; }
-      .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.875rem; margin-bottom: 1.5rem; }
-      .stat-number { font-size: 1.75rem; }
-      .stat-card { padding: 1rem; gap: 0.875rem; }
-
-      /* Section header */
-      .section-header { flex-wrap: wrap; gap: 0.75rem; }
-      #view-users .section-header > div {
-        flex-wrap: wrap;
-        width: 100%;
-        gap: 0.5rem;
-      }
-      #userSearchInput { width: 100% !important; min-width: 0 !important; }
-      #userFilterStatus { width: 100%; }
-
-      /* Panel iframe */
-      #view-panel iframe { height: calc(100vh - 60px - 56px); }
-
-      /* Footer */
-      footer {
-        height: auto;
-        flex-wrap: wrap;
-        padding: 0.75rem 1rem;
-        gap: 0.5rem;
-        justify-content: center;
-      }
-      .footer-left, .footer-right { width: 100%; justify-content: center; text-align: center; }
-
-      /* Toasts */
-      .toast-container { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; }
-      .toast { min-width: 0; max-width: 100%; width: 100%; }
-
-      /* Tables */
-      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-      /* Modals */
-      .modal-overlay { padding: 0.75rem; align-items: flex-end; }
-      .modal-box { max-width: 100%; border-radius: 20px 20px 0 0; max-height: 90vh; overflow-y: auto; }
-
-      /* Account */
-      .account-grid { grid-template-columns: 1fr; gap: 1.25rem; }
-
-      /* DB toolbar */
-      .db-toolbar { flex-wrap: wrap; gap: 0.5rem; }
-      .db-toolbar select { flex: 1 1 calc(50% - 0.25rem); min-width: 140px; }
-      .db-toolbar input[type="text"] { flex: 1 1 100%; min-width: 0; }
-      .db-toolbar .btn-ghost, .db-toolbar .btn-outline-green { flex: 1 1 calc(50% - 0.25rem); justify-content: center; }
-
-      /* Profile detail */
-      .profile-detail-header { flex-wrap: wrap; text-align: center; justify-content: center; padding: 1rem; gap: 0.875rem; }
-      .profile-detail-header > div:nth-child(2) { width: 100%; text-align: center; }
-      #pdDeleteBtn { width: 100%; justify-content: center; }
-    }
-
-    /* â”€â”€ TrÃ¨s petit mobile (â‰¤ 400px) â”€â”€ */
-    @media (max-width: 400px) {
-      header { padding: 0 0.75rem; }
-      .header-title { font-size: 1rem; }
-      .stats-grid { grid-template-columns: 1fr; }
-      .stat-number { font-size: 1.5rem; }
-      main { padding: 0.75rem; }
-      .card-body-pad { padding: 1rem; }
-      .section-title { font-size: 1rem; }
-      thead th, tbody td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
-      footer { padding: 0.5rem 0.75rem; }
-    }
-
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       ONGLET BASE DE DONNÃ‰ES
-       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-    .db-mode-switch { display: flex; gap: 0.5rem; background: #f3f4f6; padding: 0.3rem; border-radius: 12px; }
-    .db-mode-btn {
-      padding: 0.5rem 1.1rem; border: none; border-radius: 9px; background: transparent;
-      color: #667781; font-size: 0.875rem; font-weight: 600; font-family: 'Inter', sans-serif;
-      cursor: pointer; transition: all 0.2s ease;
-    }
-    .db-mode-btn.active { background: #fff; color: #128C7E; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .db-subview { display: none; }
-    .db-subview.active { display: block; }
-    .db-toolbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; }
-    .db-toolbar select, .db-toolbar input[type="text"] {
-      padding: 0.55rem 0.9rem; border: 1.5px solid #e4e6ea; border-radius: 10px;
-      font-size: 0.875rem; font-family: 'Inter', sans-serif; color: #111b21; background: #fff; outline: none;
-    }
-    .db-toolbar select:focus, .db-toolbar input:focus { border-color: #25D366; }
-    .db-toolbar input[type="text"] { flex: 1; min-width: 200px; }
-    .db-warning-banner {
-      display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1.1rem; margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d;
-      border-radius: 12px; color: #92400e; font-size: 0.8125rem; font-weight: 500;
-    }
-    td.cell-editable { cursor: pointer; transition: background 0.15s ease; border-radius: 6px; }
-    td.cell-editable:hover { background: rgba(37,211,102,0.08); box-shadow: inset 0 0 0 1.5px rgba(37,211,102,0.35); }
-    td.cell-readonly { color: #9aa4ad; }
-    td.cell-sensitive { color: #b45309; font-style: italic; font-size: 0.8125rem; }
-    .row-actions-cell { display: flex; gap: 0.4rem; white-space: nowrap; }
-    .btn-icon-sm {
-      width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid #e4e6ea; background: #fff;
-      color: #667781; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-      transition: all 0.2s ease;
-    }
-    .btn-icon-sm:hover.edit { border-color: #25D366; color: #128C7E; background: rgba(37,211,102,0.06); }
-    .btn-icon-sm:hover.danger { border-color: #dc3545; color: #dc3545; background: rgba(220,53,69,0.06); }
-    .btn-danger {
-      display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem;
-      background: linear-gradient(135deg, #dc3545 0%, #b91c2c 100%); color: #fff; border: none;
-      border-radius: 12px; font-size: 0.875rem; font-weight: 600; font-family: 'Inter', sans-serif;
-      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(220,53,69,0.25);
-    }
-    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(220,53,69,0.35); }
-    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .profile-row { cursor: pointer; }
-    .profile-detail-header {
-      display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem;
-      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); border: 1px solid rgba(228,230,234,0.6);
-      border-radius: 16px; margin: 1rem 0 1.5rem;
-    }
-    .profile-detail-name { font-size: 1.25rem; font-weight: 700; color: #111b21; }
-    .profile-detail-sub { font-size: 0.875rem; color: #667781; margin-top: 0.2rem; }
-    .db-section-card { margin-bottom: 1.5rem; }
-    .db-section-title-row {
-      display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem;
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-bottom: 2px solid #e4e6ea;
-    }
-    .db-section-title-row .section-title { font-size: 1rem; }
-    .db-empty-note { padding: 1.5rem; color: #667781; font-size: 0.875rem; text-align: center; }
-    .field-edit-form .form-group textarea {
-      padding: 0.75rem 1rem; border: 1.5px solid #e4e6ea; border-radius: 12px; font-size: 0.9375rem;
-      font-family: 'Inter', sans-serif; color: #111b21; resize: vertical; min-height: 90px; outline: none;
-    }
-    .field-edit-form .form-group textarea:focus { border-color: #25D366; box-shadow: 0 0 0 4px rgba(37,211,102,0.12); }
-    .field-edit-form select { padding: 0.75rem 1rem; border: 1.5px solid #e4e6ea; border-radius: 12px; font-size: 0.9375rem; font-family: 'Inter', sans-serif; width: 100%; background: #fff; }
-  </style>
+  <link rel="stylesheet" href="/admin/admin.css" />
 </head>
 <body>
 
-  <!-- â”€â”€ HEADER â”€â”€ -->
+  <!-- ── HEADER ── -->
   <header>
     <div class="header-brand">
       <div class="header-icon-box">
@@ -1198,8 +31,12 @@
       <button class="nav-tab" data-tab="users">Utilisateurs</button>
       <button class="nav-tab" data-tab="referrals">Codes de parrainage</button>
       <button class="nav-tab" data-tab="plans">Plans d'abonnements</button>
-      <button class="nav-tab" data-tab="database">Base de donnÃ©es</button>
+      <button class="nav-tab" data-tab="database">Base de données</button>
       <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
+      <button class="nav-tab" data-tab="contact">
+        Messages depuis Contact
+        <span class="nav-tab-badge" id="contactUnreadBadge" style="display:none;">0</span>
+      </button>
     </nav>
 
     <!-- Bouton hamburger (mobile uniquement) -->
@@ -1212,15 +49,15 @@
     </button>
 
     <div class="header-right">
-      <div class="admin-profile" id="profileLink" style="cursor:pointer;" title="Aller Ã  Mon compte">
+      <div class="admin-profile" id="profileLink" style="cursor:pointer;" title="Aller à Mon compte">
         <div class="admin-avatar" id="adminAvatar">A</div>
         <span class="admin-name" id="adminName">Admin</span>
       </div>
-      <button class="btn-logout" id="logoutBtn">DÃ©connexion</button>
+      <button class="btn-logout" id="logoutBtn">Déconnexion</button>
     </div>
   </header>
 
-  <!-- â”€â”€ DRAWER NAVIGATION MOBILE â”€â”€ -->
+  <!-- ── DRAWER NAVIGATION MOBILE ── -->
   <div class="mobile-nav-drawer" id="mobileDrawer">
     <div class="mobile-nav-overlay" id="mobileOverlay"></div>
     <div class="mobile-nav-panel">
@@ -1259,23 +96,28 @@
         </button>
         <button class="mobile-nav-tab" data-tab="database">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3" stroke="currentColor" stroke-width="2"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" stroke="currentColor" stroke-width="2"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" stroke="currentColor" stroke-width="2"/></svg>
-          Base de donnÃ©es
+          Base de données
         </button>
         <button class="mobile-nav-tab" data-tab="panel">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" stroke="currentColor" stroke-width="2"/></svg>
           Panel WhatsApp
         </button>
+        <button class="mobile-nav-tab" data-tab="contact">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/></svg>
+          Messages Contact
+          <span class="nav-tab-badge" id="contactUnreadBadgeMobile" style="display:none;">0</span>
+        </button>
       </div>
       <div class="mobile-nav-footer">
         <button class="mobile-btn-logout-full" id="mobileLogoutBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="white" stroke-width="2"/><polyline points="16 17 21 12 16 7" stroke="white" stroke-width="2"/><line x1="21" y1="12" x2="9" y2="12" stroke="white" stroke-width="2"/></svg>
-          Se dÃ©connecter
+          Se déconnecter
         </button>
       </div>
     </div>
   </div>
 
-  <!-- â”€â”€ MAIN â”€â”€ -->
+  <!-- ── MAIN ── -->
   <main id="mainContent">
 
     <!-- VIEW 1: DASHBOARD -->
@@ -1298,7 +140,7 @@
             <div class="stat-label">Total Tenants</div>
           </div>
         </div>
-        <!-- ConnectÃ©s -->
+        <!-- Connectés -->
         <div class="stat-card">
           <div class="stat-icon green">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1307,7 +149,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-number" id="statConnected"><span class="skeleton skeleton-num"></span></div>
-            <div class="stat-label">ConnectÃ©s</div>
+            <div class="stat-label">Connectés</div>
           </div>
         </div>
         <!-- Utilisateurs -->
@@ -1356,11 +198,11 @@
           <table id="tenantsTable">
             <thead>
               <tr>
-                <th>TÃ©lÃ©phone</th>
+                <th>Téléphone</th>
                 <th>Nom</th>
                 <th>Statut</th>
-                <th>ConnectÃ© le</th>
-                <th>CrÃ©Ã© le</th>
+                <th>Connecté le</th>
+                <th>Créé le</th>
                 <th>QR</th>
                 <th>Suspension</th>
               </tr>
@@ -1372,7 +214,7 @@
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                       <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Chargementâ€¦
+                    Chargement…
                   </div>
                 </td>
               </tr>
@@ -1402,14 +244,14 @@
           <div class="card">
             <div class="profile-summary">
               <div class="profile-avatar" id="profileAvatar">A</div>
-              <div class="profile-name" id="profileName">â€”</div>
-              <div class="profile-email" id="profileEmail">â€”</div>
+              <div class="profile-name" id="profileName">—</div>
+              <div class="profile-email" id="profileEmail">—</div>
               <div class="profile-last">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="#667781" stroke-width="2"/>
                   <path d="M12 6v6l4 2" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                <span id="profileLastLogin">â€”</span>
+                <span id="profileLastLogin">—</span>
               </div>
             </div>
           </div>
@@ -1452,27 +294,27 @@
                 <rect x="5" y="11" width="14" height="10" rx="2" stroke="#667781" stroke-width="2"/>
                 <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#667781" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <span class="card-header-title">SÃ©curitÃ©</span>
+              <span class="card-header-title">Sécurité</span>
             </div>
             <form id="passwordForm">
               <div class="card-body-pad">
                 <div class="form-group">
                   <label for="currentPwd">Mot de passe actuel</label>
-                  <input type="password" id="currentPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" />
+                  <input type="password" id="currentPwd" placeholder="••••••••" autocomplete="current-password" />
                 </div>
                 <div class="form-group">
                   <label for="newPwd">Nouveau mot de passe</label>
-                  <input type="password" id="newPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password" />
+                  <input type="password" id="newPwd" placeholder="••••••••" autocomplete="new-password" />
                 </div>
                 <div class="form-group">
                   <label for="confirmPwd">Confirmer</label>
-                  <input type="password" id="confirmPwd" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password" />
+                  <input type="password" id="confirmPwd" placeholder="••••••••" autocomplete="new-password" />
                 </div>
               </div>
               <div class="card-footer-pad">
                 <button type="submit" class="btn-primary" id="savePwdBtn">
                   <div class="spinner" id="spinnerPwd"></div>
-                  Mettre Ã  jour
+                  Mettre à jour
                 </button>
               </div>
             </form>
@@ -1489,7 +331,7 @@
           <input 
             type="text" 
             id="userSearchInput" 
-            placeholder="Rechercher par email ou tÃ©lÃ©phone..."
+            placeholder="Rechercher par email ou téléphone..."
             style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:8px;font-size:0.875rem;width:280px;font-family:'Inter',sans-serif;"
           />
           <select 
@@ -1571,7 +413,7 @@
                 <th>Contact</th>
                 <th>Statut</th>
                 <th>Inscription</th>
-                <th>DerniÃ¨re connexion</th>
+                <th>Dernière connexion</th>
               </tr>
             </thead>
             <tbody id="usersTableBody">
@@ -1590,7 +432,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            PrÃ©cÃ©dent
+            Précédent
           </button>
           <div class="pagination-info" id="usersPaginationInfo">Page 1 sur 1</div>
           <button class="pagination-btn" id="usersNextBtn" disabled>
@@ -1623,13 +465,13 @@
               <tr>
                 <th>Code</th>
                 <th>Usage</th>
-                <th>CrÃ©Ã© le</th>
+                <th>Créé le</th>
               </tr>
             </thead>
             <tbody id="referralCodesBody">
               <tr>
                 <td colspan="3">
-                  <div class="empty-state">Chargementâ€¦</div>
+                  <div class="empty-state">Chargement…</div>
                 </td>
               </tr>
             </tbody>
@@ -1659,13 +501,13 @@
                 <th>Nom</th>
                 <th>Prix</th>
                 <th>Usage</th>
-                <th>CrÃ©Ã© le</th>
+                <th>Créé le</th>
               </tr>
             </thead>
             <tbody id="plansBody">
               <tr>
                 <td colspan="4">
-                  <div class="empty-state">Chargementâ€¦</div>
+                  <div class="empty-state">Chargement…</div>
                 </td>
               </tr>
             </tbody>
@@ -1674,10 +516,10 @@
       </div>
     </div><!-- end view-plans -->
 
-    <!-- VIEW: BASE DE DONNÃ‰ES -->
+    <!-- VIEW: BASE DE DONNÉES -->
     <div class="view" id="view-database">
       <div class="section-header">
-        <div class="section-title">Base de donnÃ©es</div>
+        <div class="section-title">Base de données</div>
         <div class="db-mode-switch">
           <button class="db-mode-btn active" data-mode="tables" id="dbModeTablesBtn">Mode Table (SQL)</button>
           <button class="db-mode-btn" data-mode="profiles" id="dbModeProfilesBtn">Mode Profils</button>
@@ -1688,14 +530,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
           <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        AccÃ¨s direct Ã  la base de donnÃ©es de production. Les modifications sont immÃ©diates et irrÃ©versibles.
+        Accès direct à la base de données de production. Les modifications sont immédiates et irréversibles.
       </div>
 
-      <!-- SUB-VIEW A : MODE TABLE (faÃ§on phpMyAdmin) -->
+      <!-- SUB-VIEW A : MODE TABLE (façon phpMyAdmin) -->
       <div class="db-subview active" id="dbSubTables">
         <div class="db-toolbar">
           <select id="dbTableSelect"></select>
-          <input type="text" id="dbSearchInput" placeholder="Rechercher dans la tableâ€¦" />
+          <input type="text" id="dbSearchInput" placeholder="Rechercher dans la table…" />
           <button class="btn-ghost" id="dbRefreshRowsBtn">Actualiser</button>
           <button class="btn-outline-green" id="dbNewRowBtn">+ Nouvelle ligne</button>
         </div>
@@ -1704,14 +546,14 @@
             <table id="dbRowsTable">
               <thead id="dbRowsThead"></thead>
               <tbody id="dbRowsBody">
-                <tr><td><div class="empty-state">SÃ©lectionnez une tableâ€¦</div></td></tr>
+                <tr><td><div class="empty-state">Sélectionnez une table…</div></td></tr>
               </tbody>
             </table>
           </div>
           <div class="pagination" id="dbRowsPagination" style="display:none;">
             <button class="pagination-btn" id="dbRowsPrevBtn" disabled>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              PrÃ©cÃ©dent
+              Précédent
             </button>
             <div class="pagination-info" id="dbRowsPaginationInfo">Page 1 sur 1</div>
             <button class="pagination-btn" id="dbRowsNextBtn" disabled>
@@ -1726,7 +568,7 @@
       <div class="db-subview" id="dbSubProfiles">
         <div id="dbProfileListWrap">
           <div class="db-toolbar">
-            <input type="text" id="profileSearchInput" placeholder="Rechercher un profil (nom, email, tÃ©lÃ©phone, uid)â€¦" />
+            <input type="text" id="profileSearchInput" placeholder="Rechercher un profil (nom, email, téléphone, uid)…" />
             <button class="btn-ghost" id="dbRefreshProfilesBtn">Actualiser</button>
           </div>
           <div class="table-card">
@@ -1736,14 +578,14 @@
                   <tr><th>Utilisateur</th><th>Contact</th><th>Comptes WhatsApp</th><th>Statut</th><th>Inscrit le</th></tr>
                 </thead>
                 <tbody id="profilesBody">
-                  <tr><td colspan="5"><div class="empty-state">Chargementâ€¦</div></td></tr>
+                  <tr><td colspan="5"><div class="empty-state">Chargement…</div></td></tr>
                 </tbody>
               </table>
             </div>
             <div class="pagination" id="profilesPagination" style="display:none;">
               <button class="pagination-btn" id="profilesPrevBtn" disabled>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                PrÃ©cÃ©dent
+                Précédent
               </button>
               <div class="pagination-info" id="profilesPaginationInfo">Page 1 sur 1</div>
               <button class="pagination-btn" id="profilesNextBtn" disabled>
@@ -1757,14 +599,14 @@
         <div id="dbProfileDetailWrap" style="display:none;">
           <button class="btn-ghost" id="profileBackBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Retour Ã  la liste
+            Retour à la liste
           </button>
 
           <div class="profile-detail-header">
             <div class="profile-avatar" id="pdAvatar">?</div>
             <div>
-              <div class="profile-detail-name" id="pdName">â€”</div>
-              <div class="profile-detail-sub" id="pdSub">â€”</div>
+              <div class="profile-detail-name" id="pdName">—</div>
+              <div class="profile-detail-sub" id="pdSub">—</div>
             </div>
             <button class="btn-danger" id="pdDeleteBtn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1782,9 +624,95 @@
       <iframe id="panelIframe" title="Panel WhatsApp" style="width:100%;border:none;display:block;height:calc(100vh - 72px - 56px);"></iframe>
     </div>
 
+    <!-- VIEW: MESSAGES DEPUIS CONTACT -->
+    <div class="view" id="view-contact">
+      <div class="section-header">
+        <div class="section-title">Messages depuis Contact</div>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="pagination-btn" id="contactGroupStatusBtn" style="padding:0.4rem 0.9rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span id="contactGroupStatusLabel">Groupe admin…</span>
+          </button>
+          <button class="pagination-btn" id="contactRefreshBtn" style="padding:0.4rem 0.9rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      <div class="contact-layout">
+        <!-- Liste des demandes -->
+        <div class="contact-list-pane">
+          <div class="contact-list-toolbar">
+            <input type="text" id="contactSearchInput" placeholder="Rechercher (nom, email, téléphone, sujet)..." />
+            <select id="contactFilterStatus">
+              <option value="all">Toutes les demandes</option>
+              <option value="unread">Non lues</option>
+              <option value="read">Lues</option>
+              <option value="replied">Répondues</option>
+            </select>
+          </div>
+          <div class="contact-list-scroll" id="contactListScroll">
+            <div class="empty-state">Chargement...</div>
+          </div>
+          <div class="pagination" id="contactPagination" style="display:none;border-top:1px solid #eef0f2;">
+            <button class="pagination-btn" id="contactPrevBtn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="pagination-info" id="contactPaginationInfo">Page 1 sur 1</div>
+            <button class="pagination-btn" id="contactNextBtn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Fil de discussion -->
+        <div class="contact-thread-pane">
+          <div id="contactThreadEmpty" class="contact-thread-empty">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <div>Sélectionnez une demande à gauche pour voir la conversation.</div>
+          </div>
+          <div id="contactThreadContent" style="display:none;flex:1;flex-direction:column;min-height:0;">
+            <div class="contact-thread-header">
+              <div class="who">
+                <div class="avatar" id="contactThreadAvatar" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">?</div>
+                <div class="who-info">
+                  <div class="who-name" id="contactThreadName">—</div>
+                  <div class="who-contact">
+                    <span id="contactThreadEmail">—</span>
+                    <span id="contactThreadPhone">—</span>
+                  </div>
+                </div>
+              </div>
+              <span class="contact-status-chip" id="contactThreadStatusChip">—</span>
+            </div>
+            <div class="contact-thread-body" id="contactThreadBody"></div>
+            <div class="contact-composer">
+              <div class="contact-composer-attachment" id="contactAttachmentPreview" style="display:none;">
+                <span id="contactAttachmentName">fichier.pdf</span>
+                <button type="button" id="contactAttachmentRemove">Retirer</button>
+              </div>
+              <div class="contact-composer-row">
+                <button type="button" class="contact-composer-btn attach" id="contactAttachBtn" title="Joindre un fichier">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <input type="file" id="contactFileInput" style="display:none;" accept="image/jpeg,image/png,video/mp4,audio/mpeg,audio/mp4,audio/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.zip,.txt,.csv" />
+                <textarea id="contactReplyInput" rows="1" placeholder="Écrire une réponse…"></textarea>
+                <button type="button" class="contact-composer-btn send" id="contactSendBtn" title="Envoyer">
+                  <span class="spinner" id="contactSendSpinner" style="border-color:rgba(255,255,255,0.4);border-top-color:#fff;"></span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" id="contactSendIcon"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/></svg>
+                </button>
+              </div>
+              <div class="contact-composer-hint">La réponse est envoyée depuis le numéro WhatsApp admin vers le numéro renseigné dans le formulaire.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end view-contact -->
+
   </main><!-- end main -->
 
-  <!-- â”€â”€ MODAL QR â”€â”€ -->
+  <!-- ── MODAL QR ── -->
   <div class="modal-overlay" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1797,12 +725,12 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>Pour connecter ce compte WhatsApp, rendez-vous sur le <a href="/" target="_blank">Panel WhatsApp</a>, puis scannez le QR code affichÃ© avec votre tÃ©lÃ©phone.</p>
+        <p>Pour connecter ce compte WhatsApp, rendez-vous sur le <a href="/" target="_blank">Panel WhatsApp</a>, puis scannez le QR code affiché avec votre téléphone.</p>
         <br/>
         <p style="color:#111b21;font-weight:500;">Comment faire :</p>
         <ol style="margin:0.5rem 0 0 1.2rem;line-height:1.8;">
-          <li>Ouvrez WhatsApp sur votre tÃ©lÃ©phone</li>
-          <li>Allez dans <strong>Appareils connectÃ©s</strong></li>
+          <li>Ouvrez WhatsApp sur votre téléphone</li>
+          <li>Allez dans <strong>Appareils connectés</strong></li>
           <li>Appuyez sur <strong>Connecter un appareil</strong></li>
           <li>Scannez le QR code sur le panel</li>
         </ol>
@@ -1813,7 +741,7 @@
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL NOUVEAU CODE DE PARRAINAGE â”€â”€ -->
+  <!-- ── MODAL NOUVEAU CODE DE PARRAINAGE ── -->
   <div class="modal-overlay" id="newCodeModal" role="dialog" aria-modal="true" aria-labelledby="newCodeModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1830,11 +758,11 @@
           <div class="form-group">
             <label for="codeInput">Code</label>
             <input type="text" id="codeInput" placeholder="ex: BIENVENUE10" minlength="4" maxlength="12" required />
-            <span class="field-hint">Entre 4 et 12 caractÃ¨res.</span>
+            <span class="field-hint">Entre 4 et 12 caractères.</span>
           </div>
 
           <div class="form-group">
-            <label>Est-ce un code Ã  usage indÃ©terminÃ© ?</label>
+            <label>Est-ce un code à usage indéterminé ?</label>
             <div class="radio-group">
               <label class="radio-option"><input type="radio" name="codeUnlimited" value="yes" checked /> Oui</label>
               <label class="radio-option"><input type="radio" name="codeUnlimited" value="no" /> Non</label>
@@ -1845,12 +773,12 @@
             <div class="form-group">
               <label>Utilisation</label>
               <div class="radio-group">
-                <label class="radio-option"><input type="radio" name="codeUsageType" value="duration" checked /> DurÃ©e</label>
-                <label class="radio-option"><input type="radio" name="codeUsageType" value="requests" /> Nombre de requÃªtes</label>
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="duration" checked /> Durée</label>
+                <label class="radio-option"><input type="radio" name="codeUsageType" value="requests" /> Nombre de requêtes</label>
               </div>
             </div>
             <div class="form-group">
-              <label for="codeUsageValue" id="codeUsageValueLabel">DurÃ©e (en jours)</label>
+              <label for="codeUsageValue" id="codeUsageValueLabel">Durée (en jours)</label>
               <input type="number" id="codeUsageValue" min="1" step="1" placeholder="ex: 30" />
             </div>
           </div>
@@ -1858,14 +786,14 @@
         <div class="modal-footer">
           <button type="submit" class="btn-primary" id="saveCodeBtn">
             <div class="spinner" id="spinnerCode"></div>
-            CrÃ©er le code
+            Créer le code
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL NOUVEAU PLAN D'ABONNEMENT â”€â”€ -->
+  <!-- ── MODAL NOUVEAU PLAN D'ABONNEMENT ── -->
   <div class="modal-overlay" id="newPlanModal" role="dialog" aria-modal="true" aria-labelledby="newPlanModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1881,7 +809,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="planNameInput">Nom du plan</label>
-            <input type="text" id="planNameInput" placeholder="ex: Gratuit, Professionnelâ€¦" maxlength="100" required />
+            <input type="text" id="planNameInput" placeholder="ex: Gratuit, Professionnel…" maxlength="100" required />
           </div>
 
           <div class="form-group">
@@ -1891,7 +819,7 @@
           </div>
 
           <div class="form-group">
-            <label>Est-ce un plan Ã  usage indÃ©terminÃ© ?</label>
+            <label>Est-ce un plan à usage indéterminé ?</label>
             <div class="radio-group">
               <label class="radio-option"><input type="radio" name="planUnlimited" value="yes" checked /> Oui</label>
               <label class="radio-option"><input type="radio" name="planUnlimited" value="no" /> Non</label>
@@ -1902,12 +830,12 @@
             <div class="form-group">
               <label>Utilisation</label>
               <div class="radio-group">
-                <label class="radio-option"><input type="radio" name="planUsageType" value="duration" checked /> DurÃ©e</label>
-                <label class="radio-option"><input type="radio" name="planUsageType" value="requests" /> Nombre de requÃªtes</label>
+                <label class="radio-option"><input type="radio" name="planUsageType" value="duration" checked /> Durée</label>
+                <label class="radio-option"><input type="radio" name="planUsageType" value="requests" /> Nombre de requêtes</label>
               </div>
             </div>
             <div class="form-group">
-              <label for="planUsageValue" id="planUsageValueLabel">DurÃ©e (en jours)</label>
+              <label for="planUsageValue" id="planUsageValueLabel">Durée (en jours)</label>
               <input type="number" id="planUsageValue" min="1" step="1" placeholder="ex: 30" />
             </div>
           </div>
@@ -1915,18 +843,18 @@
         <div class="modal-footer">
           <button type="submit" class="btn-primary" id="savePlanBtn">
             <div class="spinner" id="spinnerPlan"></div>
-            CrÃ©er le plan
+            Créer le plan
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL LIGNE (crÃ©er / Ã©diter une ligne â€” mode Table) â”€â”€ -->
+  <!-- ── MODAL LIGNE (créer / éditer une ligne — mode Table) ── -->
   <div class="modal-overlay" id="dbRowModal" role="dialog" aria-modal="true" aria-labelledby="dbRowModalTitle">
     <div class="modal-box" style="max-width:560px;">
       <div class="modal-header">
-        <span class="modal-title" id="dbRowModalTitle">Ã‰diter la ligne</span>
+        <span class="modal-title" id="dbRowModalTitle">Éditer la ligne</span>
         <button class="modal-close" id="dbRowModalCloseBtn" aria-label="Fermer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
@@ -1943,7 +871,7 @@
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL CHAMP (Ã©dition rapide d'une case â€” mode Profils) â”€â”€ -->
+  <!-- ── MODAL CHAMP (édition rapide d'une case — mode Profils) ── -->
   <div class="modal-overlay" id="fieldEditModal" role="dialog" aria-modal="true" aria-labelledby="fieldEditModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1964,7 +892,7 @@
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL CONFIRMATION SUPPRESSION PROFIL â”€â”€ -->
+  <!-- ── MODAL CONFIRMATION SUPPRESSION PROFIL ── -->
   <div class="modal-overlay" id="deleteProfileModal" role="dialog" aria-modal="true" aria-labelledby="deleteProfileModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1974,9 +902,9 @@
         </button>
       </div>
       <div class="modal-body">
-        <p style="color:#dc3545;font-weight:600;">Cette action est irrÃ©versible.</p>
+        <p style="color:#dc3545;font-weight:600;">Cette action est irréversible.</p>
         <br/>
-        <p>Toutes les donnÃ©es de ce profil seront supprimÃ©es dÃ©finitivement : compte, comptes WhatsApp, sessions, groupes, messages et paiements associÃ©s.</p>
+        <p>Toutes les données de ce profil seront supprimées définitivement : compte, comptes WhatsApp, sessions, groupes, messages et paiements associés.</p>
         <br/>
         <div class="form-group">
           <label for="deleteProfileConfirmInput">Tapez <strong>SUPPRIMER</strong> pour confirmer</label>
@@ -1986,13 +914,13 @@
       <div class="modal-footer">
         <button type="button" class="btn-danger" id="deleteProfileConfirmBtn" disabled>
           <div class="spinner" id="deleteProfileSpinner"></div>
-          Supprimer dÃ©finitivement
+          Supprimer définitivement
         </button>
       </div>
     </div>
   </div>
 
-  <!-- â”€â”€ MODAL SUSPENSION TENANT â”€â”€ -->
+  <!-- ── MODAL SUSPENSION TENANT ── -->
   <div class="modal-overlay" id="suspendModal">
     <div class="modal-box">
       <div class="modal-header" style="border-bottom:2px solid #fee2e2;">
@@ -2008,7 +936,7 @@
       </div>
       <div class="modal-body">
         <p style="margin-bottom:1rem;color:#374151;">
-          La session WhatsApp sera fermÃ©e et le tenant recevra un message de notification sur son numÃ©ro WhatsApp.
+          La session WhatsApp sera fermée et le tenant recevra un message de notification sur son numéro WhatsApp.
         </p>
         <div class="form-group">
           <label for="suspendReason" style="font-size:0.875rem;font-weight:600;color:#111b21;">
@@ -2017,7 +945,7 @@
           <textarea
             id="suspendReason"
             rows="4"
-            placeholder="Ex: Violation des conditions d'utilisation â€” envoi de spam dÃ©tectÃ©..."
+            placeholder="Ex: Violation des conditions d'utilisation — envoi de spam détecté..."
             style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e4e6ea;border-radius:12px;font-size:0.9375rem;font-family:'Inter',sans-serif;resize:vertical;outline:none;margin-top:0.5rem;"
             onfocus="this.style.borderColor='#dc3545'"
             onblur="this.style.borderColor='#e4e6ea'"
@@ -2041,10 +969,82 @@
     </div>
   </div>
 
-  <!-- â”€â”€ TOAST CONTAINER â”€â”€ -->
+  <!-- ── MODAL GESTION DU GROUPE ADMIN "MESSAGES DEPUIS CONTACT" ── -->
+  <div class="modal-overlay" id="contactGroupModal" role="dialog" aria-modal="true" aria-labelledby="contactGroupModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="contactGroupModalTitle">Groupe WhatsApp admin</span>
+        <button class="modal-close" id="contactGroupModalClose" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+
+        <!-- État : groupe non configuré -->
+        <div id="contactGroupCreateForm">
+          <p style="margin-bottom:1rem;color:#374151;font-size:0.875rem;">
+            Aucun groupe n'est encore configuré. Créez-le ici : votre numéro admin en sera automatiquement membre,
+            et toutes les nouvelles demandes de contact y seront transmises.
+          </p>
+          <div class="form-group">
+            <label for="contactGroupNameInput">Nom du groupe</label>
+            <input type="text" id="contactGroupNameInput" placeholder="Ex: Contact — Convessa" />
+          </div>
+          <div class="form-group">
+            <label>Membres à ajouter</label>
+            <div id="contactGroupPhoneList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.5rem;"></div>
+            <button type="button" id="contactGroupAddPhoneBtn" class="btn-ghost" style="width:100%;justify-content:center;font-size:0.8125rem;">
+              + Ajouter un numéro
+            </button>
+            <span class="field-hint" style="margin-top:0.35rem;">Votre numéro admin est ajouté automatiquement. Indicatif +229 par défaut.</span>
+          </div>
+          <div id="contactGroupCreateError" style="display:none;padding:0.75rem 1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:0.875rem;margin-top:0.5rem;"></div>
+        </div>
+
+        <!-- État : groupe déjà configuré -->
+        <div id="contactGroupManage" style="display:none;">
+          <div class="form-group">
+            <label for="contactGroupRenameInput">Nom du groupe</label>
+            <div style="display:flex;gap:0.5rem;">
+              <input type="text" id="contactGroupRenameInput" style="flex:1;" />
+              <button type="button" class="btn-ghost" id="contactGroupRenameBtn">Renommer</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Participants (<span id="contactGroupParticipantsCount">0</span>)</label>
+            <div id="contactGroupParticipantsList" style="max-height:180px;overflow-y:auto;border:1px solid #eef0f2;border-radius:10px;"></div>
+          </div>
+          <div class="form-group">
+            <label>Ajouter des membres</label>
+            <div id="contactGroupAddPhoneList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.5rem;"></div>
+            <button type="button" id="contactGroupAddMorePhoneBtn" class="btn-ghost" style="width:100%;justify-content:center;font-size:0.8125rem;">
+              + Ajouter un numéro
+            </button>
+          </div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.25rem;">
+            <button type="button" class="btn-primary" id="contactGroupAddBtn" style="flex:1;">Ajouter au groupe</button>
+            <button type="button" class="btn-ghost" id="contactGroupInviteBtn">Lien d'invitation</button>
+          </div>
+          <div id="contactGroupManageError" style="display:none;padding:0.75rem 1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:0.875rem;margin-top:0.5rem;"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="contactGroupSubmitBtn">
+          <div class="spinner" id="contactGroupSpinner"></div>
+          <span id="contactGroupSubmitLabel">Créer le groupe</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST CONTAINER ── -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- â”€â”€ FOOTER â”€â”€ -->
+  <!-- ── FOOTER ── -->
   <footer>
     <div class="footer-left">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -2055,1588 +1055,13 @@
     <div class="footer-right">Backoffice v1.0 &bull; &copy; 2026 Convessa</div>
   </footer>
 
-  <script>
-    // â”€â”€ AUTH CHECK â”€â”€
-    const token = sessionStorage.getItem('admin_token');
-    if (!token) window.location.replace('/admin/login');
-
-    async function apiFetch(path, opts = {}) {
-      const res = await fetch(path, {
-        ...opts,
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json',
-          ...(opts.headers || {})
-        },
-        credentials: 'same-origin'
-      });
-      if (res.status === 401) {
-        sessionStorage.removeItem('admin_token');
-        window.location.replace('/admin/login');
-        throw new Error('Unauthorized');
-      }
-      return res;
-    }
-
-    // â”€â”€ HELPERS â”€â”€
-    function esc(str) {
-      if (str == null) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function initials(name) {
-      if (!name) return 'A';
-      return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return 'â€”';
-      try {
-        const d = new Date(dateStr);
-        return d.toLocaleString('fr-FR', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        });
-      } catch (_) { return 'â€”'; }
-    }
-
-    function maskPhone(phone) {
-      if (!phone) return 'â€”';
-      const s = String(phone).replace(/\D/g, '');
-      if (s.length <= 7) return s;
-      return s.slice(0, 4) + '****' + s.slice(-3);
-    }
-
-    // â”€â”€ TOAST SYSTEM â”€â”€
-    function showToast(msg, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast ' + type;
-
-      const icons = {
-        success: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#25D366" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        error:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="#dc3545" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="#dc3545" stroke-width="2" stroke-linecap="round"/></svg>',
-        info:    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#3b82f6" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#3b82f6"/></svg>'
-      };
-
-      toast.innerHTML = (icons[type] || icons.info) + '<span class="toast-msg">' + esc(msg) + '</span>';
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-      }, 4000);
-    }
-
-    // â”€â”€ LOAD PROFILE â”€â”€
-    async function loadProfile() {
-      try {
-        const res = await apiFetch('/api/admin/me');
-        const data = await res.json();
-        if (data.success && data.admin) {
-          const a = data.admin;
-          const name = esc(a.displayName || a.email || 'Admin');
-          const ini = initials(a.displayName || a.email);
-          // Header
-          document.getElementById('adminAvatar').textContent = ini;
-          document.getElementById('adminName').textContent = a.displayName || a.email || 'Admin';
-          // Profile card
-          document.getElementById('profileAvatar').textContent = ini;
-          document.getElementById('profileName').textContent = a.displayName || 'â€”';
-          document.getElementById('profileEmail').textContent = a.email || 'â€”';
-          document.getElementById('profileLastLogin').textContent =
-            a.lastLoginAt ? 'DerniÃ¨re connexion : ' + formatDate(a.lastLoginAt) : 'Jamais connectÃ©';
-          // Pre-fill form
-          document.getElementById('editName').value = a.displayName || '';
-          document.getElementById('editEmail').value = a.email || '';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') console.error('loadProfile error', e);
-      }
-    }
-
-    // â”€â”€ LOAD STATS â”€â”€
-    async function loadStats() {
-      try {
-        const res = await apiFetch('/api/admin/stats');
-        const data = await res.json();
-        if (data.success && data.stats) {
-          const s = data.stats;
-          document.getElementById('statTotal').textContent = s.tenants?.total ?? '0';
-          document.getElementById('statConnected').textContent = s.tenants?.connected ?? '0';
-          document.getElementById('statUsers').textContent = s.users?.total ?? '0';
-          document.getElementById('statMessages').textContent = s.messages?.today ?? '0';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          ['statTotal','statConnected','statUsers','statMessages'].forEach(id => {
-            document.getElementById(id).textContent = 'â€”';
-          });
-        }
-      }
-    }
-
-    // â”€â”€ STATUS BADGE HTML â”€â”€
-    function statusBadge(status, suspended) {
-      if (suspended) {
-        return '<span class="badge" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;"><span class="badge-dot" style="background:#dc3545;"></span>Suspendu</span>';
-      }
-      const map = {
-        connected: { cls: 'badge-connected', label: 'ConnectÃ©' },
-        pending_qr: { cls: 'badge-pending', label: 'En attente QR' },
-        disconnected: { cls: 'badge-disconnected', label: 'DÃ©connectÃ©' }
-      };
-      const s = map[status] || { cls: 'badge-disconnected', label: esc(status || 'Inconnu') };
-      return '<span class="badge ' + s.cls + '"><span class="badge-dot"></span>' + s.label + '</span>';
-    }
-
-    // â”€â”€ LOAD TENANTS â”€â”€
-    async function loadTenants() {
-      const tbody = document.getElementById('tenantsBody');
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#e4e6ea" stroke-width="2"/></svg>Chargementâ€¦</div></td></tr>';
-      try {
-        const res = await apiFetch('/api/admin/tenants');
-        const data = await res.json();
-        if (data.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
-          tbody.innerHTML = data.tenants.map(t => {
-            const qrBtn = t.status === 'pending_qr'
-              ? '<button class="btn-sm" data-id="' + esc(t.tenantId || t.id) + '" onclick="openQrModal(this)">Voir QR</button>'
-              : '';
-
-            const isSuspended = t.suspended || t.suspended === 1;
-            const suspendBtn = isSuspended
-              ? '<button class="btn-sm" style="border-color:#25D366;color:#128C7E;" onclick="unsuspendTenant(\'' + esc(t.tenantId || t.id) + '\')">RÃ©activer</button>'
-              : '<button class="btn-sm" style="border-color:#dc3545;color:#dc3545;" onclick="openSuspendModal(\'' + esc(t.tenantId || t.id) + '\',\'' + esc(t.name || '') + '\')">Suspendre</button>';
-
-            return '<tr>' +
-              '<td class="td-phone">' + esc(maskPhone(t.phone)) + '</td>' +
-              '<td class="td-name">' + esc(t.name || 'â€”') + '</td>' +
-              '<td>' + statusBadge(t.status, isSuspended) + '</td>' +
-              '<td>' + esc(formatDate(t.connectedAt)) + '</td>' +
-              '<td>' + esc(formatDate(t.createdAt)) + '</td>' +
-              '<td>' + qrBtn + '</td>' +
-              '<td style="display:flex;gap:0.375rem;">' + suspendBtn + '</td>' +
-              '</tr>';
-          }).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">' +
-            '<svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#e4e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-            'Aucun compte WhatsApp trouvÃ©.</div></td></tr>';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
-        }
-      }
-    }
-
-    // â”€â”€ MODAL â”€â”€
-    function openQrModal(btn) {
-      document.getElementById('qrModal').classList.add('open');
-    }
-    function closeQrModal() {
-      document.getElementById('qrModal').classList.remove('open');
-    }
-    document.getElementById('modalCloseBtn').addEventListener('click', closeQrModal);
-    document.getElementById('modalCloseFooter').addEventListener('click', closeQrModal);
-    document.getElementById('qrModal').addEventListener('click', function(e) {
-      if (e.target === this) closeQrModal();
-    });
-
-    // â”€â”€ USAGE BADGE HTML (codes de parrainage / plans) â”€â”€
-    function usageBadge(item) {
-      if (item.unlimited) {
-        return '<span class="badge-usage unlimited">IllimitÃ©</span>';
-      }
-      if (item.usageType === 'duration') {
-        return '<span class="badge-usage">' + esc(item.usageValue) + ' jour(s)</span>';
-      }
-      if (item.usageType === 'requests') {
-        return '<span class="badge-usage">' + esc(item.usageValue) + ' requÃªte(s)</span>';
-      }
-      return '<span class="badge-usage">â€”</span>';
-    }
-
-    function formatPrice(price) {
-      return Number(price || 0).toLocaleString('fr-FR') + ' Frs CFA';
-    }
-
-    // â”€â”€ LOAD REFERRAL CODES â”€â”€
-    async function loadReferralCodes() {
-      const tbody = document.getElementById('referralCodesBody');
-      tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Chargementâ€¦</div></td></tr>';
-      try {
-        const res = await apiFetch('/api/admin/referral-codes');
-        const data = await res.json();
-        if (data.success && Array.isArray(data.codes) && data.codes.length > 0) {
-          tbody.innerHTML = data.codes.map(c =>
-            '<tr>' +
-            '<td class="td-name">' + esc(c.code) + '</td>' +
-            '<td>' + usageBadge(c) + '</td>' +
-            '<td>' + esc(formatDate(c.createdAt)) + '</td>' +
-            '</tr>'
-          ).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Aucun code de parrainage trouvÃ©.</div></td></tr>';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
-        }
-      }
-    }
-
-    // â”€â”€ LOAD PLANS â”€â”€
-    async function loadPlans() {
-      const tbody = document.getElementById('plansBody');
-      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Chargementâ€¦</div></td></tr>';
-      try {
-        const res = await apiFetch('/api/admin/plans');
-        const data = await res.json();
-        if (data.success && Array.isArray(data.plans) && data.plans.length > 0) {
-          tbody.innerHTML = data.plans.map(p =>
-            '<tr>' +
-            '<td class="td-name">' + esc(p.name) + '</td>' +
-            '<td>' + esc(formatPrice(p.price)) + '</td>' +
-            '<td>' + usageBadge(p) + '</td>' +
-            '<td>' + esc(formatDate(p.createdAt)) + '</td>' +
-            '</tr>'
-          ).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Aucun plan trouvÃ©.</div></td></tr>';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>';
-        }
-      }
-    }
-
-    // â”€â”€ LOAD USERS â”€â”€
-    let currentUsersPage = 1;
-    let currentUsersLimit = 20;
-    let allUsersData = null;
-
-    async function loadUsers(page = 1, limit = 20) {
-      currentUsersPage = page;
-      currentUsersLimit = limit;
-
-      const tbody = document.getElementById('usersTableBody');
-      const pagination = document.getElementById('usersPagination');
-      const prevBtn = document.getElementById('usersPrevBtn');
-      const nextBtn = document.getElementById('usersNextBtn');
-      const paginationInfo = document.getElementById('usersPaginationInfo');
-
-      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Chargement des utilisateurs...</div></td></tr>';
-      pagination.style.display = 'none';
-
-      try {
-        const res = await apiFetch(`/api/admin/users?page=${page}&limit=${limit}`);
-        const data = await res.json();
-
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          allUsersData = data;
-
-          // Calculer les stats
-          const total = data.meta.total;
-          const active = data.data.filter(u => u.active).length;
-          const inactive = total - active;
-          
-          // Calculer nouveaux ce mois (approximation - crÃ©Ã©s dans les 30 derniers jours)
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const newThisMonth = data.data.filter(u => new Date(u.created_at) > thirtyDaysAgo).length;
-
-          // Mettre Ã  jour les stats
-          document.getElementById('statUsersTotal').textContent = total;
-          document.getElementById('statUsersActive').textContent = active;
-          document.getElementById('statUsersInactive').textContent = inactive;
-          document.getElementById('statUsersNewMonth').textContent = newThisMonth;
-
-          // GÃ©nÃ©rer les lignes du tableau
-          tbody.innerHTML = data.data.map(user => {
-            const initial = (user.display_name || user.email || '?')[0].toUpperCase();
-            const displayName = user.display_name || 'Utilisateur';
-            const userId = user.firebase_uid ? user.firebase_uid.substring(0, 8) : user.id;
-            const email = user.email || 'â€”';
-            const phone = user.phone ? maskPhone(user.phone) : 'â€”';
-            const statusClass = user.active ? 'active' : 'inactive';
-            const statusLabel = user.active ? 'Actif' : 'Inactif';
-            const statusIcon = user.active 
-              ? '<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'
-              : '<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>';
-
-            const createdDate = formatDate(user.created_at);
-            const lastLogin = user.last_login ? formatDate(user.last_login) : '<span style="color:#9ca3af;">Jamais</span>';
-
-            return `
-              <tr>
-                <td>
-                  <div class="user-info-cell">
-                    <div class="user-avatar-table">${initial}</div>
-                    <div class="user-details">
-                      <div class="user-name">${esc(displayName)}</div>
-                      <div class="user-id">ID: ${esc(userId)}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="contact-info">
-                    <div class="contact-item">
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                      </svg>
-                      ${esc(email)}
-                    </div>
-                    <div class="contact-item">
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                      </svg>
-                      ${esc(phone)}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="user-badge ${statusClass}">
-                    ${statusIcon}
-                    ${statusLabel}
-                  </span>
-                </td>
-                <td>
-                  <div class="date-display">${createdDate}</div>
-                </td>
-                <td>
-                  <div class="date-display">${lastLogin}</div>
-                </td>
-              </tr>
-            `;
-          }).join('');
-
-          // GÃ©rer la pagination
-          const { page: currentPage, pages: totalPages } = data.meta;
-          paginationInfo.textContent = `Page ${currentPage} sur ${totalPages}`;
-          prevBtn.disabled = currentPage <= 1;
-          nextBtn.disabled = currentPage >= totalPages;
-          pagination.style.display = 'flex';
-
-        } else {
-          tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#e4e6ea" stroke-width="2"/><circle cx="9" cy="7" r="4" stroke="#e4e6ea" stroke-width="2"/></svg>Aucun utilisateur trouvÃ©.</div></td></tr>';
-          
-          // Stats Ã  0
-          document.getElementById('statUsersTotal').textContent = '0';
-          document.getElementById('statUsersActive').textContent = '0';
-          document.getElementById('statUsersInactive').textContent = '0';
-          document.getElementById('statUsersNewMonth').textContent = '0';
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement des utilisateurs.</div></td></tr>';
-        }
-      }
-    }
-
-    // Pagination buttons
-    document.getElementById('usersPrevBtn').addEventListener('click', () => {
-      if (currentUsersPage > 1) {
-        loadUsers(currentUsersPage - 1, currentUsersLimit);
-      }
-    });
-
-    document.getElementById('usersNextBtn').addEventListener('click', () => {
-      if (allUsersData && currentUsersPage < allUsersData.meta.pages) {
-        loadUsers(currentUsersPage + 1, currentUsersLimit);
-      }
-    });
-
-    // Recherche et filtres
-    let searchTimeout;
-    document.getElementById('userSearchInput').addEventListener('input', function(e) {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        filterUsersTable(e.target.value, document.getElementById('userFilterStatus').value);
-      }, 300);
-    });
-
-    document.getElementById('userFilterStatus').addEventListener('change', function(e) {
-      filterUsersTable(document.getElementById('userSearchInput').value, e.target.value);
-    });
-
-    function filterUsersTable(searchTerm, statusFilter) {
-      if (!allUsersData || !allUsersData.data) return;
-
-      const tbody = document.getElementById('usersTableBody');
-      const searchLower = searchTerm.toLowerCase().trim();
-
-      const filteredUsers = allUsersData.data.filter(user => {
-        // Filtre de recherche
-        const matchSearch = !searchLower || 
-          (user.email && user.email.toLowerCase().includes(searchLower)) ||
-          (user.phone && user.phone.includes(searchLower)) ||
-          (user.display_name && user.display_name.toLowerCase().includes(searchLower));
-
-        // Filtre de statut
-        const matchStatus = statusFilter === 'all' ||
-          (statusFilter === 'active' && user.active) ||
-          (statusFilter === 'inactive' && !user.active);
-
-        return matchSearch && matchStatus;
-      });
-
-      if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Aucun utilisateur ne correspond aux critÃ¨res.</div></td></tr>';
-        return;
-      }
-
-      // RÃ©gÃ©nÃ©rer le tableau avec les rÃ©sultats filtrÃ©s
-      tbody.innerHTML = filteredUsers.map(user => {
-        const initial = (user.display_name || user.email || '?')[0].toUpperCase();
-        const displayName = user.display_name || 'Utilisateur';
-        const userId = user.firebase_uid ? user.firebase_uid.substring(0, 8) : user.id;
-        const email = user.email || 'â€”';
-        const phone = user.phone ? maskPhone(user.phone) : 'â€”';
-        const statusClass = user.active ? 'active' : 'inactive';
-        const statusLabel = user.active ? 'Actif' : 'Inactif';
-        const statusIcon = user.active 
-          ? '<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'
-          : '<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>';
-
-        const createdDate = formatDate(user.created_at);
-        const lastLogin = user.last_login ? formatDate(user.last_login) : '<span style="color:#9ca3af;">Jamais</span>';
-
-        return `
-          <tr>
-            <td>
-              <div class="user-info-cell">
-                <div class="user-avatar-table">${initial}</div>
-                <div class="user-details">
-                  <div class="user-name">${esc(displayName)}</div>
-                  <div class="user-id">ID: ${esc(userId)}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="contact-info">
-                <div class="contact-item">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                  </svg>
-                  ${esc(email)}
-                </div>
-                <div class="contact-item">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                  </svg>
-                  ${esc(phone)}
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="user-badge ${statusClass}">
-                ${statusIcon}
-                ${statusLabel}
-              </span>
-            </td>
-            <td>
-              <div class="date-display">${createdDate}</div>
-            </td>
-            <td>
-              <div class="date-display">${lastLogin}</div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // â”€â”€ MODAL: NOUVEAU CODE DE PARRAINAGE â”€â”€
-    const newCodeModal      = document.getElementById('newCodeModal');
-    const newCodeForm       = document.getElementById('newCodeForm');
-    const codeUsageFields   = document.getElementById('codeUsageFields');
-    const codeUsageValue    = document.getElementById('codeUsageValue');
-    const codeUsageValueLbl = document.getElementById('codeUsageValueLabel');
-
-    function openNewCodeModal() {
-      newCodeForm.reset();
-      codeUsageFields.classList.remove('visible');
-      codeUsageValueLbl.textContent = 'DurÃ©e (en jours)';
-      newCodeModal.classList.add('open');
-    }
-    function closeNewCodeModal() { newCodeModal.classList.remove('open'); }
-
-    document.getElementById('newCodeBtn').addEventListener('click', openNewCodeModal);
-    document.getElementById('newCodeCloseBtn').addEventListener('click', closeNewCodeModal);
-    newCodeModal.addEventListener('click', (e) => { if (e.target === newCodeModal) closeNewCodeModal(); });
-
-    document.getElementsByName('codeUnlimited').forEach(radio => {
-      radio.addEventListener('change', function() {
-        codeUsageFields.classList.toggle('visible', this.value === 'no');
-      });
-    });
-    document.getElementsByName('codeUsageType').forEach(radio => {
-      radio.addEventListener('change', function() {
-        codeUsageValueLbl.textContent = this.value === 'duration' ? 'DurÃ©e (en jours)' : 'Nombre de requÃªtes';
-      });
-    });
-
-    newCodeForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const code      = document.getElementById('codeInput').value.trim();
-      const unlimited = document.querySelector('input[name="codeUnlimited"]:checked').value === 'yes';
-
-      if (code.length < 4 || code.length > 12) {
-        showToast('Le code doit contenir entre 4 et 12 caractÃ¨res.', 'error');
-        return;
-      }
-
-      const payload = { code, unlimited };
-      if (!unlimited) {
-        const usageType = document.querySelector('input[name="codeUsageType"]:checked').value;
-        const value = parseInt(codeUsageValue.value, 10);
-        if (!Number.isInteger(value) || value < 1) {
-          showToast('Veuillez prÃ©ciser une valeur valide (nombre entier positif).', 'error');
-          return;
-        }
-        payload.usageType  = usageType;
-        payload.usageValue = value;
-      }
-
-      const btn = document.getElementById('saveCodeBtn');
-      const sp  = document.getElementById('spinnerCode');
-      btn.disabled = true;
-      sp.classList.add('active');
-      try {
-        const res  = await apiFetch('/api/admin/referral-codes', { method: 'POST', body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast('Code de parrainage crÃ©Ã© avec succÃ¨s.', 'success');
-          closeNewCodeModal();
-          await loadReferralCodes();
-        } else {
-          showToast(data.error?.message || 'Erreur lors de la crÃ©ation du code.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false;
-        sp.classList.remove('active');
-      }
-    });
-
-    // â”€â”€ MODAL: NOUVEAU PLAN D'ABONNEMENT â”€â”€
-    const newPlanModal      = document.getElementById('newPlanModal');
-    const newPlanForm       = document.getElementById('newPlanForm');
-    const planUsageFields   = document.getElementById('planUsageFields');
-    const planUsageValue    = document.getElementById('planUsageValue');
-    const planUsageValueLbl = document.getElementById('planUsageValueLabel');
-
-    function openNewPlanModal() {
-      newPlanForm.reset();
-      planUsageFields.classList.remove('visible');
-      planUsageValueLbl.textContent = 'DurÃ©e (en jours)';
-      newPlanModal.classList.add('open');
-    }
-    function closeNewPlanModal() { newPlanModal.classList.remove('open'); }
-
-    document.getElementById('newPlanBtn').addEventListener('click', openNewPlanModal);
-    document.getElementById('newPlanCloseBtn').addEventListener('click', closeNewPlanModal);
-    newPlanModal.addEventListener('click', (e) => { if (e.target === newPlanModal) closeNewPlanModal(); });
-
-    document.getElementsByName('planUnlimited').forEach(radio => {
-      radio.addEventListener('change', function() {
-        planUsageFields.classList.toggle('visible', this.value === 'no');
-      });
-    });
-    document.getElementsByName('planUsageType').forEach(radio => {
-      radio.addEventListener('change', function() {
-        planUsageValueLbl.textContent = this.value === 'duration' ? 'DurÃ©e (en jours)' : 'Nombre de requÃªtes';
-      });
-    });
-
-    newPlanForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const name      = document.getElementById('planNameInput').value.trim();
-      const price     = parseInt(document.getElementById('planPriceInput').value, 10);
-      const unlimited = document.querySelector('input[name="planUnlimited"]:checked').value === 'yes';
-
-      if (!name) {
-        showToast('Le nom du plan est requis.', 'error');
-        return;
-      }
-      if (!Number.isInteger(price) || price < 0 || price > 1000000) {
-        showToast('Le prix doit Ãªtre compris entre 0 et 1 000 000 Frs CFA.', 'error');
-        return;
-      }
-
-      const payload = { name, price, unlimited };
-      if (!unlimited) {
-        const usageType = document.querySelector('input[name="planUsageType"]:checked').value;
-        const value = parseInt(planUsageValue.value, 10);
-        if (!Number.isInteger(value) || value < 1) {
-          showToast('Veuillez prÃ©ciser une valeur valide (nombre entier positif).', 'error');
-          return;
-        }
-        payload.usageType  = usageType;
-        payload.usageValue = value;
-      }
-
-      const btn = document.getElementById('savePlanBtn');
-      const sp  = document.getElementById('spinnerPlan');
-      btn.disabled = true;
-      sp.classList.add('active');
-      try {
-        const res  = await apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast('Plan crÃ©Ã© avec succÃ¨s.', 'success');
-          closeNewPlanModal();
-          await loadPlans();
-        } else {
-          showToast(data.error?.message || 'Erreur lors de la crÃ©ation du plan.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false;
-        sp.classList.remove('active');
-      }
-    });
-
-    // â”€â”€ TAB SWITCHING â”€â”€
-    // PersistÃ© en localStorage pour survivre Ã  un rechargement de page (F5) :
-    // sans Ã§a, un refresh renvoyait toujours vers l'onglet "dashboard" par dÃ©faut.
-    const ACTIVE_TAB_KEY = 'admin_active_tab';
-    const views = {
-      dashboard: document.getElementById('view-dashboard'),
-      users:     document.getElementById('view-users'),
-      account:   document.getElementById('view-account'),
-      referrals: document.getElementById('view-referrals'),
-      plans:     document.getElementById('view-plans'),
-      database:  document.getElementById('view-database'),
-      panel:     document.getElementById('view-panel')
-    };
-    const mainContent = document.getElementById('mainContent');
-
-    function activateTab(target, { persist = true } = {}) {
-      if (!views[target]) target = 'dashboard';
-
-      document.querySelectorAll('.nav-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === target);
-      });
-
-      // Toggle main padding class for panel view
-      mainContent.classList.toggle('panel-view', target === 'panel');
-
-      Object.keys(views).forEach(key => views[key].classList.remove('active'));
-      views[target].classList.add('active');
-
-      if (persist) sessionStorage.setItem(ACTIVE_TAB_KEY, target);
-
-      // Lazy-load Panel WhatsApp â€” on charge l'iframe uniquement au premier clic
-      // pour Ã©viter qu'elle soit vide. Le panel est servi par Express sur le mÃªme
-      // domaine/port que l'admin, donc window.location.origin fonctionne.
-      if (target === 'panel') {
-        const iframe = document.getElementById('panelIframe');
-        if (iframe && !iframe.getAttribute('src')) {
-          iframe.src = window.location.origin + '/whatsapp-panel';
-        }
-      }
-
-      if (target === 'account')   loadProfile();
-      if (target === 'users')     loadUsers();
-      if (target === 'referrals') loadReferralCodes();
-      if (target === 'plans')     loadPlans();
-      if (target === 'database')  { if (typeof initDatabaseTab === 'function') initDatabaseTab(); else window.addEventListener('dbTabReady', initDatabaseTab, { once: true }); }
-    }
-
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', function() { activateTab(this.dataset.tab); });
-    });
-
-    // â”€â”€ OPEN PANEL BTN â”€â”€
-    document.getElementById('openPanelBtn').addEventListener('click', function() { activateTab('panel'); });
-    // â”€â”€ REFRESH BTN â”€â”€
-    document.getElementById('refreshBtn').addEventListener('click', function() {
-      this.disabled = true;
-      Promise.all([loadStats(), loadTenants()]).finally(() => {
-        this.disabled = false;
-      });
-    });
-
-    // â”€â”€ PROFILE FORM â”€â”€
-    document.getElementById('profileForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('saveProfileBtn');
-      const sp  = document.getElementById('spinnerProfile');
-      btn.disabled = true;
-      sp.classList.add('active');
-      try {
-        const res = await apiFetch('/api/admin/me', {
-          method: 'PUT',
-          body: JSON.stringify({
-            displayName: document.getElementById('editName').value.trim(),
-            email: document.getElementById('editEmail').value.trim()
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast('Profil mis Ã  jour avec succÃ¨s.', 'success');
-          await loadProfile();
-        } else {
-          showToast(data.message || 'Erreur lors de la mise Ã  jour.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false;
-        sp.classList.remove('active');
-      }
-    });
-
-    // â”€â”€ PASSWORD FORM â”€â”€
-    document.getElementById('passwordForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const currentPwd = document.getElementById('currentPwd').value;
-      const newPwd     = document.getElementById('newPwd').value;
-      const confirmPwd = document.getElementById('confirmPwd').value;
-
-      if (!currentPwd || !newPwd || !confirmPwd) {
-        showToast('Veuillez remplir tous les champs.', 'error'); return;
-      }
-      if (newPwd.length < 8) {
-        showToast('Le nouveau mot de passe doit contenir au moins 8 caractÃ¨res.', 'error'); return;
-      }
-      if (newPwd !== confirmPwd) {
-        showToast('Les mots de passe ne correspondent pas.', 'error'); return;
-      }
-
-      const btn = document.getElementById('savePwdBtn');
-      const sp  = document.getElementById('spinnerPwd');
-      btn.disabled = true;
-      sp.classList.add('active');
-      try {
-        const res = await apiFetch('/api/admin/me/password', {
-          method: 'PUT',
-          body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast('Mot de passe mis Ã  jour avec succÃ¨s.', 'success');
-          document.getElementById('passwordForm').reset();
-        } else {
-          showToast(data.message || 'Erreur lors de la mise Ã  jour.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false;
-        sp.classList.remove('active');
-      }
-    });
-
-    // â”€â”€ PROFILE LINK (clic sur l'avatar/nom admin) â”€â”€
-    document.getElementById('profileLink').addEventListener('click', function() {
-      activateTab('account');
-    });
-
-    // â”€â”€ LOGOUT â”€â”€
-    document.getElementById('logoutBtn').addEventListener('click', async function() {
-      this.disabled = true;
-      try {
-        await apiFetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
-      } finally {
-        sessionStorage.removeItem('admin_token');
-        window.location.replace('/admin/login');
-      }
-    });
-
-    // â”€â”€ HAMBURGER DRAWER MOBILE â”€â”€
-    const hamburgerBtn   = document.getElementById('hamburgerBtn');
-    const mobileDrawer   = document.getElementById('mobileDrawer');
-    const mobileOverlay  = document.getElementById('mobileOverlay');
-    const mobileClose    = document.getElementById('mobileDrawerClose');
-    const mobileLogout   = document.getElementById('mobileLogoutBtn');
-
-    function openDrawer()  { mobileDrawer.classList.add('open'); document.body.style.overflow = 'hidden'; }
-    function closeDrawer() { mobileDrawer.classList.remove('open'); document.body.style.overflow = ''; }
-
-    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openDrawer);
-    if (mobileClose)  mobileClose.addEventListener('click', closeDrawer);
-    if (mobileOverlay) mobileOverlay.addEventListener('click', closeDrawer);
-
-    // Onglets mobiles â†’ mÃªme action que les onglets desktop + fermeture du drawer
-    document.querySelectorAll('.mobile-nav-tab').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const tab = this.dataset.tab;
-        activateTab(tab);
-        // Mettre Ã  jour l'Ã©tat actif dans le drawer
-        document.querySelectorAll('.mobile-nav-tab').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        closeDrawer();
-      });
-    });
-
-    // Synchroniser l'Ã©tat actif du drawer quand un onglet desktop est cliquÃ©
-    document.querySelectorAll('.nav-tab').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const tab = this.dataset.tab;
-        document.querySelectorAll('.mobile-nav-tab').forEach(b => {
-          b.classList.toggle('active', b.dataset.tab === tab);
-        });
-      });
-    });
-
-    // Logout depuis le drawer
-    if (mobileLogout) {
-      mobileLogout.addEventListener('click', async function() {
-        this.disabled = true;
-        try { await apiFetch('/api/admin/logout', { method: 'POST' }).catch(() => {}); }
-        finally { sessionStorage.removeItem('admin_token'); window.location.replace('/admin/login'); }
-      });
-    }
-
-    // â”€â”€ INIT â”€â”€
-    (async function init() {
-      // Restaurer l'onglet IMMÃ‰DIATEMENT â€” avant tout chargement async â€”
-      // pour Ã©viter le flash du dashboard par dÃ©faut lors d'un F5.
-      const savedTab = sessionStorage.getItem(ACTIVE_TAB_KEY) || 'dashboard';
-      activateTab(savedTab, { persist: false });
-      // Synchroniser l'Ã©tat actif dans le drawer mobile
-      document.querySelectorAll('.mobile-nav-tab').forEach(b => {
-        b.classList.toggle('active', b.dataset.tab === savedTab);
-      });
-
-      await loadProfile();
-      await Promise.all([loadStats(), loadTenants()]);
-    })();
-  </script>
-
-  <script>
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // ONGLET "BASE DE DONNÃ‰ES" â€” DB Browser gÃ©nÃ©rique + Gestion de profils
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  (function () {
-    const state = {
-      initialized: false,
-      tablesMeta:  [],              // mÃ©tadonnÃ©es de toutes les tables (SCHEMA whitelistÃ© cÃ´tÃ© serveur)
-      currentTable: null,
-      rowsPage:  1,
-      rowsLimit: 25,
-      rowsSearch: '',
-
-      profilesPage: 1,
-      profilesLimit: 20,
-      profilesSearch: '',
-      currentUid: null,
-    };
-
-    function tableMetaByName(name) {
-      return state.tablesMeta.find(t => t.name === name) || null;
-    }
-
-    function inputTypeFor(col) {
-      if (col.type === 'boolean') return 'checkbox';
-      if (col.type === 'number')  return 'number';
-      // 'date' reste en texte libre (format ISO 8601) : les <input type="datetime-local">
-      // n'acceptent pas le format complet renvoyÃ© par Postgres (millisecondes + "Z").
-      return 'text';
-    }
-
-    function formatCellValue(col, value) {
-      if (value === null || value === undefined) return '<span style="color:#c0c6cc;">NULL</span>';
-      if (col.sensitive) return esc(value);
-      if (col.type === 'boolean') return value ? 'Oui' : 'Non';
-      if (col.type === 'date') return esc(formatDate(value));
-      if (col.type === 'json') return '<code style="font-size:0.78rem;">' + esc(JSON.stringify(value)) + '</code>';
-      const str = String(value);
-      return esc(str.length > 80 ? str.slice(0, 80) + 'â€¦' : str);
-    }
-
-    // â”€â”€ INITIALISATION (appelÃ©e Ã  la premiÃ¨re ouverture de l'onglet) â”€â”€
-    async function initDatabaseTab() {
-      if (state.initialized) return;
-      state.initialized = true;
-      try {
-        const res = await apiFetch('/api/admin/db/tables');
-        const data = await res.json();
-        if (data.success) {
-          state.tablesMeta = data.tables;
-          const select = document.getElementById('dbTableSelect');
-          select.innerHTML = state.tablesMeta.map(t => `<option value="${esc(t.name)}">${esc(t.label)}</option>`).join('');
-          state.currentTable = state.tablesMeta[0]?.name || null;
-          if (state.currentTable) loadDbRows(1);
-        }
-      } catch (e) {
-        if (e.message !== 'Unauthorized') showToast('Erreur lors du chargement des tables.', 'error');
-      }
-      loadProfilesList(1);
-    }
-    window.initDatabaseTab = initDatabaseTab;
-    // Signale au premier script que initDatabaseTab est maintenant disponible
-    // (utile si l'onglet "database" Ã©tait actif au moment du rechargement)
-    window.dispatchEvent(new Event('dbTabReady'));
-
-    // â”€â”€ SWITCH MODE TABLE / PROFILS â”€â”€
-    document.getElementById('dbModeTablesBtn').addEventListener('click', () => switchDbMode('tables'));
-    document.getElementById('dbModeProfilesBtn').addEventListener('click', () => switchDbMode('profiles'));
-    function switchDbMode(mode) {
-      document.getElementById('dbModeTablesBtn').classList.toggle('active', mode === 'tables');
-      document.getElementById('dbModeProfilesBtn').classList.toggle('active', mode === 'profiles');
-      document.getElementById('dbSubTables').classList.toggle('active', mode === 'tables');
-      document.getElementById('dbSubProfiles').classList.toggle('active', mode === 'profiles');
-    }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODE TABLE (faÃ§on phpMyAdmin) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-    document.getElementById('dbTableSelect').addEventListener('change', function () {
-      state.currentTable = this.value;
-      loadDbRows(1);
-    });
-    document.getElementById('dbRefreshRowsBtn').addEventListener('click', () => loadDbRows(state.rowsPage));
-    document.getElementById('dbSearchInput').addEventListener('input', debounce(function () {
-      state.rowsSearch = this.value.trim();
-      loadDbRows(1);
-    }, 350));
-    document.getElementById('dbNewRowBtn').addEventListener('click', () => openDbRowModal('create'));
-    document.getElementById('dbRowsPrevBtn').addEventListener('click', () => loadDbRows(state.rowsPage - 1));
-    document.getElementById('dbRowsNextBtn').addEventListener('click', () => loadDbRows(state.rowsPage + 1));
-
-    function debounce(fn, ms) {
-      let t;
-      return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
-    }
-
-    async function loadDbRows(page = 1) {
-      if (!state.currentTable) return;
-      const thead = document.getElementById('dbRowsThead');
-      const tbody = document.getElementById('dbRowsBody');
-      tbody.innerHTML = `<tr><td><div class="empty-state">Chargementâ€¦</div></td></tr>`;
-
-      try {
-        const params = new URLSearchParams({ page, limit: state.rowsLimit });
-        if (state.rowsSearch) params.set('search', state.rowsSearch);
-        const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows?${params}`);
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error?.message || 'Erreur');
-
-        state.rowsPage = page;
-        const meta = data.table;
-
-        thead.innerHTML = '<tr>' + meta.columns.map(c =>
-          `<th>${esc(c.name)}${c.sensitive ? ' ðŸ”’' : ''}${meta.pk.includes(c.name) ? ' ðŸ”‘' : ''}</th>`
-        ).join('') + '<th>Actions</th></tr>';
-
-        if (data.rows.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="${meta.columns.length + 1}"><div class="empty-state">Aucune ligne trouvÃ©e.</div></td></tr>`;
-        } else {
-          tbody.innerHTML = data.rows.map(row => {
-            const pkValues = meta.pk.map(c => row[c]);
-            const cells = meta.columns.map(c => {
-              const cls = c.sensitive ? 'cell-sensitive' : (meta.pk.includes(c.name) ? 'cell-readonly' : '');
-              return `<td class="${cls}">${formatCellValue(c, row[c.name])}</td>`;
-            }).join('');
-            const pkEnc = encodeURIComponent(JSON.stringify(pkValues));
-            return `<tr>${cells}<td class="row-actions-cell">
-              <button class="btn-icon-sm edit" title="Ã‰diter" onclick="__dbEditRow('${pkEnc}')">âœŽ</button>
-              <button class="btn-icon-sm danger" title="Supprimer" onclick="__dbDeleteRow('${pkEnc}')">ðŸ—‘</button>
-            </td></tr>`;
-          }).join('');
-        }
-
-        const pages = Math.max(1, data.meta.pages);
-        document.getElementById('dbRowsPagination').style.display = data.total > state.rowsLimit ? 'flex' : 'none';
-        document.getElementById('dbRowsPaginationInfo').textContent = `Page ${page} sur ${pages} (${data.total} lignes)`;
-        document.getElementById('dbRowsPrevBtn').disabled = page <= 1;
-        document.getElementById('dbRowsNextBtn').disabled = page >= pages;
-      } catch (e) {
-        if (e.message !== 'Unauthorized') {
-          tbody.innerHTML = `<tr><td><div class="empty-state" style="color:#dc3545;">${esc(e.message || 'Erreur lors du chargement.')}</div></td></tr>`;
-        }
-      }
-    }
-
-    window.__dbEditRow = function (pkEnc) { openDbRowModal('edit', JSON.parse(decodeURIComponent(pkEnc))); };
-    window.__dbDeleteRow = async function (pkEnc) {
-      if (!confirm('Supprimer dÃ©finitivement cette ligne ? Cette action est irrÃ©versible.')) return;
-      const pkValues = JSON.parse(decodeURIComponent(pkEnc));
-      try {
-        const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(pkValues))}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) { showToast('Ligne supprimÃ©e.', 'success'); loadDbRows(state.rowsPage); }
-        else showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
-      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); }
-    };
-
-    let dbRowModalMode = 'create';
-    let dbRowModalPk = null;
-
-    async function openDbRowModal(mode, pkValues) {
-      const meta = tableMetaByName(state.currentTable);
-      if (!meta) return;
-      dbRowModalMode = mode;
-      dbRowModalPk = pkValues || null;
-
-      document.getElementById('dbRowModalTitle').textContent = mode === 'create'
-        ? `Nouvelle ligne â€” ${meta.label}` : `Ã‰diter â€” ${meta.label}`;
-
-      let row = {};
-      if (mode === 'edit') {
-        try {
-          const res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(pkValues))}`);
-          const data = await res.json();
-          if (!data.success) { showToast(data.error?.message || 'Ligne introuvable.', 'error'); return; }
-          row = data.row;
-        } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); return; }
-      }
-
-      const body = document.getElementById('dbRowFormBody');
-      body.innerHTML = meta.columns.map(col => {
-        const isPk = meta.pk.includes(col.name);
-        const disabled = col.sensitive || (mode === 'edit' && isPk) || col.generated;
-        const hint = col.sensitive ? 'Champ protÃ©gÃ©, non modifiable.' : (col.generated ? 'GÃ©nÃ©rÃ© automatiquement.' : '');
-        const val = row[col.name];
-
-        if (col.type === 'boolean') {
-          return `<div class="form-group"><label><input type="checkbox" data-col="${esc(col.name)}" ${val ? 'checked' : ''} ${disabled ? 'disabled' : ''} style="width:auto;margin-right:0.5rem;" />${esc(col.name)}</label>${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
-        }
-        if (col.type === 'json') {
-          const jsonStr = (val && !col.sensitive) ? JSON.stringify(val, null, 2) : '';
-          return `<div class="form-group"><label>${esc(col.name)}</label><textarea data-col="${esc(col.name)}" data-type="json" ${disabled ? 'disabled' : ''}>${esc(jsonStr)}</textarea>${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
-        }
-        const displayVal = col.sensitive ? '' : (val ?? '');
-        const placeholder = col.sensitive ? 'â€¢â€¢â€¢â€¢â€¢â€¢ (non affichÃ©)' : '';
-        return `<div class="form-group"><label>${esc(col.name)}${col.required ? ' *' : ''}</label>
-          <input type="${inputTypeFor(col)}" data-col="${esc(col.name)}" value="${esc(displayVal)}" placeholder="${placeholder}" ${disabled ? 'disabled' : ''} />
-          ${hint ? `<span class="field-hint">${hint}</span>` : ''}</div>`;
-      }).join('');
-
-      document.getElementById('dbRowModal').classList.add('open');
-    }
-
-    document.getElementById('dbRowForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const meta = tableMetaByName(state.currentTable);
-      const inputs = document.querySelectorAll('#dbRowFormBody [data-col]');
-      const payload = {};
-      inputs.forEach(inp => {
-        if (inp.disabled) return;
-        const col = inp.dataset.col;
-        if (inp.type === 'checkbox') { payload[col] = inp.checked; return; }
-        if (inp.dataset.type === 'json') {
-          const raw = inp.value.trim();
-          payload[col] = raw ? JSON.parse(raw) : null;
-          return;
-        }
-        if (inp.value === '') { payload[col] = null; return; }
-        payload[col] = inp.type === 'number' ? Number(inp.value) : inp.value;
-      });
-      if (dbRowModalMode === 'create') {
-        meta.pk.forEach(pkCol => {
-          const pkInput = document.querySelector(`#dbRowFormBody [data-col="${pkCol}"]`);
-          if (pkInput && !pkInput.disabled && !payload[pkCol]) delete payload[pkCol];
-        });
-      }
-
-      const btn = document.getElementById('dbRowSaveBtn');
-      const sp  = document.getElementById('dbRowSpinner');
-      btn.disabled = true; sp.classList.add('active');
-      try {
-        let res;
-        if (dbRowModalMode === 'create') {
-          res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows`, { method: 'POST', body: JSON.stringify(payload) });
-        } else {
-          res = await apiFetch(`/api/admin/db/tables/${encodeURIComponent(state.currentTable)}/rows/${encodeURIComponent(JSON.stringify(dbRowModalPk))}`, { method: 'PUT', body: JSON.stringify(payload) });
-        }
-        const data = await res.json();
-        if (data.success) {
-          showToast(dbRowModalMode === 'create' ? 'Ligne crÃ©Ã©e avec succÃ¨s.' : 'Ligne mise Ã  jour.', 'success');
-          document.getElementById('dbRowModal').classList.remove('open');
-          loadDbRows(state.rowsPage);
-        } else {
-          showToast(data.error?.message || 'Erreur lors de l\'enregistrement.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast(err instanceof SyntaxError ? 'JSON invalide dans un champ.' : 'Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false; sp.classList.remove('active');
-      }
-    });
-
-    document.getElementById('dbRowModalCloseBtn').addEventListener('click', () => document.getElementById('dbRowModal').classList.remove('open'));
-    document.getElementById('dbRowModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODE PROFILS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-    document.getElementById('profileSearchInput').addEventListener('input', debounce(function () {
-      state.profilesSearch = this.value.trim();
-      loadProfilesList(1);
-    }, 350));
-    document.getElementById('dbRefreshProfilesBtn').addEventListener('click', () => loadProfilesList(state.profilesPage));
-    document.getElementById('profilesPrevBtn').addEventListener('click', () => loadProfilesList(state.profilesPage - 1));
-    document.getElementById('profilesNextBtn').addEventListener('click', () => loadProfilesList(state.profilesPage + 1));
-    document.getElementById('profileBackBtn').addEventListener('click', () => {
-      document.getElementById('dbProfileDetailWrap').style.display = 'none';
-      document.getElementById('dbProfileListWrap').style.display = 'block';
-    });
-
-    async function loadProfilesList(page = 1) {
-      const tbody = document.getElementById('profilesBody');
-      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Chargementâ€¦</div></td></tr>`;
-      try {
-        const params = new URLSearchParams({ page, limit: state.profilesLimit });
-        if (state.profilesSearch) params.set('search', state.profilesSearch);
-        const res = await apiFetch(`/api/admin/profiles?${params}`);
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error?.message || 'Erreur');
-
-        state.profilesPage = page;
-        if (data.profiles.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Aucun profil trouvÃ©.</div></td></tr>`;
-        } else {
-          tbody.innerHTML = data.profiles.map(p => {
-            const isAdmin = p.profile_type === 'admin';
-            const badge = isAdmin
-              ? '<span class="user-badge" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;border:1px solid #fca5a5;">ðŸ›¡ Admin</span>'
-              : `<span class="user-badge ${p.active ? 'active' : 'inactive'}">${p.active ? 'Actif' : 'Inactif'}</span>`;
-            const tenantsBadge = isAdmin
-              ? '<span style="font-size:0.8rem;color:#667781;">â€”</span>'
-              : `<span style="font-weight:600;">${p.tenants_count}</span>`;
-            return `
-            <tr class="profile-row" onclick="__openProfile('${esc(p.uid)}')">
-              <td class="user-info-cell">
-                <div class="user-avatar-table" style="${isAdmin ? 'background:linear-gradient(135deg,#dc3545,#991b1b);' : ''}">${esc(initials(p.display_name || p.email))}</div>
-                <div class="user-details">
-                  <span class="user-name">${esc(p.display_name || 'Sans nom')}</span>
-                  <span class="user-id">${esc(p.uid)}</span>
-                </div>
-              </td>
-              <td class="contact-info">
-                <span class="contact-item">${esc(p.email || 'â€”')}</span>
-                <span class="contact-item">${esc(maskPhone(p.phone))}</span>
-              </td>
-              <td>${tenantsBadge}</td>
-              <td>${badge}</td>
-              <td class="date-display">${esc(formatDate(p.created_at))}</td>
-            </tr>`;
-          }).join('');
-        }
-        const pages = Math.max(1, data.meta.pages);
-        document.getElementById('profilesPagination').style.display = data.meta.total > state.profilesLimit ? 'flex' : 'none';
-        document.getElementById('profilesPaginationInfo').textContent = `Page ${page} sur ${pages} (${data.meta.total} profils)`;
-        document.getElementById('profilesPrevBtn').disabled = page <= 1;
-        document.getElementById('profilesNextBtn').disabled = page >= pages;
-      } catch (e) {
-        if (e.message !== 'Unauthorized') tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="color:#dc3545;">Erreur lors du chargement.</div></td></tr>`;
-      }
-    }
-
-    window.__openProfile = async function (uid) {
-      state.currentUid = uid;
-      document.getElementById('dbProfileListWrap').style.display = 'none';
-      document.getElementById('dbProfileDetailWrap').style.display = 'block';
-      document.getElementById('pdSections').innerHTML = `<div class="empty-state">Chargement du profilâ€¦</div>`;
-      try {
-        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(uid)}`);
-        const data = await res.json();
-        if (!data.success) { showToast(data.error?.message || 'Profil introuvable.', 'error'); return; }
-        renderProfileDetail(data.profile);
-      } catch (e) { if (e.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error'); }
-    };
-
-    function renderProfileDetail(profile) {
-      const acc = profile.account || {};
-
-      // â”€â”€ Profil admin Convessa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (profile.profile_type === 'admin') {
-        document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
-        document.getElementById('pdName').textContent = acc.display_name || acc.email || 'Admin';
-        document.getElementById('pdSub').textContent = [acc.email, 'Administrateur Convessa'].filter(Boolean).join(' â€¢ ');
-
-        const sections = document.getElementById('pdSections');
-        sections.innerHTML = '';
-
-        // Fiche admin avec libellÃ©s lisibles
-        sections.appendChild(buildAdminSection('Compte Administrateur', acc));
-        if (profile.adminSession) {
-          sections.appendChild(buildSection('Session Baileys (compte WhatsApp admin)', 'wa_sessions', [profile.adminSession]));
-        } else {
-          const noSession = document.createElement('div');
-          noSession.className = 'table-card db-section-card';
-          noSession.innerHTML = '<div class="db-section-title-row"><span class="section-title">Session Baileys (compte WhatsApp admin)</span></div><div class="db-empty-note">Aucune session Baileys trouvÃ©e pour l\'admin (id = "admin").</div>';
-          sections.appendChild(noSession);
-        }
-        return;
-      }
-
-      // â”€â”€ Profil utilisateur Firebase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      document.getElementById('pdAvatar').textContent = initials(acc.display_name || acc.email);
-      document.getElementById('pdName').textContent = acc.display_name || acc.email || acc.uid;
-      document.getElementById('pdSub').textContent = [acc.email, maskPhone(acc.phone)].filter(Boolean).join(' â€¢ ');
-
-      const sections = document.getElementById('pdSections');
-      sections.innerHTML = '';
-      sections.appendChild(buildSection('Compte Utilisateur', 'auth_users', acc ? [acc] : []));
-      sections.appendChild(buildSection('Comptes WhatsApp (tenants)', 'wa_tenants', profile.tenants));
-      sections.appendChild(buildSection('Sessions Baileys (credentials WhatsApp)', 'wa_sessions', profile.sessions));
-      sections.appendChild(buildSection('Groupes WhatsApp', 'wa_groups', profile.groups));
-      sections.appendChild(buildSection('Messages envoyÃ©s (200 derniers)', 'wa_messages', profile.messages));
-      sections.appendChild(buildSection('Paiements d\'abonnement', 'subscription_payments', profile.payments));
-      sections.appendChild(buildSection('Appareils enregistrÃ©s', 'auth_devices', profile.devices));
-      sections.appendChild(buildSection('Journal de sÃ©curitÃ© (100 derniers)', 'auth_device_sessions', profile.securityLogs));
-    }
-
-    // â”€â”€ MAP DE LIBELLÃ‰S lisibles pour les colonnes de toutes les tables â”€â”€â”€â”€â”€â”€â”€â”€
-    const COL_LABELS = {
-      // auth_users
-      uid: 'UID Firebase', email: 'Adresse e-mail', display_name: 'Nom d\'affichage',
-      photo_url: 'Photo URL', provider: 'Fournisseur', phone: 'TÃ©lÃ©phone',
-      active: 'Actif', created_at: 'CrÃ©Ã© le', last_login_at: 'DerniÃ¨re connexion',
-      // convessa_admins
-      id: 'ID', password_hash: 'Hash mot de passe (ðŸ”’)', updated_at: 'ModifiÃ© le',
-      // wa_tenants
-      user_uid: 'UID Utilisateur', name: 'Nom', api_key_hash: 'Hash ClÃ© API (ðŸ”’)',
-      api_key_hint: 'AperÃ§u ClÃ© API', api_key_enc: 'ClÃ© API chiffrÃ©e (ðŸ”’)',
-      api_key_iv: 'IV chiffrement (ðŸ”’)', api_key_tag: 'Tag chiffrement (ðŸ”’)',
-      api_key_expires_at: 'Expiration ClÃ© API', webhook_url: 'URL Webhook',
-      status: 'Statut', usage_type: 'Type d\'usage', messages_limit: 'Limite messages',
-      messages_sent: 'Messages envoyÃ©s', referral_code: 'Code de parrainage',
-      connected_at: 'ConnectÃ© le',
-      // wa_sessions
-      creds_iv: 'IV credentials (ðŸ”’)', creds_tag: 'Tag credentials (ðŸ”’)',
-      creds_data: 'DonnÃ©es credentials (ðŸ”’)',
-      // wa_session_keys
-      session_id: 'ID Session', key_type: 'Type de clÃ©', key_id: 'ID ClÃ©',
-      key_value: 'Valeur (ðŸ”’)',
-      // wa_message_queue / wa_messages
-      tenant_id: 'ID Tenant', recipient: 'Destinataire', jid: 'JID WhatsApp',
-      message: 'Message', media_type: 'Type mÃ©dia', media_url: 'URL mÃ©dia',
-      media_b64: 'MÃ©dia base64 (ðŸ”’)', media_mime: 'MIME type', media_name: 'Nom fichier',
-      attempts: 'Tentatives', last_error: 'DerniÃ¨re erreur', queued_at: 'Mis en file le',
-      sent_at: 'EnvoyÃ© le', to_jid: 'Destinataire JID', to_type: 'Type dest.',
-      has_media: 'Contient mÃ©dia', error_code: 'Code erreur', error_message: 'Message d\'erreur',
-      wa_message_id: 'ID message WhatsApp',
-      // wa_groups
-      wa_group_jid: 'JID du groupe', invite_code: 'Code d\'invitation',
-      invite_code_generated_at: 'Invitation gÃ©nÃ©rÃ©e le', participants_count: 'Nb participants',
-      // auth_devices
-      fingerprint_hash: 'Empreinte appareil', first_ip: 'PremiÃ¨re IP',
-      user_agent: 'User-Agent', accept_language: 'Langue', client_hints: 'Client Hints',
-      first_seen_at: 'PremiÃ¨re apparition', last_seen_at: 'DerniÃ¨re apparition',
-      blocked: 'BloquÃ©', blocked_reason: 'Raison blocage', registered_uid: 'UID enregistrÃ©',
-      // auth_device_sessions
-      device_id: 'ID Appareil', user_uid: 'UID Utilisateur', ip: 'Adresse IP',
-      action: 'Action', meta: 'MÃ©tadonnÃ©es',
-      // subscription_payments
-      plan_id: 'ID Plan', gateway: 'Passerelle', gateway_tx_id: 'ID Transaction',
-      amount: 'Montant', currency: 'Devise',
-      // referral_codes / subscription_plans
-      code: 'Code', unlimited: 'IllimitÃ©', usage_value: 'Valeur d\'usage',
-      price: 'Prix', description: 'Description', features: 'FonctionnalitÃ©s',
-      is_popular: 'Populaire',
-      // wa_logs
-      level: 'Niveau', component: 'Composant', context: 'Contexte',
-    };
-    function colLabel(name) { return COL_LABELS[name] || name; }
-
-    // â”€â”€ Fiche lisible pour un admin Convessa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function buildAdminSection(title, acc) {
-      const wrap = document.createElement('div');
-      wrap.className = 'table-card db-section-card';
-
-      const adminMeta = tableMetaByName('convessa_admins');
-      if (!acc || !adminMeta) {
-        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnÃ©e.</div>`;
-        return wrap;
-      }
-
-      // Construire une fiche verticale avec champs et libellÃ©s lisibles
-      const fields = [
-        { label: 'ID',                  value: acc.id,            editable: false },
-        { label: 'Adresse e-mail',      value: acc.email,         editable: true,  col: 'email',        type: 'text',    pk: [acc.id] },
-        { label: 'Nom d\'affichage',    value: acc.display_name,  editable: true,  col: 'display_name', type: 'text',    pk: [acc.id] },
-        { label: 'Actif',               value: acc.active ? 'Oui' : 'Non', editable: true, col: 'active', type: 'boolean', pk: [acc.id] },
-        { label: 'Hash mot de passe',   value: acc.password_hash, editable: false, sensitive: true },
-        { label: 'CrÃ©Ã© le',             value: formatDate(acc.created_at), editable: false },
-        { label: 'ModifiÃ© le',          value: formatDate(acc.updated_at), editable: false },
-        { label: 'DerniÃ¨re connexion',  value: formatDate(acc.last_login_at), editable: false },
-      ];
-
-      let fieldsHtml = fields.map(f => {
-        const valDisplay = f.sensitive
-          ? '<span style="color:#b45309;font-style:italic;">â€¢â€¢â€¢â€¢â€¢â€¢ (protÃ©gÃ©)</span>'
-          : (f.value == null ? '<span style="color:#c0c6cc;">â€”</span>' : esc(String(f.value)));
-
-        if (f.editable) {
-          const rawEnc = esc(JSON.stringify(f.value === undefined ? null : (acc[f.col] ?? null)));
-          return `<tr>
-            <td style="font-weight:600;color:#374151;width:220px;padding:0.875rem 1.25rem;background:#f9fafb;border-right:2px solid #e4e6ea;">${esc(f.label)}</td>
-            <td class="cell-editable"
-                data-pk='${esc(JSON.stringify(f.pk))}'
-                data-raw='${rawEnc}'
-                data-table="convessa_admins"
-                data-col="${esc(f.col)}"
-                data-type="${esc(f.type)}"
-                onclick="__editProfileField(this)"
-                style="padding:0.875rem 1.25rem;">${valDisplay}
-              <span style="float:right;font-size:0.75rem;color:#25D366;opacity:0.7;">âœŽ modifier</span>
-            </td>
-          </tr>`;
-        }
-        return `<tr>
-          <td style="font-weight:600;color:#374151;width:220px;padding:0.875rem 1.25rem;background:#f9fafb;border-right:2px solid #e4e6ea;">${esc(f.label)}</td>
-          <td class="${f.sensitive ? 'cell-sensitive' : 'cell-readonly'}" style="padding:0.875rem 1.25rem;">${valDisplay}</td>
-        </tr>`;
-      }).join('');
-
-      wrap.innerHTML = `
-        <div class="db-section-title-row">
-          <span class="section-title">${esc(title)}</span>
-          <span style="font-size:0.8rem;color:#667781;background:#fee2e2;color:#991b1b;padding:0.25rem 0.6rem;border-radius:6px;font-weight:600;">ðŸ›¡ Admin Convessa</span>
-        </div>
-        <div class="table-wrap"><table style="min-width:unset;width:100%;">
-          <tbody>${fieldsHtml}</tbody>
-        </table></div>`;
-      return wrap;
-    }
-
-    function buildSection(title, tableName, rows) {
-      const wrap = document.createElement('div');
-      wrap.className = 'table-card db-section-card';
-      const meta = tableMetaByName(tableName);
-
-      if (!meta || !rows || rows.length === 0) {
-        wrap.innerHTML = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span></div><div class="db-empty-note">Aucune donnÃ©e.</div>`;
-        return wrap;
-      }
-
-      const editableCols = meta.columns.filter(c => !c.sensitive && !meta.pk.includes(c.name));
-      const displayCols = meta.columns; // on affiche toutes les colonnes ; les sensibles sont masquÃ©es cÃ´tÃ© API
-
-      let html = `<div class="db-section-title-row"><span class="section-title">${esc(title)}</span><span style="font-size:0.8rem;color:#667781;">${rows.length} ligne(s)</span></div>
-        <div class="table-wrap"><table><thead><tr>${displayCols.map(c => `<th title="${esc(c.name)}">${esc(colLabel(c.name))}</th>`).join('')}</tr></thead><tbody>`;
-
-      rows.forEach(row => {
-        const pkValues = meta.pk.map(c => row[c]);
-        const pkEnc = esc(JSON.stringify(pkValues));
-        html += '<tr>' + displayCols.map(c => {
-          const editable = editableCols.includes(c);
-          if (!editable) {
-            const cls = c.sensitive ? 'cell-sensitive' : 'cell-readonly';
-            return `<td class="${cls}">${formatCellValue(c, row[c.name])}</td>`;
-          }
-          const rawEnc = esc(JSON.stringify(row[c.name] === undefined ? null : row[c.name]));
-          return `<td class="cell-editable" data-pk='${pkEnc}' data-raw='${rawEnc}' data-table="${esc(tableName)}" data-col="${esc(c.name)}" data-type="${esc(c.type)}" onclick="__editProfileField(this)">${formatCellValue(c, row[c.name])}</td>`;
-        }).join('') + '</tr>';
-      });
-
-      html += '</tbody></table></div>';
-      wrap.innerHTML = html;
-      return wrap;
-    }
-
-    window.__editProfileField = function (td) {
-      const table  = td.dataset.table;
-      const column = td.dataset.col;
-      const type   = td.dataset.type;
-      const pk     = JSON.parse(td.dataset.pk);
-      const meta   = tableMetaByName(table);
-      const col    = meta.columns.find(c => c.name === column);
-
-      document.getElementById('fieldEditModalTitle').textContent = `${meta.label} â€” ${colLabel(column)}`;
-      const body = document.getElementById('fieldEditFormBody');
-
-      // On repart toujours de la valeur brute (non formatÃ©e) stockÃ©e dans data-raw,
-      // jamais du texte affichÃ© (formatÃ© en fr-FR), pour Ã©viter d'envoyer une date
-      // ou un JSON mal formÃ© au serveur.
-      let rawValue = null;
-      try { rawValue = JSON.parse(td.dataset.raw); } catch { rawValue = null; }
-
-      if (type === 'boolean') {
-        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
-          <select data-value><option value="true">Oui</option><option value="false">Non</option></select></div>`;
-        body.querySelector('[data-value]').value = rawValue ? 'true' : 'false';
-      } else if (type === 'json') {
-        const jsonStr = rawValue !== null ? JSON.stringify(rawValue, null, 2) : '';
-        body.innerHTML = `<div class="form-group"><label>${esc(column)} (JSON)</label><textarea data-value>${esc(jsonStr)}</textarea></div>`;
-      } else if (type === 'date') {
-        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
-          <input type="text" data-value value="${esc(rawValue ?? '')}" placeholder="ex: 2026-07-30T10:00:00.000Z" />
-          <span class="field-hint">Format ISO 8601 (laisser tel quel si non modifiÃ©).</span></div>`;
-      } else {
-        body.innerHTML = `<div class="form-group"><label>${esc(column)}</label>
-          <input type="${inputTypeFor(col)}" data-value value="${esc(rawValue ?? '')}" /></div>`;
-      }
-
-      document.getElementById('fieldEditForm').dataset.table = table;
-      document.getElementById('fieldEditForm').dataset.pk = JSON.stringify(pk);
-      document.getElementById('fieldEditForm').dataset.column = column;
-      document.getElementById('fieldEditForm').dataset.type = type;
-      document.getElementById('fieldEditModal').classList.add('open');
-    };
-
-    document.getElementById('fieldEditForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const form = this;
-      const table  = form.dataset.table;
-      const pk     = JSON.parse(form.dataset.pk);
-      const column = form.dataset.column;
-      const type   = form.dataset.type;
-      const raw = form.querySelector('[data-value]').value;
-
-      let value = raw;
-      if (type === 'boolean') value = raw === 'true';
-      else if (type === 'number') value = raw === '' ? null : Number(raw);
-      else if (type === 'json') { try { value = raw.trim() ? JSON.parse(raw) : null; } catch { showToast('JSON invalide.', 'error'); return; } }
-      else if (raw === '') value = null;
-
-      const btn = document.getElementById('fieldEditSaveBtn');
-      const sp  = document.getElementById('fieldEditSpinner');
-      btn.disabled = true; sp.classList.add('active');
-      try {
-        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(state.currentUid)}/field`, {
-          method: 'PUT',
-          body: JSON.stringify({ table, pk, column, value })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Champ mis Ã  jour.', 'success');
-          document.getElementById('fieldEditModal').classList.remove('open');
-          window.__openProfile(state.currentUid);
-        } else {
-          showToast(data.error?.message || 'Erreur lors de la mise Ã  jour.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false; sp.classList.remove('active');
-      }
-    });
-    document.getElementById('fieldEditCloseBtn').addEventListener('click', () => document.getElementById('fieldEditModal').classList.remove('open'));
-    document.getElementById('fieldEditModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
-
-    // â”€â”€ SUPPRESSION TOTALE D'UN PROFIL â”€â”€
-    document.getElementById('pdDeleteBtn').addEventListener('click', () => {
-      document.getElementById('deleteProfileConfirmInput').value = '';
-      document.getElementById('deleteProfileConfirmBtn').disabled = true;
-      document.getElementById('deleteProfileModal').classList.add('open');
-    });
-    document.getElementById('deleteProfileConfirmInput').addEventListener('input', function () {
-      document.getElementById('deleteProfileConfirmBtn').disabled = this.value.trim() !== 'SUPPRIMER';
-    });
-    document.getElementById('deleteProfileCloseBtn').addEventListener('click', () => document.getElementById('deleteProfileModal').classList.remove('open'));
-    document.getElementById('deleteProfileModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
-
-    document.getElementById('deleteProfileConfirmBtn').addEventListener('click', async function () {
-      const btn = this;
-      const sp = document.getElementById('deleteProfileSpinner');
-      btn.disabled = true; sp.classList.add('active');
-      try {
-        const res = await apiFetch(`/api/admin/profiles/${encodeURIComponent(state.currentUid)}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Profil supprimÃ© dÃ©finitivement.', 'success');
-          document.getElementById('deleteProfileModal').classList.remove('open');
-          document.getElementById('dbProfileDetailWrap').style.display = 'none';
-          document.getElementById('dbProfileListWrap').style.display = 'block';
-          loadProfilesList(state.profilesPage);
-        } else {
-          showToast(data.error?.message || 'Erreur lors de la suppression.', 'error');
-        }
-      } catch (err) {
-        if (err.message !== 'Unauthorized') showToast('Erreur rÃ©seau.', 'error');
-      } finally {
-        btn.disabled = false; sp.classList.remove('active');
-      }
-    });
-  })();
-  </script>
+  <script src="/admin/js/admin-core.js"></script>
+  <script src="/admin/js/admin-users.js"></script>
+  <script src="/admin/js/admin-referrals.js"></script>
+  <script src="/admin/js/admin-plans.js"></script>
+  <script src="/admin/js/admin-contact.js"></script>
+  <script src="/admin/js/admin-database.js"></script>
+  <script src="/admin/js/admin-mobile.js"></script>
+  <script src="/admin/js/admin-init.js"></script>
 </body>
 </html>
-
-<script>
-// â”€â”€ SUSPENSION / RÃ‰ACTIVATION TENANT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-(function() {
-  let _suspendTenantId = null;
-
-  window.openSuspendModal = function(tenantId, tenantName) {
-    _suspendTenantId = tenantId;
-    document.getElementById('suspendModalTitle').textContent =
-      'Suspendre : ' + (tenantName || tenantId.slice(0, 8) + 'â€¦');
-    document.getElementById('suspendReason').value = '';
-    document.getElementById('suspendError').style.display = 'none';
-    document.getElementById('suspendModal').classList.add('open');
-    setTimeout(() => document.getElementById('suspendReason').focus(), 100);
-  };
-
-  window.closeSuspendModal = function() {
-    document.getElementById('suspendModal').classList.remove('open');
-    _suspendTenantId = null;
-  };
-
-  document.getElementById('suspendModal').addEventListener('click', function(e) {
-    if (e.target === this) window.closeSuspendModal();
-  });
-
-  window.confirmSuspend = async function() {
-    if (!_suspendTenantId) return;
-    const reason = document.getElementById('suspendReason').value.trim();
-    const errEl  = document.getElementById('suspendError');
-    const btn    = document.getElementById('suspendConfirmBtn');
-
-    if (!reason) {
-      errEl.textContent = 'La raison de suspension est obligatoire.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    btn.disabled = true;
-    errEl.style.display = 'none';
-
-    try {
-      const token = sessionStorage.getItem('admin_token') || '';
-      const res = await fetch('/api/admin/tenants/' + _suspendTenantId + '/suspend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        credentials: 'same-origin',
-        body: JSON.stringify({ reason }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error?.message || 'Erreur');
-
-      window.closeSuspendModal();
-      // RafraÃ®chir la liste des tenants
-      if (typeof loadTenants === 'function') loadTenants();
-      if (typeof showToast === 'function') showToast('Compte suspendu. Le tenant a Ã©tÃ© notifiÃ© via WhatsApp.', 'success');
-    } catch (e) {
-      errEl.textContent = e.message || 'Erreur lors de la suspension.';
-      errEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-    }
-  };
-
-  window.unsuspendTenant = async function(tenantId) {
-    if (!confirm('RÃ©activer ce compte WhatsApp ?')) return;
-    try {
-      const token = sessionStorage.getItem('admin_token') || '';
-      const res = await fetch('/api/admin/tenants/' + tenantId + '/unsuspend', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token },
-        credentials: 'same-origin',
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error?.message || 'Erreur');
-      if (typeof loadTenants === 'function') loadTenants();
-      if (typeof showToast === 'function') showToast('Compte rÃ©activÃ© avec succÃ¨s.', 'success');
-    } catch (e) {
-      if (typeof showToast === 'function') showToast(e.message || 'Erreur lors de la rÃ©activation.', 'error');
-    }
-  };
-})();
-</script>
-

@@ -72,7 +72,7 @@ export async function listRows(tableName: string, opts: ListRowsOptions) {
     const rows = await query(
         `SELECT * FROM ${quoteIdent(table.name)} ${where}
          ORDER BY ${quoteIdent(sortCol)} DESC LIMIT ? OFFSET ?`,
-        [...params, opts.limit, offset]
+        [...params, Number(opts.limit), Number(offset)]
     )
 
     return {

@@ -318,6 +318,124 @@ export class WhatsAppManager extends EventEmitter {
         }
     }
 
+    // ── Groupes (compte admin) ────────────────────────────────────────────────
+    // Utilisé pour le groupe WhatsApp dédié aux notifications "Messages depuis
+    // Contact" : création, gestion des participants, renommage — depuis le
+    // backoffice, sans configuration manuelle préalable.
+
+    /**
+     * Crée un groupe WhatsApp depuis le compte admin.
+     * Comme pour les tenants, les participants dont les réglages de
+     * confidentialité empêchent l'ajout direct reçoivent le lien d'invitation
+     * en message privé plutôt que d'échouer silencieusement.
+     */
+    async createGroup(
+        name: string,
+        participantsJid: string[]
+    ): Promise<{ groupJid: string; addedJids: string[]; invitedByLinkJids: string[] }> {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+
+        const group    = await this.sock.groupCreate(name, participantsJid)
+        const groupJid = group.id
+
+        const presentJids = new Set((group.participants ?? []).map(p => p.id))
+        const addedJids:  string[] = participantsJid.filter(jid => presentJids.has(jid))
+        const failedJids: string[] = participantsJid.filter(jid => !presentJids.has(jid))
+
+        const invitedByLinkJids: string[] = []
+        if (failedJids.length > 0) {
+            try {
+                const code = await this.sock.groupInviteCode(groupJid)
+                if (!code) throw new Error('Code d\'invitation introuvable')
+                const link = `https://chat.whatsapp.com/${code}`
+                for (const jid of failedJids) {
+                    try {
+                        await this.sock.sendMessage(jid, { text: `Vous avez été invité(e) au groupe "${name}". Rejoignez via ce lien : ${link}` })
+                        invitedByLinkJids.push(jid)
+                    } catch (err) {
+                        logger.warn({ component: 'WhatsAppManager', jid, err }, 'Impossible d\'envoyer le lien d\'invitation par DM')
+                    }
+                }
+            } catch (err) {
+                logger.warn({ component: 'WhatsAppManager', err }, 'Impossible de générer le lien d\'invitation pour le fallback')
+            }
+        }
+
+        logger.info(
+            { component: 'WhatsAppManager', groupJid, added: addedJids.length, invitedByLink: invitedByLinkJids.length },
+            'Groupe WhatsApp admin créé'
+        )
+
+        return { groupJid, addedJids, invitedByLinkJids }
+    }
+
+    /** Métadonnées d'un groupe (nom, participants, etc.). */
+    async getGroupMetadata(groupJid: string) {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+        return this.sock.groupMetadata(groupJid)
+    }
+
+    /** Ajoute des participants à un groupe existant (avec fallback lien d'invitation). */
+    async addGroupParticipants(
+        groupJid: string,
+        participantsJid: string[]
+    ): Promise<{ addedJids: string[]; invitedByLinkJids: string[] }> {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+
+        const results = await this.sock.groupParticipantsUpdate(groupJid, participantsJid, 'add')
+
+        const addedJids: string[]  = []
+        const failedJids: string[] = []
+        for (const r of results) {
+            if (!r.jid) continue
+            if (r.status === '200') addedJids.push(r.jid)
+            else failedJids.push(r.jid)
+        }
+
+        const invitedByLinkJids: string[] = []
+        if (failedJids.length > 0) {
+            try {
+                const code = await this.sock.groupInviteCode(groupJid)
+                if (!code) throw new Error('Code d\'invitation introuvable')
+                const link = `https://chat.whatsapp.com/${code}`
+                for (const jid of failedJids) {
+                    try {
+                        await this.sock.sendMessage(jid, { text: `Voici le lien pour rejoindre le groupe : ${link}` })
+                        invitedByLinkJids.push(jid)
+                    } catch { /* ignoré */ }
+                }
+            } catch { /* ignoré */ }
+        }
+
+        return { addedJids, invitedByLinkJids }
+    }
+
+    /** Retire des participants d'un groupe existant. */
+    async removeGroupParticipants(groupJid: string, participantsJid: string[]): Promise<void> {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+        await this.sock.groupParticipantsUpdate(groupJid, participantsJid, 'remove')
+    }
+
+    /** Renomme un groupe existant. */
+    async updateGroupSubject(groupJid: string, name: string): Promise<void> {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+        await this.sock.groupUpdateSubject(groupJid, name)
+    }
+
+    /** Récupère (ou génère) le code d'invitation d'un groupe. */
+    async getGroupInviteCode(groupJid: string): Promise<string> {
+        if (!this.sock)        throw new Error('Socket non initialisé')
+        if (!this.isConnected) throw new Error('WhatsApp non connecté')
+        const code = await this.sock.groupInviteCode(groupJid)
+        if (!code) throw new Error('Code d\'invitation introuvable')
+        return code
+    }
+
     // ── Statut ─────────────────────────────────────────────────────────────────
 
     getStatus(): ConnectionStatus {
@@ -337,6 +455,19 @@ export class WhatsAppManager extends EventEmitter {
 
     isReady(): boolean {
         return this.isConnected && this.sock !== null
+    }
+
+    /**
+     * Retourne le JID normalisé du compte admin connecté (ex: "22912345678@s.whatsapp.net"),
+     * ou null si non connecté. Le device ID Baileys (":19") est retiré pour obtenir
+     * un JID utilisable comme destinataire d'un message.
+     */
+    getConnectedJid(): string | null {
+        if (!this.isConnected || !this.connectedPhone) return null
+        // Format Baileys : "22912345678:19@s.whatsapp.net" — on retire le device ID
+        const rawNumber = this.connectedPhone.split('@')[0]?.split(':')[0] ?? ''
+        if (!rawNumber) return null
+        return `${rawNumber}@s.whatsapp.net`
     }
 
     getSocket(): WASocket | null {

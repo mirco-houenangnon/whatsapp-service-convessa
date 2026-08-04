@@ -1,29 +1,53 @@
 /**
  * contact.ts — Routes contact et communauté Convessa.
  *
- * POST /api/v1/contact       — Envoie un message de contact (notifie l'admin via WhatsApp)
+ * POST /api/v1/contact       — Envoie un message de contact :
+ *                                1) enregistre la demande en base
+ *                                2) confirme au demandeur par WhatsApp (numéro admin → son numéro)
+ *                                3) transmet la demande au groupe WhatsApp admin (ou, à défaut,
+ *                                   au numéro admin personnel si le groupe n'est pas configuré)
  * POST /api/v1/community     — Rejoint la communauté Convessa (avec ou sans compte)
- * GET  /api/admin/contact    — Liste les messages de contact (admin)
  * GET  /api/admin/community  — Liste les membres communauté (admin)
+ *
+ * Les routes de gestion des messages de contact côté admin (liste, réponse,
+ * fil de discussion) vivent dans adminContact.ts (/api/admin/contact/*).
  */
 
 import { Router }          from 'express'
 import { v4 as uuidv4 }   from 'uuid'
-import { requireFirebaseAuth } from '../middleware/firebaseAuth.js'
 import { requireAdminAuth }    from '../middleware/adminAuth.js'
 import { rateLimit }           from '../middleware/rateLimit.js'
 import { query, execute }      from '../../db/connection.js'
 import { WhatsAppManager }     from '../../whatsapp/WhatsAppManager.js'
-import { logger }              from '../../services/logger.js'
-import { config }              from '../../config.js'
+import { logger, maskPhone }   from '../../services/logger.js'
+import { normalizePhone }      from '../../services/phoneUtils.js'
+import {
+    createContactMessage,
+    markContactMessageUserNotified,
+    markContactMessageGroupNotified,
+}                               from '../../db/ContactStore.js'
+import { getSetting, ADMIN_CONTACT_GROUP_KEY } from '../../db/SettingsStore.js'
 
-// ── Numéro WhatsApp admin qui reçoit les messages de contact ──────────────────
-// Configuré via ADMIN_WHATSAPP_NUMBER dans .env (ex: 22990000000)
-function getAdminJid(): string | null {
-    const num = process.env['ADMIN_WHATSAPP_NUMBER']?.trim()
-    if (!num) return null
-    const clean = num.replace(/[^0-9]/g, '')
-    return `${clean}@s.whatsapp.net`
+const PHONE_REGEX = /^[+\d\s\-().]+$/
+const MAX_MESSAGE_LENGTH = 2000
+
+function sanitizePhone(raw: string): string {
+    return normalizePhone(raw)
+}
+
+// ── Groupe WhatsApp dédié à l'administration ──────────────────────────────────
+// Résolu dans cet ordre :
+//   1) Groupe créé depuis le backoffice ("Messages depuis Contact") — stocké
+//      en base (app_settings) via ADMIN_CONTACT_GROUP_KEY.
+//   2) Variable d'environnement ADMIN_WHATSAPP_GROUP_ID (repli de configuration
+//      manuelle), avec ou sans le suffixe "@g.us".
+async function getAdminGroupJid(): Promise<string | null> {
+    const stored = await getSetting(ADMIN_CONTACT_GROUP_KEY)
+    if (stored?.trim()) return stored.trim()
+
+    const raw = process.env['ADMIN_WHATSAPP_GROUP_ID']?.trim()
+    if (!raw) return null
+    return raw.endsWith('@g.us') ? raw : `${raw}@g.us`
 }
 
 export function contactRouter(waManager: WhatsAppManager): Router {
@@ -35,35 +59,106 @@ export function contactRouter(waManager: WhatsAppManager): Router {
             name?: string; email?: string; phone?: string; subject?: string; message?: string
         }
 
-        if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
-            res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'name, email, subject et message sont requis' } })
+        if (!name?.trim() || !email?.trim() || !phone?.trim() || !subject?.trim() || !message?.trim()) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'MISSING_FIELDS', message: 'name, email, phone, subject et message sont requis' },
+            })
             return
         }
 
+        if (!PHONE_REGEX.test(phone.trim())) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Numéro de téléphone invalide' },
+            })
+            return
+        }
+
+        if (message.trim().length > MAX_MESSAGE_LENGTH) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: `Le message ne peut pas dépasser ${MAX_MESSAGE_LENGTH} caractères` },
+            })
+            return
+        }
+
+        const trimmedName    = name.trim()
+        const trimmedEmail   = email.trim()
+        const trimmedPhone   = phone.trim()
+        const trimmedSubject = subject.trim()
+        const trimmedMessage = message.trim()
+        const submitterJid   = `${sanitizePhone(trimmedPhone)}@s.whatsapp.net`
+
         try {
-            const id = uuidv4()
-            await execute(
-                `INSERT INTO contact_messages (id, name, email, phone, subject, message, status) VALUES (?, ?, ?, ?, ?, ?, 'unread')`,
-                [id, name.trim(), email.trim(), phone?.trim() ?? null, subject.trim(), message.trim()]
-            )
+            const created = await createContactMessage({
+                name:    trimmedName,
+                email:   trimmedEmail,
+                phone:   trimmedPhone,
+                subject: trimmedSubject,
+                message: trimmedMessage,
+            })
 
-            // Notifier l'admin via WhatsApp si le numéro admin est configuré et connecté
-            const adminJid = getAdminJid()
-            if (adminJid && waManager.isReady()) {
-                const text = `📩 *Nouveau message de contact*\n\n` +
-                    `*Nom :* ${name.trim()}\n` +
-                    `*Email :* ${email.trim()}\n` +
-                    (phone?.trim() ? `*Tél :* ${phone.trim()}\n` : '') +
-                    `*Sujet :* ${subject.trim()}\n\n` +
-                    `*Message :*\n${message.trim()}`
+            // ── 1) Confirmation personnalisée au demandeur (depuis le numéro admin) ──
+            if (waManager.isReady()) {
+                const firstName  = trimmedName.split(/\s+/)[0]
+                const userText =
+                    `Bonjour ${firstName},\n\n` +
+                    `Nous avons bien reçu votre demande concernant : "${trimmedSubject}".\n` +
+                    `Notre équipe la prend en charge et vous répondra directement sur ce numéro WhatsApp dans les plus brefs délais.\n\n` +
+                    `Merci de votre confiance.\n` +
+                    `— L'équipe Convessa`
 
-                waManager.sendMessage(adminJid, text).catch(err => {
-                    logger.warn({ component: 'Contact', err }, 'Impossible de notifier l\'admin via WhatsApp')
-                })
+                waManager.sendMessage(submitterJid, userText)
+                    .then(() => markContactMessageUserNotified(created.id))
+                    .catch(err => {
+                        logger.warn(
+                            { component: 'Contact', id: created.id, phone: maskPhone(trimmedPhone), err },
+                            "Impossible d'envoyer la confirmation WhatsApp au demandeur"
+                        )
+                    })
+            } else {
+                logger.warn({ component: 'Contact', id: created.id }, 'WhatsApp admin non connecté — confirmation au demandeur non envoyée')
             }
 
-            logger.info({ component: 'Contact', id, email: email.trim() }, 'Message de contact reçu')
-            res.status(201).json({ success: true, message: 'Message envoyé avec succès. Nous vous répondrons bientôt !' })
+            // ── 2) Transmission au groupe WhatsApp admin ────────────────────────────
+            const groupJid = await getAdminGroupJid()
+            const adminJid = waManager.getConnectedJid()
+            const destinationJid = groupJid ?? adminJid
+
+            if (destinationJid && waManager.isReady()) {
+                const text =
+                    `*Nouvelle demande reçue via le formulaire de contact*\n\n` +
+                    `Nom : ${trimmedName}\n\n` +
+                    `Email : ${trimmedEmail}\n\n` +
+                    `Téléphone : ${trimmedPhone}\n\n` +
+                    `Sujet : ${trimmedSubject}\n\n` +
+                    `Message :\n_${trimmedMessage}_\n\n` +
+                    `Répondez depuis l'espace "Messages depuis Contact" du backoffice admin.`
+
+                waManager.sendMessage(destinationJid, text)
+                    .then(() => {
+                        if (groupJid) markContactMessageGroupNotified(created.id)
+                    })
+                    .catch(err => {
+                        logger.warn(
+                            { component: 'Contact', id: created.id, err },
+                            "Impossible de notifier l'administration via WhatsApp"
+                        )
+                    })
+            } else if (!destinationJid) {
+                logger.warn(
+                    { component: 'Contact', id: created.id },
+                    'Aucun groupe admin configuré et compte admin non connecté — notification admin non envoyée'
+                )
+            }
+
+            logger.info({ component: 'Contact', id: created.id, email: trimmedEmail }, 'Message de contact reçu')
+            res.status(201).json({
+                success: true,
+                id:      created.id,
+                message: 'Message envoyé avec succès. Vous recevrez une confirmation sur WhatsApp et nous vous répondrons bientôt !',
+            })
 
         } catch (err) {
             logger.error({ component: 'Contact', err }, 'Erreur enregistrement message contact')
@@ -100,7 +195,7 @@ export function contactRouter(waManager: WhatsAppManager): Router {
             )
 
             // Notifier l'admin
-            const adminJid = getAdminJid()
+            const adminJid = waManager.getConnectedJid()
             if (adminJid && waManager.isReady()) {
                 const text = `🎉 *Nouveau membre Communauté Convessa*\n\n` +
                     `*Nom :* ${firstName.trim()} ${lastName.trim()}\n` +
@@ -115,24 +210,6 @@ export function contactRouter(waManager: WhatsAppManager): Router {
 
         } catch (err) {
             logger.error({ component: 'Community', err }, 'Erreur inscription communauté')
-            res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
-        }
-    })
-
-    // ── GET /api/admin/contact — messages de contact (admin) ──────────────────
-    router.get('/admin-contact', requireAdminAuth, async (req, res) => {
-        const page  = Math.max(1, parseInt(req.query['page'] as string || '1', 10))
-        const limit = Math.min(50, parseInt(req.query['limit'] as string || '20', 10))
-        const offset = (page - 1) * limit
-        try {
-            const messages = await query(
-                `SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-                [limit, offset]
-            )
-            const countRows = await query<{ total: number }>('SELECT COUNT(*) AS total FROM contact_messages')
-            res.json({ success: true, messages, total: countRows[0]?.total ?? 0 })
-        } catch (err) {
-            logger.error({ component: 'Admin', err }, 'Erreur liste messages contact')
             res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erreur interne' } })
         }
     })

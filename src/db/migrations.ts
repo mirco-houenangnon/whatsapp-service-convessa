@@ -292,17 +292,53 @@ const TABLES = [
 
     // ── Messages de contact ────────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS contact_messages (
-        id            VARCHAR(36)   NOT NULL,
-        name          VARCHAR(150)  NOT NULL,
-        email         VARCHAR(255)  NOT NULL,
-        phone         VARCHAR(30)   DEFAULT NULL,
-        subject       VARCHAR(255)  NOT NULL,
-        message       TEXT          NOT NULL,
-        status        VARCHAR(20)   NOT NULL DEFAULT 'unread'
-                          COMMENT 'unread | read | replied',
-        created_at    DATETIME      NOT NULL DEFAULT NOW(),
+        id                      VARCHAR(36)   NOT NULL,
+        name                    VARCHAR(150)  NOT NULL,
+        email                   VARCHAR(255)  NOT NULL,
+        phone                   VARCHAR(30)   DEFAULT NULL,
+        subject                 VARCHAR(255)  NOT NULL,
+        message                 TEXT          NOT NULL,
+        status                  VARCHAR(20)   NOT NULL DEFAULT 'unread'
+                                    COMMENT 'unread | read | replied',
+        user_notified_at        DATETIME      DEFAULT NULL COMMENT 'Confirmation WhatsApp envoyée au demandeur',
+        admin_group_notified_at DATETIME      DEFAULT NULL COMMENT 'Notification WhatsApp envoyée au groupe admin',
+        read_at                 DATETIME      DEFAULT NULL,
+        created_at              DATETIME      NOT NULL DEFAULT NOW(),
+        updated_at              DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        INDEX idx_contact_status (status)
+        INDEX idx_contact_status (status),
+        INDEX idx_contact_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Réponses admin aux messages de contact (fil de discussion) ────────────
+    `CREATE TABLE IF NOT EXISTS contact_message_replies (
+        id                  VARCHAR(36)   NOT NULL,
+        contact_message_id  VARCHAR(36)   NOT NULL,
+        admin_id            INT           DEFAULT NULL,
+        admin_name          VARCHAR(100)  DEFAULT NULL,
+        body                TEXT          DEFAULT NULL,
+        media_type          VARCHAR(20)   DEFAULT NULL,
+        media_mime          VARCHAR(100)  DEFAULT NULL,
+        media_name          VARCHAR(255)  DEFAULT NULL,
+        wa_message_id       VARCHAR(255)  DEFAULT NULL,
+        status              VARCHAR(20)   NOT NULL DEFAULT 'sent'
+                                COMMENT 'sent | failed',
+        error_message       VARCHAR(500)  DEFAULT NULL,
+        created_at          DATETIME      NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (id),
+        INDEX idx_replies_contact_message (contact_message_id),
+        CONSTRAINT fk_replies_contact_message FOREIGN KEY (contact_message_id)
+            REFERENCES contact_messages(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    // ── Paramètres applicatifs (clé/valeur) ────────────────────────────────────
+    // Utilisé notamment pour stocker le JID du groupe WhatsApp admin
+    // ("Messages depuis Contact") créé depuis le backoffice.
+    `CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key    VARCHAR(100)  NOT NULL,
+        setting_value  TEXT          DEFAULT NULL,
+        updated_at     DATETIME      NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (setting_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ]
 
@@ -335,6 +371,11 @@ const ALTER_MIGRATIONS = [
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended         TINYINT(1)  NOT NULL DEFAULT 0`,
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(500) DEFAULT NULL`,
     `ALTER TABLE wa_tenants ADD COLUMN IF NOT EXISTS suspended_at      DATETIME    DEFAULT NULL`,
+    // ── Messagerie "Contact" — espace admin (fil de discussion + suivi) ────────
+    `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_notified_at        DATETIME DEFAULT NULL`,
+    `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS admin_group_notified_at DATETIME DEFAULT NULL`,
+    `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS read_at                 DATETIME DEFAULT NULL`,
+    `ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS updated_at              DATETIME NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP`,
 ]
 
 export async function runMigrations(): Promise<void> {

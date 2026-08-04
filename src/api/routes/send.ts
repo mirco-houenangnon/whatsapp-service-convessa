@@ -35,6 +35,7 @@ import { rateLimit }           from '../middleware/rateLimit.js'
 import { TenantManager }       from '../../whatsapp/TenantManager.js'
 import { validateMedia, getMediaRules } from '../../services/mediaValidator.js'
 import { logger, maskPhone }   from '../../services/logger.js'
+import { normalizePhone }      from '../../services/phoneUtils.js'
 import {
     createLoggedMessage,
     markMessageSent,
@@ -47,12 +48,16 @@ import { incrementMessagesSent } from '../../db/TenantStore.js'
 import { isTenantSendingAllowed } from '../../services/tenantPrivileges.js'
 import type { MediaPayload, MediaType } from '../../db/MessageQueue.js'
 
-const PHONE_REGEX        = /^[+\d\s\-()]+$/
+const PHONE_REGEX        = /^[+\d\s\-().]+$/
 const VALID_MEDIA_TYPES: MediaType[] = ['image', 'video', 'audio', 'document']
 const MAX_BROADCAST_RECIPIENTS = 50
 
+/**
+ * Nettoie tout numéro saisi → chiffres purs sans +
+ * Gère : espaces, tirets, parenthèses, points, +, 01 béninois, etc.
+ */
 function sanitizePhone(raw: string): string {
-    return raw.replace(/[\s\-()]/g, '').replace(/^\+/, '')
+    return normalizePhone(raw)
 }
 
 // Un groupId interne est un UUID v4 (jamais un numéro de téléphone)

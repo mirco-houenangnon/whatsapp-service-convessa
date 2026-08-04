@@ -30,6 +30,7 @@ import {
     isDeviceBlocked, getDeviceRegisteredUid, logDeviceSession,
 } from '../../db/DeviceStore.js'
 import { logger }  from '../../services/logger.js'
+import { normalizePhone, toFirebaseE164 } from '../../services/phoneUtils.js'
 import { config }  from '../../config.js'
 import { WhatsAppManager } from '../../whatsapp/WhatsAppManager.js'
 import { enqueue }         from '../../db/MessageQueue.js'
@@ -529,12 +530,12 @@ export function authRouter(waManager: WhatsAppManager): Router {
             // ── Créer ou récupérer l'utilisateur Firebase ───────────────────────
             let firebaseUid: string
             try {
-                const fbUser = await firebaseAuth.getUserByPhoneNumber(`+${phone}`)
+                const fbUser = await firebaseAuth.getUserByPhoneNumber(toFirebaseE164(phone))
                 firebaseUid  = fbUser.uid
             } catch {
                 try {
                     const fbUser = await firebaseAuth.createUser({
-                        phoneNumber:   `+${phone}`,
+                        phoneNumber:   toFirebaseE164(phone),
                         displayName:   `User ${maskPhone(phone)}`,
                         emailVerified: false,
                         disabled:      false,
@@ -985,9 +986,9 @@ function maskPhone(phone: string): string {
     return phone.slice(0, 3) + '****' + phone.slice(-3)
 }
 
-/** Supprime les espaces, tirets, parenthèses et le signe + */
+/** Nettoie tout numéro saisi → chiffres purs sans + (espaces, tirets, parenthèses, points, 01 béninois, etc.) */
 function sanitizePhone(raw: string): string {
-    return raw.replace(/[\s\-().+]/g, '')
+    return normalizePhone(raw)
 }
 
 /** Retourne un objet utilisateur sans champs sensibles */

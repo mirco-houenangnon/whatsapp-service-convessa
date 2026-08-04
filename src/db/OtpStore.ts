@@ -34,7 +34,10 @@ export async function verifyOtp(phone: string, code: string): Promise<'valid' | 
 
     await execute(`UPDATE auth_otp_codes SET attempts = attempts + 1 WHERE phone = ?`, [phone])
     if (hashOtp(code) !== otp.code_hash) return 'invalid'
-    await execute(`UPDATE auth_otp_codes SET verified = 1 WHERE phone = ?`, [phone])
+    // Ne pas marquer verified=1 ici : la validation du code ne signifie pas que
+    // la création du compte (Firebase + DB) a réussi. Si l'étape suivante échoue
+    // (500), un retry avec le même code doit encore pouvoir passer. Le code est
+    // définitivement consommé via deleteOtp() une fois le compte créé avec succès.
     return 'valid'
 }
 

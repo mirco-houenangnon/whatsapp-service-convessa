@@ -26,6 +26,7 @@ import { requireTenantApiKey } from '../middleware/tenantAuth.js'
 import { rateLimit }           from '../middleware/rateLimit.js'
 import { TenantManager }       from '../../whatsapp/TenantManager.js'
 import { logger }              from '../../services/logger.js'
+import { normalizePhone }      from '../../services/phoneUtils.js'
 import {
     findTenantGroupByName,
     createGroup,
@@ -35,11 +36,11 @@ import {
     incrementParticipantsCount,
 }                               from '../../db/GroupStore.js'
 
-const PHONE_REGEX = /^[+\d\s\-()]+$/
+const PHONE_REGEX = /^[+\d\s\-().]+$/
 const MAX_PARTICIPANTS = 256 // limite WhatsApp
 
 function sanitizePhone(raw: string): string {
-    return raw.replace(/[\s\-()]/g, '').replace(/^\+/, '')
+    return normalizePhone(raw)
 }
 
 export function groupsRouter(tenantManager: TenantManager): Router {

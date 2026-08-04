@@ -32,13 +32,16 @@ export function getPool(): mysql.Pool {
 
 /**
  * Exécute une requête SELECT paramétrée (placeholders `?`).
+ * Utilise pool.query() (non-préparé) plutôt que pool.execute() (prepared)
+ * car mysql2 prepared statements rejettent les entiers JS pour LIMIT/OFFSET
+ * dans certaines versions du driver.
  * Retourne les lignes sous forme T[].
  */
 export async function query<T = Record<string, unknown>>(
     sql:     string,
     params?: unknown[]
 ): Promise<T[]> {
-    const [rows] = await getPool().execute<mysql.RowDataPacket[]>(sql, params)
+    const [rows] = await getPool().query<mysql.RowDataPacket[]>(sql, params)
     return rows as unknown as T[]
 }
 

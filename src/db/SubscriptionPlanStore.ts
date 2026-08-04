@@ -1,5 +1,31 @@
 /**
  * SubscriptionPlanStore.ts — Plans d'abonnement — MySQL.
+ *
+ * ── Plans actifs (à créer depuis le backoffice Admin > Plans) ─────────────
+ *
+ *  Gratuit
+ *    Prix : 0 FCFA
+ *    Type : requests (quota de messages)
+ *    Valeur : 50 messages
+ *
+ *  Standard
+ *    Prix : 1 500 FCFA
+ *    Type : requests
+ *    Valeur : 1 000 messages
+ *
+ *  Pro
+ *    Prix : 7 000 FCFA
+ *    Type : requests
+ *    Valeur : 5 000 messages
+ *
+ *  Entreprise
+ *    Prix : 12 500 FCFA
+ *    Type : duration (durée)
+ *    Valeur : 30 jours
+ *
+ * Pour mettre à jour les plans : Admin > Plans d'abonnements > Nouveau plan.
+ * Pour modifier un plan existant : Admin > Base de données > subscription_plans.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { v4 as uuidv4 }   from 'uuid'

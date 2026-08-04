@@ -32,6 +32,7 @@ import {
     listTenants,
     type Tenant,
 } from '../db/TenantStore.js'
+import { getFreePlan }             from '../db/SubscriptionPlanStore.js'
 import { WhatsAppManager }         from './WhatsAppManager.js'
 import type { MediaPayload }       from '../db/MessageQueue.js'
 import { config }                  from '../config.js'
@@ -299,23 +300,36 @@ export class TenantManager extends EventEmitter {
         const phoneToMask = session?.phone ?? tenant.phone ?? ''
         const expiresIso  = privileges.expiresAt ? privileges.expiresAt.toISOString() : null
 
-        // ── Message de bienvenue WhatsApp ─────────────────────────────────────────────
+        // ── Message de bienvenue WhatsApp ────────────────────────────────────────
         const phoneForWelcome = session?.phone ?? tenant.phone ?? ''
         if (phoneForWelcome) {
-            const usageMsg = privileges.usageType === 'unlimited'
-                ? 'Vous bénéficiez d\'un accès *illimité* à l\'API.'
-                : privileges.usageType === 'requests'
-                ? `Vous disposez de *${privileges.messagesLimit?.toLocaleString('fr-FR')} messages* à utiliser.`
-                : privileges.expiresAt
-                ? `Votre accès est valable jusqu'au *${privileges.expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}*.`
-                : ''
+            // Récupérer le nom réel du plan gratuit pour l'afficher dans le message
+            const freePlan = trimmedCode ? null : await getFreePlan().catch(() => null)
+            const freePlanName = freePlan?.name ?? 'Gratuit'
 
-            const welcomeText = `🎉 *Bienvenue sur Convessa !*\n\n` +
-                `Votre compte WhatsApp API est maintenant actif.\n\n` +
+            const planLabel = trimmedCode
+                ? `votre abonnement (code de parrainage *${trimmedCode}*)`
+                : `votre plan *${freePlanName}*`
+
+            const usageMsg = privileges.usageType === 'unlimited'
+                ? `Vous bénéficiez de ${planLabel}, avec un accès *illimité* à l'API.`
+                : privileges.usageType === 'requests'
+                ? `Vous bénéficiez de ${planLabel}, avec *${privileges.messagesLimit?.toLocaleString('fr-FR')} messages* à votre disposition.`
+                : privileges.expiresAt
+                ? `Vous bénéficiez de ${planLabel}, valable jusqu'au *${privileges.expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}*.`
+                : `Vous bénéficiez de ${planLabel}.`
+
+            const welcomeText =
+                `🎉 *Bienvenue sur Convessa !*\n\n` +
+                `Votre session WhatsApp API est maintenant active et prête à l'emploi.\n\n` +
                 `${usageMsg}\n\n` +
+                `*Prochaines étapes :*\n` +
+                `1️⃣ Récupérez votre clé API dans votre espace Convessa\n` +
+                `2️⃣ Consultez la documentation et intégrez l'API dans votre application\n` +
+                `3️⃣ Envoyez votre premier message — c'est aussi simple que ça\n\n` +
                 `📖 Documentation : https://convessa.dev/docs\n` +
-                `💬 Support : https://convessa.dev/contact\n\n` +
-                `Votre clé API commence par : *${hint}*\n\n` +
+                `💬 Contactez-nous depuis le site : https://convessa.dev/contact\n\n` +
+                `Votre clé API commence par : *${hint}*\n` +
                 `_Gardez votre clé secrète et ne la partagez jamais._`
 
             try {
@@ -618,9 +632,13 @@ export class TenantManager extends EventEmitter {
         logger.info({ component: 'TenantManager', tenantId }, 'Session tenant fermée')
     }
 
-    // ── Envoyer un message via le numéro admin (pour notifications système) ────────
+    // ── Envoyer un message via le numéro admin (pour notifications système) ──────
     async sendMessageAsTenantViaAdmin(phone: string, text: string): Promise<void> {
-        const jid = `${phone.replace(/[^0-9]/g, '')}@s.whatsapp.net`
+        // `phone` peut être un JID Baileys brut ("22912345678:19@s.whatsapp.net")
+        // ou un numéro nu ("22912345678"). On normalise vers "XXXXXXX@s.whatsapp.net".
+        const raw = phone.includes('@') ? phone.split('@')[0]! : phone
+        const number = raw.split(':')[0]!.replace(/[^0-9]/g, '')
+        const jid = `${number}@s.whatsapp.net`
         await this.adminManager.sendMessage(jid, text)
     }
 }

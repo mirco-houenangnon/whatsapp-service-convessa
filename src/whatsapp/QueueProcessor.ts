@@ -9,6 +9,7 @@
 
 import { config }          from '../config.js'
 import { logger }          from '../services/logger.js'
+import { normalizePhone }  from '../services/phoneUtils.js'
 import { WhatsAppManager } from './WhatsAppManager.js'
 import {
     dequeueNext,
@@ -98,8 +99,8 @@ export class QueueProcessor {
             const sock = this.waManager.getSocket()
             if (!sock) throw new Error('Socket indisponible')
 
-            // Résolution du JID WhatsApp
-            const cleanRecipient = msg.recipient.replace(/[+\s\-]/g, '')
+            // Résolution du JID WhatsApp — normalizePhone gère le 0 de tête local
+            const cleanRecipient = normalizePhone(msg.recipient)
             const jid             = `${cleanRecipient}@s.whatsapp.net`
             const waResults       = await sock.onWhatsApp(jid)
             const found           = waResults?.[0]

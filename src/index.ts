@@ -43,6 +43,7 @@ import { groupsRouter }    from './api/routes/groups.js'
 import { plansRouter }     from './api/routes/plans.js'
 import { paymentsRouter }  from './api/routes/payments.js'
 import { contactRouter }   from './api/routes/contact.js'
+import { adminContactRouter } from './api/routes/adminContact.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -152,6 +153,7 @@ app.use('/api/v1', groupsRouter(tenantManager))
 app.use('/api/v1/plans', plansRouter())
 app.use('/api/v1', paymentsRouter(tenantManager))
 app.use('/api/v1', contactRouter(waManager))
+app.use('/api/admin/contact', adminContactRouter(waManager))
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

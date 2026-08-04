@@ -85,7 +85,7 @@ export async function listProfiles(opts: { page: number; limit: number; search?:
          ) combined
          ORDER BY created_at DESC
          LIMIT ? OFFSET ?`,
-        [...params, opts.limit, offset]
+        [...params, Number(opts.limit), Number(offset)]
     )
 
     return { total, profiles: rows }

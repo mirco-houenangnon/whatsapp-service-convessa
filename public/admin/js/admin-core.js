@@ -454,4 +454,4 @@
     }
 
     // --
-    // ONGLET "MESSAGES DEPUIS CONTACT" — liste + fil de discussion WhatsApp
+    // ONGLET "MESSAGERIE" — liste + fil de discussion WhatsApp

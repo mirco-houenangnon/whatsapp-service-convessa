@@ -3,12 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Convessa | Backoffice Admin</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/admin/admin.css" />
+  <link rel="stylesheet" href="/admin/admin.css?v=TURQUOISE001" />
+  <style id="whatsapp-override">
+    /* Forçage styles WhatsApp - priorité maximale */
+    .contact-bubble {
+      max-width: 65% !important;
+      width: fit-content !important;
+      padding: 6px 10px !important;
+      border-radius: 8px !important;
+      font-size: 13px !important;
+      line-height: 1.4 !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+      margin-bottom: 2px !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+    }
+    .contact-bubble.inbound {
+      align-self: flex-start !important;
+      background: #ffffff !important;
+      color: #111b21 !important;
+      border-top-left-radius: 2px !important;
+      border: 1px solid #e8ecef !important;
+    }
+    .contact-bubble.outbound {
+      align-self: flex-end !important;
+      background: #d9fdd3 !important;
+      color: #111b21 !important;
+      border-top-right-radius: 2px !important;
+      border: none !important;
+    }
+    .contact-bubble.outbound.failed {
+      background: #fee2e2 !important;
+      border: 1px solid #fca5a5 !important;
+    }
+    .contact-thread-body {
+      flex: 1 !important;
+      overflow-y: auto !important;
+      padding: 12px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+      background: #efeae2 !important;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px) !important;
+      background-size: 20px 20px !important;
+    }
+    .contact-bubble .bubble-time {
+      font-size: 10px !important;
+      color: #8b969b !important;
+      margin-top: 2px !important;
+      text-align: right !important;
+    }
+    .contact-bubble .bubble-label {
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      color: #128C7E !important;
+      margin-bottom: 2px !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -34,7 +95,7 @@
       <button class="nav-tab" data-tab="database">Base de données</button>
       <button class="nav-tab" data-tab="panel">Panel WhatsApp</button>
       <button class="nav-tab" data-tab="contact">
-        Messages depuis Contact
+        Messagerie
         <span class="nav-tab-badge" id="contactUnreadBadge" style="display:none;">0</span>
       </button>
     </nav>
@@ -104,7 +165,7 @@
         </button>
         <button class="mobile-nav-tab" data-tab="contact">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/></svg>
-          Messages Contact
+          Messagerie
           <span class="nav-tab-badge" id="contactUnreadBadgeMobile" style="display:none;">0</span>
         </button>
       </div>
@@ -624,10 +685,10 @@
       <iframe id="panelIframe" title="Panel WhatsApp" style="width:100%;border:none;display:block;height:calc(100vh - 72px - 56px);"></iframe>
     </div>
 
-    <!-- VIEW: MESSAGES DEPUIS CONTACT -->
+    <!-- VIEW: MESSAGERIE -->
     <div class="view" id="view-contact">
       <div class="section-header">
-        <div class="section-title">Messages depuis Contact</div>
+        <div class="section-title">Messagerie</div>
         <div style="display:flex;gap:0.5rem;align-items:center;">
           <button class="pagination-btn" id="contactGroupStatusBtn" style="padding:0.4rem 0.9rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -686,7 +747,7 @@
               </div>
               <span class="contact-status-chip" id="contactThreadStatusChip">—</span>
             </div>
-            <div class="contact-thread-body" id="contactThreadBody"></div>
+            <div class="contact-thread-body" id="contactThreadBody" style="padding:12px;gap:4px;background:#efeae2;background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:20px 20px;display:flex;flex-direction:column;"></div>
             <div class="contact-composer">
               <div class="contact-composer-attachment" id="contactAttachmentPreview" style="display:none;">
                 <span id="contactAttachmentName">fichier.pdf</span>
@@ -969,7 +1030,7 @@
     </div>
   </div>
 
-  <!-- ── MODAL GESTION DU GROUPE ADMIN "MESSAGES DEPUIS CONTACT" ── -->
+  <!-- ── MODAL GESTION DU GROUPE ADMIN "MESSAGERIE" ── -->
   <div class="modal-overlay" id="contactGroupModal" role="dialog" aria-modal="true" aria-labelledby="contactGroupModalTitle">
     <div class="modal-box">
       <div class="modal-header">
@@ -1063,5 +1124,22 @@
   <script src="/admin/js/admin-database.js"></script>
   <script src="/admin/js/admin-mobile.js"></script>
   <script src="/admin/js/admin-init.js"></script>
+  <script src="/admin/force-style.js"></script>
+  <script>
+    // Fonction pour forcer les styles WhatsApp (automatique et silencieuse)
+    window.forceWhatsAppStyles = function() {
+      const style = document.createElement('style');
+      style.id = 'force-wa-mega';
+      style.innerHTML = '.contact-bubble{all:unset!important;display:block!important;max-width:65%!important;width:fit-content!important;padding:6px 10px!important;border-radius:8px!important;font-size:13px!important;line-height:1.4!important;margin-bottom:2px!important;box-sizing:border-box!important;word-wrap:break-word!important}.contact-bubble.inbound{background:#fff!important;color:#111b21!important;border:1px solid #e8ecef!important;float:left!important;clear:both!important}.contact-bubble.outbound{background:#d9fdd3!important;color:#111b21!important;float:right!important;clear:both!important}.contact-thread-body{background:#efeae2!important;padding:12px!important}.bubble-label{font-size:11px!important;font-weight:700!important;color:#128C7E!important;display:block!important;margin-bottom:2px!important}.bubble-time{font-size:10px!important;color:#8b969b!important;display:block!important;margin-top:2px!important;text-align:right!important}';
+      const existing = document.getElementById('force-wa-mega');
+      if (existing) existing.remove();
+      document.head.appendChild(style);
+    };
+    
+    // Appliquer automatiquement au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => {
+      window.forceWhatsAppStyles();
+    });
+  </script>
 </body>
 </html>

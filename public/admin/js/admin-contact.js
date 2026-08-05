@@ -134,25 +134,27 @@
     function renderContactThreadBody(msg, replies) {
       const body = document.getElementById('contactThreadBody');
       let html = `
-        <div class="contact-bubble inbound">
-          <div class="bubble-label">${esc(msg.name)} — ${esc(msg.subject)}</div>
+        <div class="contact-bubble inbound" style="max-width:65%;width:fit-content;padding:6px 10px;border-radius:8px;font-size:13px;line-height:1.4;background:#fff;color:#111b21;border:1px solid #e8ecef;border-top-left-radius:2px;align-self:flex-start;margin-bottom:2px;">
+          <div class="bubble-label" style="font-size:11px;font-weight:700;color:#128C7E;margin-bottom:2px;">${esc(msg.name)} — ${esc(msg.subject)}</div>
           ${esc(msg.message)}
-          <div class="bubble-time">${formatDate(msg.createdAt)}</div>
+          <div class="bubble-time" style="font-size:10px;color:#8b969b;margin-top:2px;text-align:right;">${formatDate(msg.createdAt)}</div>
         </div>
       `;
       html += replies.map(r => {
         const mediaHtml = r.mediaType
-          ? `<div class="bubble-media">📎 ${esc(r.mediaName || r.mediaType)}</div>`
+          ? `<div class="bubble-media" style="display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.06);border-radius:6px;padding:4px 8px;margin-bottom:4px;font-size:12px;font-weight:600;color:#333;border:1px solid rgba(0,0,0,0.08);">📎 ${esc(r.mediaName || r.mediaType)}</div>`
           : '';
         const errorHtml = r.status === 'failed'
-          ? `<div class="bubble-error">Échec de l'envoi${r.errorMessage ? ' — ' + esc(r.errorMessage) : ''}</div>`
+          ? `<div class="bubble-error" style="font-size:11px;color:#b91c1c;margin-top:3px;font-weight:600;">Échec de l'envoi${r.errorMessage ? ' — ' + esc(r.errorMessage) : ''}</div>`
           : '';
+        const bgColor = r.status === 'failed' ? '#fee2e2' : '#d9fdd3';
+        const border = r.status === 'failed' ? 'border:1px solid #fca5a5;' : '';
         return `
-          <div class="contact-bubble outbound ${r.status === 'failed' ? 'failed' : ''}">
-            <div class="bubble-label">${esc(r.adminName || 'Administrateur')}</div>
+          <div class="contact-bubble outbound ${r.status === 'failed' ? 'failed' : ''}" style="max-width:65%;width:fit-content;padding:6px 10px;border-radius:8px;font-size:13px;line-height:1.4;background:${bgColor};color:#111b21;${border}border-top-right-radius:2px;align-self:flex-end;margin-bottom:2px;">
+            <div class="bubble-label" style="font-size:11px;font-weight:700;color:#128C7E;margin-bottom:2px;">${esc(r.adminName || 'Administrateur')}</div>
             ${mediaHtml}
             ${r.body ? esc(r.body) : ''}
-            <div class="bubble-time">${formatDate(r.createdAt)}</div>
+            <div class="bubble-time" style="font-size:10px;color:#8b969b;margin-top:2px;text-align:right;">${formatDate(r.createdAt)}</div>
             ${errorHtml}
           </div>
         `;
@@ -160,6 +162,13 @@
 
       body.innerHTML = html;
       body.scrollTop = body.scrollHeight;
+      
+      // FORCER les styles immédiatement après le rendu
+      setTimeout(() => {
+        if (window.forceWhatsAppStyles) {
+          window.forceWhatsAppStyles();
+        }
+      }, 100);
     }
 
     // ── Composer : pièce jointe ──
@@ -273,7 +282,7 @@
     document.getElementById('contactNextBtn').addEventListener('click', () => loadContactMessages(contactState.page + 1));
     document.getElementById('contactRefreshBtn').addEventListener('click', () => loadContactMessages(contactState.page));
 
-    // ── Groupe WhatsApp admin ("Messages depuis Contact") ──
+    // ── Groupe WhatsApp admin ("Messagerie") ──
     const contactGroupState = { configured: false, connected: false, groupJid: null, name: '', participants: [] };
 
     function contactGroupStatusLabelText() {

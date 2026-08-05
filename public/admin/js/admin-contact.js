@@ -273,7 +273,7 @@
     document.getElementById('contactNextBtn').addEventListener('click', () => loadContactMessages(contactState.page + 1));
     document.getElementById('contactRefreshBtn').addEventListener('click', () => loadContactMessages(contactState.page));
 
-    // ── Groupe WhatsApp admin ("Messages depuis Contact") ──
+    // ── Groupe WhatsApp admin ("Messagerie") ──
     const contactGroupState = { configured: false, connected: false, groupJid: null, name: '', participants: [] };
 
     function contactGroupStatusLabelText() {

@@ -47,27 +47,42 @@ export function chatbotContextRouter(): Router {
 
             const tenant = await getTenantByUserUid(uid)
             if (!tenant) {
-                res.json({ success: true, context: 'Ce client n\'a pas encore de session WhatsApp active.' })
+                res.json({ success: true, context: 'Ce client n\'a pas encore créé de session WhatsApp sur la plateforme.' })
                 return
             }
 
             // ── Whitelist stricte : uniquement des champs non sensibles ──────
             const remaining = tenant.messagesLimit != null
                 ? Math.max(0, tenant.messagesLimit - tenant.messagesSent)
-                : null
+                : 'Illimité'
 
             const statusText: Record<string, string> = {
-                pending_qr: 'En attente de connexion : le client n\'a PAS encore scanné le QR code, sa session WhatsApp n\'est pas encore active.',
-                connected: 'Session WhatsApp ACTIVE et connectée dès maintenant.',
-                disconnected: 'Session DÉCONNECTÉE : le client doit reconnecter WhatsApp (scanner un nouveau QR code) pour redevenir actif.',
+                pending_qr: 'En attente de connexion (le QR code est généré dans le tableau de bord mais n\'a PAS encore été scanné sur le téléphone).',
+                connected: `Session WhatsApp ACTIVE et connectée${tenant.connectedAt ? ' depuis le ' + tenant.connectedAt.toISOString().slice(0, 10) : ''}.`,
+                disconnected: 'Session DÉCONNECTÉE (le client doit cliquer sur Reconnecter et scanner un nouveau QR code).',
+                revoked: 'Session révoquée.',
             }
 
-            const summary = [
-                `Statut de connexion : ${statusText[tenant.status] ?? tenant.status}`,
-                `Type de forfait : ${tenant.usageType}`,
-                remaining != null ? `Messages restants sur son forfait : ${remaining}` : null,
-                tenant.apiKeyExpiresAt ? `Clé API expire le : ${tenant.apiKeyExpiresAt.toISOString().slice(0, 10)}` : null,
-            ].filter(Boolean).join('\n')
+            const usageLabel: Record<string, string> = {
+                unlimited: 'Illimité',
+                duration: 'Abonnement par durée',
+                requests: 'Quota de messages',
+            }
+
+            const summaryLines = [
+                tenant.name ? `Nom / Compte : ${tenant.name}` : null,
+                tenant.phone ? `Numéro WhatsApp relié : +${tenant.phone}` : null,
+                `Statut de la session : ${statusText[tenant.status] ?? tenant.status}`,
+                `Formule / Forfait : ${usageLabel[tenant.usageType] ?? tenant.usageType}`,
+                `Messages envoyés : ${tenant.messagesSent}`,
+                `Messages restants sur le forfait : ${remaining}`,
+                tenant.apiKeyExpiresAt ? `Date d'expiration de la clé API / abonnement : ${tenant.apiKeyExpiresAt.toISOString().slice(0, 10)}` : null,
+                tenant.apiKeyHint ? `Indice de clé API : active (se termine par ...${tenant.apiKeyHint})` : 'Clé API : Aucune clé générée pour le moment',
+                tenant.webhookUrl ? `Webhook configuré : Oui (${tenant.webhookUrl})` : 'Webhook : Aucun webhook configuré',
+                `Compte créé le : ${tenant.createdAt.toISOString().slice(0, 10)}`,
+            ]
+
+            const summary = summaryLines.filter(Boolean).join('\n')
 
             res.json({ success: true, context: summary })
         } catch (err) {

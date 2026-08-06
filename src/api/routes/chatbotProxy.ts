@@ -18,6 +18,28 @@ import { logger } from '../../services/logger.js'
 
 const ALLOWED_LANGS = ['fr', 'en', 'es']
 
+// Rate Limiter en mémoire : 10 requêtes / minute par utilisateur
+const rateLimitMap = new Map<string, { count: number, resetTime: number }>()
+const MAX_REQUESTS = 10
+const WINDOW_MS = 60 * 1000
+
+function checkRateLimit(key: string): boolean {
+    const now = Date.now()
+    const record = rateLimitMap.get(key)
+
+    if (!record || now > record.resetTime) {
+        rateLimitMap.set(key, { count: 1, resetTime: now + WINDOW_MS })
+        return true
+    }
+
+    if (record.count >= MAX_REQUESTS) {
+        return false
+    }
+
+    record.count += 1
+    return true
+}
+
 export function chatbotProxyRouter(): Router {
     const router = Router()
 
@@ -40,6 +62,19 @@ export function chatbotProxyRouter(): Router {
     router.post('/', async (req, res) => {
         const message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
         const lang    = ALLOWED_LANGS.includes(req.body?.lang) ? req.body.lang : 'fr'
+        const history = Array.isArray(req.body?.history) ? req.body.history : []
+        const stream  = Boolean(req.body?.stream || req.query?.stream === 'true')
+        const authHeader = req.headers['authorization']
+
+        // Anti-Spam (Rate Limiter) : basé sur l'Auth (personne connectée) ou l'IP
+        const limitKey = authHeader || req.ip || 'anonymous'
+        if (!checkRateLimit(limitKey)) {
+            res.status(429).json({
+                success: false,
+                error: { code: 'TOO_MANY_REQUESTS', message: 'Vous avez dépassé la limite de requêtes (10/min). Veuillez patienter.' },
+            })
+            return
+        }
 
         if (!message || message.length > 2000) {
             res.status(400).json({
@@ -58,8 +93,6 @@ export function chatbotProxyRouter(): Router {
         }
 
         try {
-            const authHeader = req.headers['authorization']
-
             const response = await fetch(`${config.iaServiceUrl}/chat`, {
                 method: 'POST',
                 headers: {
@@ -67,10 +100,7 @@ export function chatbotProxyRouter(): Router {
                     'X-Internal-Service-Key': config.internalAiServiceKey,
                     ...(authHeader ? { Authorization: authHeader as string } : {}),
                 },
-                body: JSON.stringify({ message, lang }),
-                // Aligné sur le timeout de 180s côté ia-service (llm.py). Sur GPU,
-                // les réponses reviennent en quelques secondes ; cette marge ne sert
-                // que de garde-fou si jamais on retombe en CPU.
+                body: JSON.stringify({ message, lang, history, stream }),
                 signal: AbortSignal.timeout(185_000),
             })
 
@@ -80,6 +110,22 @@ export function chatbotProxyRouter(): Router {
                     success: false,
                     error: { code: 'AI_SERVICE_ERROR', message: 'Le chatbot est momentanément indisponible' },
                 })
+                return
+            }
+
+            if (stream && response.body) {
+                res.setHeader('Content-Type', 'text/event-stream')
+                res.setHeader('Cache-Control', 'no-cache')
+                res.setHeader('Connection', 'keep-alive')
+
+                // Node.js Web Stream to Express Response Pipe
+                const reader = response.body.getReader()
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    res.write(value)
+                }
+                res.end()
                 return
             }
 

@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Docker configuration files
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Virtual environments
+.venv
+venv
+env
+
+# Python byte-code & caches
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.cache
+.pytest_cache
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Databases & Vector store local persistent data
+chroma_db
+data
+*.sqlite3
+
+# IDE & OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs & Documentation
+*.log
+logs
+README.md

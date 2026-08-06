@@ -176,6 +176,10 @@ export const config = {
     // ── Admin Backoffice ───────────────────────────────────────────────────────
     adminJwtSecret: optional('ADMIN_JWT_SECRET', 'convessa-admin-dev-secret-change-in-prod'),
 
+    // ── Chatbot IA (service interne, optionnel) ────────────────────────────────
+    internalAiServiceKey: optional('INTERNAL_AI_SERVICE_KEY', ''),
+    iaServiceUrl:         optional('IA_SERVICE_URL', ''),
+
     // ── Passerelles de paiement ────────────────────────────────────────────────
     payments: {
         fedapay: {

@@ -44,6 +44,8 @@ import { plansRouter }     from './api/routes/plans.js'
 import { paymentsRouter }  from './api/routes/payments.js'
 import { contactRouter }   from './api/routes/contact.js'
 import { adminContactRouter } from './api/routes/adminContact.js'
+import { chatbotContextRouter } from './api/routes/chatbotContext.js'
+import { chatbotProxyRouter }   from './api/routes/chatbotProxy.js'
 
 // Initialise Firebase Admin SDK au démarrage
 import './services/firebase.js'
@@ -154,6 +156,8 @@ app.use('/api/v1/plans', plansRouter())
 app.use('/api/v1', paymentsRouter(tenantManager))
 app.use('/api/v1', contactRouter(waManager))
 app.use('/api/admin/contact', adminContactRouter(waManager))
+app.use('/api/v1/internal/chatbot-context', chatbotContextRouter())
+app.use('/api/v1/chatbot', chatbotProxyRouter())
 
 // ── Route 404 ─────────────────────────────────────────────────────────────────
 

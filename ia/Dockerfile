@@ -9,20 +9,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# CORRECTIF CACHE : torch installé AVANT de copier requirements.txt.
+# Cette couche ne dépend d'aucun fichier du projet (juste de cette ligne de
+# commande elle-même) — un futur changement de requirements.txt, même sans
+# rapport avec torch (ex: bump de version de fastapi), ne la réinvalidera
+# donc plus. Avant ce correctif, l'installation CPU-only de torch (~700 Mo,
+# déjà un gain vs les ~1.5 Go de la version CUDA) était réinstallée à chaque
+# fois que requirements.txt changeait, quelle qu'en soit la raison.
+RUN pip install --no-cache-dir \
+    torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+
 COPY requirements.txt .
 
-# Installation de toutes les dépendances (~50 MB au lieu de ~700 MB avec torch).
-# optimum[onnxruntime] convertit intfloat/multilingual-e5-base en ONNX à la
-# première exécution puis met le résultat en cache dans le volume hf_cache,
-# donc les redémarrages suivants sont instantanés.
+# Installe le reste des dépendances. pip voit que torch==2.2.2 est déjà
+# satisfait (installé juste avant) et ne le retélécharge pas, même si
+# sentence-transformers le liste dans ses propres dépendances.
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Correction des fins de ligne Windows (CRLF → LF) et permissions d'exécution.
-# Sans ça, si entrypoint.sh a des CRLF (édition sous Windows), Linux
-# ne trouve pas le shebang et lève "no such file or directory".
-RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8100
 

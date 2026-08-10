@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import chromadb
+from chromadb.utils import embedding_functions
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -115,80 +116,16 @@ def _iter_files(root: str, extensions: set[str]):
 
 
 def get_chroma_collection():
-    """Retourne (ou crée) la collection Chroma, avec le modèle d'embeddings ONNX multilingue.
-
-    On charge directement le fichier model.onnx pré-converti depuis le repo
-    HuggingFace `optimum/multilingual-e5-base` — zéro torch, zéro conversion
-    à la volée. Le tokenizer vient du repo d'origine `intfloat/multilingual-e5-base`.
-
-    Téléchargement unique au premier démarrage (~280 MB), puis mis en cache dans
-    le volume Docker hf_cache (/data/hf_cache). Les redémarrages suivants sont
-    instantanés.
-    """
-    import numpy as np
-    import onnxruntime as ort
-    from transformers import AutoTokenizer
-    from huggingface_hub import hf_hub_download
-
-    hf_cache = _hf_cache()
-    base_model  = settings.embedding_model              # "intfloat/multilingual-e5-base"
-    onnx_repo   = "onnx-community/multilingual-e5-base-ONNX"  # repo HF avec model.onnx pré-converti
-    # Le fichier ONNX float32 standard est dans le sous-dossier onnx/
-    onnx_file   = "onnx/model.onnx"
-
-    # Tokenizer depuis le repo d'origine (identique à sentence-transformers)
-    tokenizer = AutoTokenizer.from_pretrained(base_model, cache_dir=hf_cache)
-
-    # Téléchargement du fichier ONNX pré-converti (pas de torch nécessaire)
-    onnx_path = hf_hub_download(
-        repo_id=onnx_repo,
-        filename=onnx_file,
-        cache_dir=hf_cache,
-    )
-
-    # Session ONNX Runtime — CPU uniquement, pas de GPU requis
-    sess_options = ort.SessionOptions()
-    sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-    session = ort.InferenceSession(onnx_path, sess_options=sess_options,
-                                   providers=["CPUExecutionProvider"])
-
-    def _embed(texts: list[str]) -> list[list[float]]:
-        # Préfixe recommandé par intfloat pour les requêtes de passage (retrieval)
-        prefixed = [f"passage: {t}" for t in texts]
-        enc = tokenizer(
-            prefixed,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="np",
-        )
-        inputs = {k: v for k, v in enc.items() if k in
-                  {inp.name for inp in session.get_inputs()}}
-        outputs = session.run(None, inputs)
-        # outputs[0] = last_hidden_state (B, T, D)
-        token_embeddings = outputs[0]
-        attention_mask   = enc["attention_mask"].astype(np.float32)  # (B, T)
-        mask_expanded    = attention_mask[:, :, np.newaxis]           # (B, T, 1)
-        sum_embeddings   = np.sum(token_embeddings * mask_expanded, axis=1)
-        sum_mask         = np.clip(mask_expanded.sum(axis=1), a_min=1e-9, a_max=None)
-        embeddings       = sum_embeddings / sum_mask                  # (B, D)
-        # Normalisation L2 (cosine similarity ready)
-        norms      = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        embeddings = embeddings / np.clip(norms, a_min=1e-9, a_max=None)
-        return embeddings.tolist()
-
+    """Retourne (ou crée) la collection Chroma, avec le modèle d'embeddings multilingue."""
     client = chromadb.PersistentClient(path=settings.chroma_path)
+    embed_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=settings.embedding_model
+    )
     return client.get_or_create_collection(
         name="project_knowledge",
-        embedding_function=_embed,
+        embedding_function=embed_fn,
         metadata={"hnsw:space": "cosine"},
     )
-
-
-def _hf_cache() -> str:
-    """Chemin du cache HuggingFace — utilise la variable d'env HF_HOME si définie."""
-    import os
-    return os.environ.get("HF_HOME", "/data/hf_cache")
 
 
 def _index_file(collection, path: Path, source_type: str, base_dir: str):

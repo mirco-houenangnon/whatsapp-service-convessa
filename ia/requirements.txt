@@ -1,16 +1,7 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 chromadb==0.5.5
-# Pile d'embeddings sans torch, sans optimum :
-#   - onnxruntime  : moteur d'inférence ONNX (~6 MB wheel)
-#   - transformers : tokenizer uniquement (pas d'inférence PyTorch)
-#   - huggingface-hub / tokenizers : téléchargement du modèle ONNX pré-converti
-# Le modèle intfloat/multilingual-e5-base-onnx est téléchargé depuis HF
-# au premier démarrage et mis en cache dans le volume hf_cache.
-onnxruntime==1.18.1
-transformers==4.43.4
-huggingface-hub==0.24.6
-tokenizers==0.19.1
+sentence-transformers==3.0.1
 numpy<2.0.0
 watchdog==4.0.1
 httpx==0.27.2

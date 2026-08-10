@@ -1,7 +1,7 @@
 #!/bin/sh
-# entrypoint.sh — Attend qu'Ollama soit prêt, tire le modèle si absent,
-# puis démarre le service IA FastAPI.
-# Lancé automatiquement au premier "docker compose up -d --build".
+# entrypoint.sh â€” Attend qu'Ollama soit prÃªt, tire le modÃ¨le si absent,
+# puis dÃ©marre le service IA FastAPI.
+# LancÃ© automatiquement au premier "docker compose up -d --build".
 
 set -e
 
@@ -10,30 +10,30 @@ MODEL="${OLLAMA_MODEL:-qwen2.5:7b}"
 
 echo "[entrypoint] Attente d'Ollama sur ${OLLAMA_HOST} ..."
 
-# Attendre qu'Ollama réponde — max 3 minutes (180s / 3s = 60 tentatives)
+# Attendre qu'Ollama rÃ©ponde â€” max 3 minutes (180s / 3s = 60 tentatives)
 i=0
 until curl -sf "${OLLAMA_HOST}/api/tags" > /dev/null 2>&1; do
   i=$((i + 1))
   if [ "$i" -ge 60 ]; then
-    echo "[entrypoint] ⚠️  Ollama ne répond pas après 3 min — démarrage quand même"
+    echo "[entrypoint] âš ï¸  Ollama ne rÃ©pond pas aprÃ¨s 3 min â€” dÃ©marrage quand mÃªme"
     break
   fi
   sleep 3
 done
 
-echo "[entrypoint] Ollama répond."
+echo "[entrypoint] Ollama rÃ©pond."
 
-# Vérifier si le modèle est déjà présent dans le volume Ollama
+# VÃ©rifier si le modÃ¨le est dÃ©jÃ  prÃ©sent dans le volume Ollama
 if curl -sf "${OLLAMA_HOST}/api/tags" | grep -q "\"${MODEL}\""; then
-  echo "[entrypoint] ✅ Modèle ${MODEL} déjà présent — pas de téléchargement."
+  echo "[entrypoint] âœ… ModÃ¨le ${MODEL} dÃ©jÃ  prÃ©sent â€” pas de tÃ©lÃ©chargement."
 else
-  echo "[entrypoint] ⬇️  Téléchargement du modèle ${MODEL} (première fois, peut prendre plusieurs minutes)..."
+  echo "[entrypoint] â¬‡ï¸  TÃ©lÃ©chargement du modÃ¨le ${MODEL} (premiÃ¨re fois, peut prendre plusieurs minutes)..."
   curl -sf -X POST "${OLLAMA_HOST}/api/pull" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"${MODEL}\"}" \
     --no-buffer -o /dev/null
-  echo "[entrypoint] ✅ Modèle ${MODEL} téléchargé."
+  echo "[entrypoint] âœ… ModÃ¨le ${MODEL} tÃ©lÃ©chargÃ©."
 fi
 
-echo "[entrypoint] Démarrage du service IA (port 8100)..."
+echo "[entrypoint] DÃ©marrage du service IA (port 8100)..."
 exec uvicorn main:app --host 0.0.0.0 --port 8100 --log-level warning

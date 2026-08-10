@@ -31,6 +31,32 @@ Contexte officiel disponible :
 ---
 """
 
+# ── Détection de fuite du prompt système (2e filet anti-jailbreak) ─────────
+# Le bouclier d'entrée (main.py) bloque les questions contenant des mots-clés
+# suspects, mais une reformulation habile peut passer au travers. Ce filet
+# côté SORTIE vérifie que la réponse générée ne recopie pas verbatim une des
+# règles internes du prompt système (ex: tentative réussie de faire "réciter"
+# ses instructions). Ne couvre que les phrases FIXES (règles 1 à 10), jamais
+# le bloc {context} dynamique qui doit légitimement pouvoir être mentionné.
+_STATIC_RULES_TEXT = SYSTEM_PROMPT_TEMPLATE.split("Contexte officiel disponible")[0]
+_PROTECTED_PHRASES = [
+    line.strip()
+    for line in _STATIC_RULES_TEXT.split("\n")
+    if len(line.strip()) >= 30
+]
+
+
+def detect_system_prompt_leak(text: str) -> bool:
+    """
+    Détection best-effort d'une fuite verbatim du prompt système. C'est un
+    filet de sécurité supplémentaire, pas une garantie absolue : une
+    paraphrase du modèle ne sera pas détectée par une comparaison de chaînes.
+    """
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(phrase.lower() in lowered for phrase in _PROTECTED_PHRASES)
+
 
 async def warm_up_model() -> None:
     """

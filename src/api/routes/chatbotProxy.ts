@@ -1,27 +1,55 @@
 /**
  * chatbotProxy.ts — Route PUBLIQUE appelée par le frontend (widget de chat).
  *
- * CORRECTIF : la route /health ne fait plus qu'un ping léger vers ia-service
- * (/health), sans déclencher une génération complète du LLM. L'ancienne
- * version appelait /chat avec un vrai message "ping", ce qui attend une
- * réponse complète du modèle (10-60s sur CPU) — largement plus long que le
- * timeout de 4s côté widget, donc le bouton ne s'affichait jamais.
+ * CORRECTIF (santé) : la route /health ne fait plus qu'un ping léger vers
+ * ia-service (/health), sans déclencher une génération complète du LLM.
+ * L'ancienne version appelait /chat avec un vrai message "ping", ce qui
+ * attend une réponse complète du modèle (10-60s sur CPU) — largement plus
+ * long que le timeout de 4s côté widget, donc le bouton ne s'affichait jamais.
  *
  * Le service ia-service ne devient "healthy" côté FastAPI qu'une fois
  * l'indexation terminée (le lifespan startup bloque avant d'accepter des
  * requêtes) — /health suffit donc déjà comme signal de disponibilité réelle.
+ *
+ * CORRECTIF (sécurité) : POST / exige désormais un token Firebase valide
+ * (requireFirebaseAuth), comme demandé — le chatbot reste réservé aux
+ * clients connectés, exactement comme prévu. Avant ce correctif, rien
+ * n'empêchait un appelant de contourner le widget et d'appeler cette route
+ * directement sans être authentifié (le widget ne masquait le bouton que
+ * côté client, ce qui ne protège rien côté serveur).
  */
 
 import { Router } from 'express'
 import { config } from '../../config.js'
 import { logger } from '../../services/logger.js'
+import { requireFirebaseAuth } from '../middleware/firebaseAuth.js'
 
 const ALLOWED_LANGS = ['fr', 'en', 'es']
+const MAX_MESSAGE_LENGTH = 2000
+const MAX_HISTORY_ITEMS = 12
+const MAX_HISTORY_ITEM_CHARS = 2000
 
-// Rate Limiter en mémoire : 10 requêtes / minute par utilisateur
+// Rate Limiter en mémoire : 10 requêtes / minute par utilisateur authentifié.
+// Pas de Redis pour l'instant (mono-instance) — si le backend est scalé
+// horizontalement un jour, cette limite deviendra "10 x nb d'instances" et
+// il faudra migrer vers un store partagé (Redis) à ce moment-là.
 const rateLimitMap = new Map<string, { count: number, resetTime: number }>()
 const MAX_REQUESTS = 10
 const WINDOW_MS = 60 * 1000
+
+// CORRECTIF : purge périodique des entrées expirées. Sans ça, le Map
+// grossissait indéfiniment (fuite mémoire) puisqu'une entrée n'était jamais
+// retirée une fois son resetTime dépassé si l'appelant ne refaisait jamais
+// de requête. .unref() pour ne jamais bloquer un arrêt propre du process.
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+setInterval(() => {
+    const now = Date.now()
+    for (const [key, record] of rateLimitMap.entries()) {
+        if (now > record.resetTime) {
+            rateLimitMap.delete(key)
+        }
+    }
+}, CLEANUP_INTERVAL_MS).unref()
 
 function checkRateLimit(key: string): boolean {
     const now = Date.now()
@@ -40,10 +68,27 @@ function checkRateLimit(key: string): boolean {
     return true
 }
 
+// CORRECTIF : borne la taille de l'historique envoyé par le client — sans ça,
+// rien n'empêchait un appelant de contourner le widget et d'envoyer un
+// historique arbitrairement long, gonflant le coût de chaque appel LLM.
+function sanitizeHistory(raw: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(raw)) return []
+    return raw.slice(-MAX_HISTORY_ITEMS).map((item) => {
+        if (item && typeof item === 'object') {
+            const clone: Record<string, unknown> = { ...(item as Record<string, unknown>) }
+            if (typeof clone.text === 'string') clone.text = clone.text.slice(0, MAX_HISTORY_ITEM_CHARS)
+            if (typeof clone.content === 'string') clone.content = clone.content.slice(0, MAX_HISTORY_ITEM_CHARS)
+            return clone
+        }
+        return {}
+    })
+}
+
 export function chatbotProxyRouter(): Router {
     const router = Router()
 
     // ── GET /health — vérifié par le frontend pour afficher/masquer le widget ──
+    // Reste public : ne renvoie qu'un booléen de disponibilité, aucune donnée.
     router.get('/health', async (_req, res) => {
         if (!config.iaServiceUrl) {
             res.status(503).json({ available: false })
@@ -59,15 +104,17 @@ export function chatbotProxyRouter(): Router {
         }
     })
 
-    router.post('/', async (req, res) => {
+    router.post('/', requireFirebaseAuth, async (req, res) => {
         const message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
         const lang    = ALLOWED_LANGS.includes(req.body?.lang) ? req.body.lang : 'fr'
-        const history = Array.isArray(req.body?.history) ? req.body.history : []
+        const history = sanitizeHistory(req.body?.history)
         const stream  = Boolean(req.body?.stream || req.query?.stream === 'true')
         const authHeader = req.headers['authorization']
 
-        // Anti-Spam (Rate Limiter) : basé sur l'Auth (personne connectée) ou l'IP
-        const limitKey = authHeader || req.ip || 'anonymous'
+        // Clé de rate-limit stable : l'uid Firebase déjà vérifié par
+        // requireFirebaseAuth, plutôt que le token brut (qui change à chaque
+        // refresh et ferait sauter la limite à chaque fois).
+        const limitKey = req.firebaseUser?.uid ?? req.ip ?? 'anonymous'
         if (!checkRateLimit(limitKey)) {
             res.status(429).json({
                 success: false,
@@ -76,7 +123,7 @@ export function chatbotProxyRouter(): Router {
             return
         }
 
-        if (!message || message.length > 2000) {
+        if (!message || message.length > MAX_MESSAGE_LENGTH) {
             res.status(400).json({
                 success: false,
                 error: { code: 'INVALID_MESSAGE', message: 'Message vide ou trop long' },
@@ -129,8 +176,11 @@ export function chatbotProxyRouter(): Router {
                 return
             }
 
-            const data = await response.json() as { answer: string; sources: string[] }
-            res.json({ success: true, answer: data.answer })
+            // CORRECTIF : les sources calculées par le RAG étaient reçues du
+            // service IA puis silencieusement jetées ici — elles sont
+            // maintenant transmises au frontend.
+            const data = await response.json() as { answer: string; sources?: string[] }
+            res.json({ success: true, answer: data.answer, sources: data.sources ?? [] })
         } catch (err) {
             logger.error({ component: 'ChatbotProxy', err }, 'Erreur appel service IA')
             res.status(502).json({

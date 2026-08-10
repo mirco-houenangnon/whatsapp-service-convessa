@@ -9,8 +9,9 @@
  *   2. Nécessite EN PLUS un header interne partagé (X-Internal-Service-Key),
  *      pour qu'un client ne puisse jamais appeler cette route directement même
  *      avec un token Firebase valide — seul le service IA connaît cette clé.
- *   3. Whitelist stricte des champs renvoyés — jamais apiKeyHash, apiKeyHint,
- *      webhookUrl, ni aucune colonne marquée `sensitive` dans schemaMeta.ts.
+ *   3. Whitelist stricte des champs renvoyés — jamais apiKeyHash, webhookUrl
+ *      en clair, numéro de téléphone en clair, ni aucune colonne marquée
+ *      `sensitive` dans schemaMeta.ts.
  *
  * N'oublie pas d'enregistrer ce router dans index.ts :
  *   import { chatbotContextRouter } from './api/routes/chatbotContext.js'
@@ -30,6 +31,16 @@ function requireInternalServiceKey(req: import('express').Request, res: import('
         return
     }
     next()
+}
+
+// CORRECTIF SÉCURITÉ : le cahier des charges prévoyait un numéro masqué dans
+// le contexte transmis au LLM — le code renvoyait le numéro complet. On ne
+// garde que les 2 derniers chiffres visibles, le reste est masqué.
+function maskPhone(phone: string): string {
+    if (!phone) return phone
+    const visible = phone.slice(-2)
+    const masked = '•'.repeat(Math.max(phone.length - 2, 0))
+    return `${masked}${visible}`
 }
 
 export function chatbotContextRouter(): Router {
@@ -71,14 +82,18 @@ export function chatbotContextRouter(): Router {
 
             const summaryLines = [
                 tenant.name ? `Nom / Compte : ${tenant.name}` : null,
-                tenant.phone ? `Numéro WhatsApp relié : +${tenant.phone}` : null,
+                tenant.phone ? `Numéro WhatsApp relié : +${maskPhone(tenant.phone)}` : null,
                 `Statut de la session : ${statusText[tenant.status] ?? tenant.status}`,
                 `Formule / Forfait : ${usageLabel[tenant.usageType] ?? tenant.usageType}`,
                 `Messages envoyés : ${tenant.messagesSent}`,
                 `Messages restants sur le forfait : ${remaining}`,
                 tenant.apiKeyExpiresAt ? `Date d'expiration de la clé API / abonnement : ${tenant.apiKeyExpiresAt.toISOString().slice(0, 10)}` : null,
                 tenant.apiKeyHint ? `Indice de clé API : active (se termine par ...${tenant.apiKeyHint})` : 'Clé API : Aucune clé générée pour le moment',
-                tenant.webhookUrl ? `Webhook configuré : Oui (${tenant.webhookUrl})` : 'Webhook : Aucun webhook configuré',
+                // CORRECTIF SÉCURITÉ : on ne renvoie plus jamais l'URL réelle du webhook
+                // (elle contredisait le commentaire de whitelist ci-dessus et n'est
+                // rattrapée par aucun pattern de redaction générique côté ia-service) —
+                // uniquement son statut configuré / non configuré, comme prévu.
+                tenant.webhookUrl ? 'Webhook configuré : Oui' : 'Webhook : Aucun webhook configuré',
                 `Compte créé le : ${tenant.createdAt.toISOString().slice(0, 10)}`,
             ]
 

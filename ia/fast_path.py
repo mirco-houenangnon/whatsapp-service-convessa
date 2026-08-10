@@ -2,10 +2,40 @@
 fast_path.py — Réponses instantanées pour les questions récurrentes simples.
 Couvre la documentation officielle Convessa sans faux-positifs.
 Règle stricte : AUCUN EMOJI.
+
+─── Cohérence avec le Fast-Path frontend (ChatWidget.jsx / detectIntent) ────
+Il existe DEUX catalogues de réponses instantanées indépendants :
+  - Frontend : `INTENT_RULES` (8 intents génériques, réponses dans les
+    fichiers i18n `chatbot.quickAnswers.*`), déclenché AVANT tout appel réseau.
+  - Backend (ici) : FAST_PATH_PATTERNS (27 entrées détaillées), déclenché
+    seulement si le frontend n'a rien trouvé.
+Tant qu'une vraie fusion des deux systèmes n'est pas faite, toute mise à jour
+d'un sujet ci-dessous doit être répercutée manuellement côté frontend si un
+intent équivalent existe. Table de correspondance connue (à tenir à jour) :
+
+    id (backend)                          intentKey (frontend, i18n)
+    ------------------------------------  ---------------------------
+    connect_wa, qr_issue, disconnections,
+    session_status                        connectWhatsapp
+    api_key, revoke_key, secure_key        apiKey
+    send_text, send_media, broadcast,
+    message_status, headers                docs
+    webhook, socketio                      webhooks
+    create_group, group_members,
+    group_invite, group_message            groups
+    error_401, error_403, error_429,
+    error_503                              docs
+    pricing, quota, file_limits            pricing / mediaLimits
+    contact_support                        support
+
+Voir aussi docs/FAQ_SYNC.md pour le détail de cette dette d'architecture et
+le plan de réconciliation.
 """
 
 import re
 import random
+import unicodedata
+import difflib
 
 # Mots-clés d'intégration technique : Si la question contient un de ces termes,
 # elle doit OBLIGATOIREMENT passer par le RAG + LLM pour générer du code sur mesure.
@@ -260,6 +290,15 @@ Pour plus de details sur le format des notifications et la mise en place, consul
 
 [Erreurs et limites](/docs?section=erreurs-limites)  [Voir les forfaits](/pricing)"""
     },
+    {
+        "id": "error_503",
+        "keywords": ["erreur 503", "503 service unavailable", "service unavailable", "service indisponible", "service temporairement indisponible"],
+        "answer": """L'erreur 503 Service Unavailable signifie que le service est temporairement indisponible, generalement en raison d'une maintenance ou d'une charge elevee sur la plateforme. Reessayez votre requete dans quelques instants.
+
+Si l'erreur persiste au-dela de quelques minutes, contactez le support.
+
+[Erreurs et limites](/docs?section=erreurs-limites)  [Contacter le support](/contact)"""
+    },
 
     # ─── TARIFS & QUOTAS ──────────────────────────────────────────────────────
     {
@@ -439,6 +478,35 @@ PERSONAL_INDICATORS = [
 ]
 
 
+def _normalize_words(text: str) -> list[str]:
+    """Minuscule, sans accents, ponctuation retirée -> liste de mots."""
+    normalized = unicodedata.normalize('NFD', text)
+    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    normalized = re.sub(r'[^\w\s]', ' ', normalized.lower())
+    return [w for w in normalized.split() if w]
+
+
+def _fuzzy_keyword_match(q_words: list[str], keyword: str) -> bool:
+    """
+    Vérifie que CHAQUE mot du mot-clé trouve une correspondance proche parmi
+    les mots de la question (tolérance aux fautes de frappe, via difflib).
+    Les mots trop courts (<=3 caractères, ex: "qr", "api") exigent une
+    correspondance exacte pour éviter les faux positifs sur des mots courts
+    qui se ressemblent tous un peu entre eux.
+    """
+    kw_words = _normalize_words(keyword)
+    if not kw_words:
+        return False
+    for kw_word in kw_words:
+        if len(kw_word) <= 3:
+            if kw_word not in q_words:
+                return False
+            continue
+        if not difflib.get_close_matches(kw_word, q_words, n=1, cutoff=0.8):
+            return False
+    return True
+
+
 def check_fast_path(question: str) -> tuple[str, list[str]] | None:
     """
     Vérifie si la question est une question FAQ exacte et générale.
@@ -465,5 +533,17 @@ def check_fast_path(question: str) -> tuple[str, list[str]] | None:
             if kw in q_lower:
                 suggestions = get_contextual_suggestions(q_lower)
                 return item["answer"], suggestions
+
+    # RÈGLE 4 (fallback) : Correspondance approximative — tolère les fautes de
+    # frappe (ex. "connceter whatapp") quand aucune correspondance exacte n'a
+    # été trouvée à la règle 3. Ne s'applique qu'aux mêmes patterns, avec le
+    # même filtrage tech/personnel déjà effectué ci-dessus.
+    q_words = _normalize_words(q_lower)
+    if q_words:
+        for item in FAST_PATH_PATTERNS:
+            for kw in item["keywords"]:
+                if _fuzzy_keyword_match(q_words, kw):
+                    suggestions = get_contextual_suggestions(q_lower)
+                    return item["answer"], suggestions
 
     return None

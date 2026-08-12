@@ -19,6 +19,7 @@ import cors              from 'cors'
 import helmet            from 'helmet'
 import path              from 'path'
 import { fileURLToPath } from 'url'
+import { spawn }         from 'child_process'
 
 import { config }          from './config.js'
 import { logger }          from './services/logger.js'
@@ -217,6 +218,9 @@ async function bootstrap(): Promise<void> {
         await waManager.init()
         processor.start()
 
+        // Démarre le service IA après que Node est en écoute
+        startIaService()
+
     } catch (err) {
         logger.error({ component: 'Server', err }, 'Erreur au démarrage — arrêt')
         process.exit(1)
@@ -224,3 +228,49 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap()
+
+// ── Service IA Python (optionnel — intégré au conteneur backend) ──────────────
+// Spawné après que Node est en écoute. Si Python/Ollama n'est pas disponible,
+// le backend continue sans l'IA. Les logs sont préfixés [IA] dans docker logs.
+function startIaService(): void {
+    const ollamaHost = process.env['OLLAMA_HOST']?.trim()
+    if (!ollamaHost) {
+        logger.info({ component: 'IA' }, 'OLLAMA_HOST non défini — service IA désactivé')
+        return
+    }
+
+    const iaDir = path.join(__dirname, '..', 'ia')
+    const env = {
+        ...process.env,
+        PYTHONUNBUFFERED:    '1',
+        DOCS_PATH:           path.join(__dirname, '..', 'ia', 'docs'),
+        CHROMA_PATH:         path.join(__dirname, '..', 'ia', 'chroma_db'),
+        BACKEND_INTERNAL_URL: `http://127.0.0.1:${config.port}`,
+        ANONYMIZED_TELEMETRY: 'false',
+        CHROMA_TELEMETRY:     'false',
+        POSTHOG_API_KEY:      '',
+    }
+
+    const ia = spawn('python3', [
+        '-m', 'uvicorn', 'main:app',
+        '--host', '0.0.0.0',
+        '--port', '8100',
+        '--log-level', 'warning',
+    ], { cwd: iaDir, env, stdio: ['ignore', 'pipe', 'pipe'] })
+
+    ia.stdout?.on('data', (d: Buffer) => logger.info({ component: 'IA' }, d.toString().trim()))
+    ia.stderr?.on('data', (d: Buffer) => logger.warn({ component: 'IA' }, d.toString().trim()))
+
+    ia.on('error', (err: Error) => {
+        logger.warn({ component: 'IA', err }, 'Impossible de démarrer le service IA — backend non affecté')
+    })
+
+    ia.on('exit', (code: number | null, signal: string | null) => {
+        if (code !== 0) {
+            logger.warn({ component: 'IA', code, signal }, 'Service IA arrêté — redémarrage dans 10s')
+            setTimeout(startIaService, 10_000)
+        }
+    })
+
+    logger.info({ component: 'IA' }, 'Service IA Python démarré (port 8100)')
+}

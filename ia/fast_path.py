@@ -493,6 +493,16 @@ def _fuzzy_keyword_match(q_words: list[str], keyword: str) -> bool:
     Les mots trop courts (<=3 caractères, ex: "qr", "api") exigent une
     correspondance exacte pour éviter les faux positifs sur des mots courts
     qui se ressemblent tous un peu entre eux.
+
+    CORRECTIF : une vraie faute de frappe change rarement la longueur d'un
+    mot de plus de 1-2 caractères ("comnent"/"comment", "webhok"/"webhook").
+    Sans ce garde-fou, un mot-clé composé comme "pk_convessa" (11 caractères)
+    était jugé "assez proche" de "convessa" (8 caractères) par le seul ratio
+    de similarité — ce n'est pas une faute de frappe, c'est un mot différent
+    qui contient l'autre comme sous-chaîne. Ce cas précis faisait matcher
+    n'importe quelle question mentionnant "Convessa" avec la réponse sur la
+    clé API. Une différence de longueur > 2 exclut désormais ce cas tout en
+    laissant passer les vraies fautes de frappe.
     """
     kw_words = _normalize_words(keyword)
     if not kw_words:
@@ -502,7 +512,10 @@ def _fuzzy_keyword_match(q_words: list[str], keyword: str) -> bool:
             if kw_word not in q_words:
                 return False
             continue
-        if not difflib.get_close_matches(kw_word, q_words, n=1, cutoff=0.8):
+        matches = difflib.get_close_matches(kw_word, q_words, n=1, cutoff=0.8)
+        if not matches:
+            return False
+        if abs(len(matches[0]) - len(kw_word)) > 2:
             return False
     return True
 

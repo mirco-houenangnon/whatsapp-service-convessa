@@ -1,43 +1,57 @@
-# ── Build stage ───────────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+# ── Stage 1 : Build Node.js ───────────────────────────────────────────────────
+FROM node:22-alpine AS node-builder
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copier les sources et compiler
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
-# ── Runtime stage ──────────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+# ── Stage 2 : Runtime final (Debian slim — compatible Python 3.11 + Node) ─────
+# On utilise node:22-slim (Debian) et non Alpine pour que les wheels Python
+# compilés (torch, chromadb) fonctionnent sans recompilation.
+FROM node:22-slim AS runtime
 
 WORKDIR /app
 
-# wget pour le healthcheck docker-compose
-RUN apk add --no-cache wget
+# Python 3.11, pip, outils de build pour chromadb, curl/wget pour healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
-# Dépendances runtime uniquement (pas les devDependencies)
+# ── Dépendances Python ────────────────────────────────────────────────────────
+# torch CPU en premier — couche stable, ne se réinstalle pas si requirements.txt
+# change pour une autre raison.
+RUN pip3 install --no-cache-dir --break-system-packages \
+    torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+
+COPY ia/requirements.txt ./ia/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r ./ia/requirements.txt
+
+# ── Dépendances Node.js runtime ───────────────────────────────────────────────
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-# Copier le build compilé
-COPY --from=builder /app/dist ./dist
-
-# Copier les assets statiques (dashboard admin)
+# ── Code compilé et assets Node ───────────────────────────────────────────────
+COPY --from=node-builder /app/dist ./dist
 COPY public ./public
-
-# Copier les scripts utilitaires
 COPY scripts ./scripts
 
-# Copier les credentials Firebase (si présents)
+# ── Code source Python du service IA ─────────────────────────────────────────
+COPY ia ./ia
+
+# ── Credentials Firebase ──────────────────────────────────────────────────────
 COPY whatsappservice-50e51-firebase-adminsdk-fbsvc-d35a2c107b.json ./
 
-# Le .env est monté via docker-compose (volume ou env_file)
-# Ne pas copier .env dans l'image !
+RUN mkdir -p /app/sessions
 
 EXPOSE 3005
 

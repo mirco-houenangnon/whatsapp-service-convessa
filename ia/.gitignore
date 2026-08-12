@@ -14,17 +14,11 @@ env/
 env.bak/
 venv.bak/
 
-# Environment variables & Secrets
-.env
-.env.*
-!.env.example
-
-# Vector Store / Database / Local Data
+# Vector Store / Base vectorielle Chroma (générée au démarrage)
 chroma_db/
 data/
-*.sqlite3
 
-# Model & HuggingFace Caches
+# Model & HuggingFace Caches (téléchargés au démarrage)
 .cache/
 hf_cache/
 

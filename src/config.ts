@@ -177,8 +177,18 @@ export const config = {
     adminJwtSecret: optional('ADMIN_JWT_SECRET', 'convessa-admin-dev-secret-change-in-prod'),
 
     // ── Chatbot IA (service interne, optionnel) ────────────────────────────────
+    // Le service IA tourne dans le même conteneur, spawné par Node au démarrage.
+    // Si OLLAMA_HOST est vide, le spawn est ignoré et le chatbot reste désactivé.
     internalAiServiceKey: optional('INTERNAL_AI_SERVICE_KEY', ''),
-    iaServiceUrl:         optional('IA_SERVICE_URL', ''),
+    iaServiceUrl:         optional('IA_SERVICE_URL', 'http://127.0.0.1:8100'),
+    ia: {
+        ollamaHost:     optional('OLLAMA_HOST', ''),
+        ollamaModel:    optional('OLLAMA_MODEL', 'qwen2.5:3b'),
+        llmProvider:    optional('LLM_PROVIDER', 'ollama'),
+        llmApiKey:      optional('LLM_API_KEY', ''),
+        llmBaseUrl:     optional('LLM_BASE_URL', 'https://api.groq.com/openai/v1'),
+        embeddingModel: optional('EMBEDDING_MODEL', 'intfloat/multilingual-e5-base'),
+    },
 
     // ── Passerelles de paiement ────────────────────────────────────────────────
     payments: {

@@ -36,6 +36,9 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 COPY ia/requirements.txt ./ia/requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r ./ia/requirements.txt
 
+# Pré-télécharge le modèle d'embedding dans l'image (évite la dépendance réseau au runtime)
+RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
+
 # ── Dépendances Node.js runtime ───────────────────────────────────────────────
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts

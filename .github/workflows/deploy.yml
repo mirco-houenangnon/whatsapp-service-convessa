@@ -1,46 +1,46 @@
-name: Deploy Backend to VPS
+name: 🚀 Deploy Backend — VPS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ diegue ]
 
 jobs:
   deploy:
+    name: Deploy to VPS
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS via SSH
+      - name: 📡 Connect & Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: ${{ secrets.VPS_PORT }}
           script: |
             set -e
-            cd ${{ secrets.BACKEND_PATH || '~/www/whatsapp-service-convessa' }}
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔄 Deploy Backend — $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            echo "Pull latest code..."
-            git pull origin main
+            cd /var/www/convessa/backend
 
-            echo "Install dependencies..."
-            npm ci --omit=dev --ignore-scripts
+            echo "📥 Pull branch diegue..."
+            git fetch origin
+            git checkout diegue
+            git pull origin diegue
 
-            echo "Build TypeScript..."
-            npm run build
+            echo "🐳 Rebuild & restart backend container..."
+            cd /var/www/convessa
+            docker compose up -d --build backend
 
-            echo "Restart service..."
-            # Si PM2 est installé
-            if command -v pm2 &> /dev/null; then
-              pm2 restart convessa-backend --update-env || pm2 start dist/index.js --name convessa-backend
-            # Sinon via systemctl
-            elif systemctl is-active --quiet convessa-backend; then
-              systemctl restart convessa-backend
+            echo "🩺 Health check..."
+            sleep 5
+            if docker inspect convessa_backend | grep -q '"Running": true'; then
+              echo "✅ Backend opérationnel !"
             else
-              echo "Redémarrage manuel requis"
+              echo "❌ Backend en échec — voir logs :"
+              docker logs convessa_backend --tail 20
+              exit 1
             fi
-
-            echo "Backend déployé avec succès !"

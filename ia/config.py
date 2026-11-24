@@ -21,7 +21,7 @@ class Settings:
     llm_api_key: str     = _optional("LLM_API_KEY",    "")
     llm_base_url: str    = _optional("LLM_BASE_URL",   "https://api.groq.com/openai/v1")
 
-    embedding_model: str = _optional("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+    embedding_model: str = _optional("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
     # Chemins dans le conteneur — définis par le spawn Node (index.ts)
     docs_path: str   = _optional("DOCS_PATH",   "/app/ia/docs")

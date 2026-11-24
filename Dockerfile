@@ -54,7 +54,7 @@ COPY scripts ./scripts
 COPY ia ./ia
 
 # ── Credentials Firebase ──────────────────────────────────────────────────────
-COPY convessa-1da63-firebase-adminsdk.json ./
+COPY convessa-b3ecd-firebase-adminsdk-fbsvc-f3a1d77bbf.json ./
 
 RUN mkdir -p /app/sessions
 

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # ── Stage 1 : Build Node.js ───────────────────────────────────────────────────
 FROM node:22-alpine AS node-builder
 
@@ -25,17 +26,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Dépendances Python ────────────────────────────────────────────────────────
-# On installe torch SANS l'index PyTorch — la version standard PyPI supporte CPU.
-# torch 2.3+ est disponible directement sur PyPI sans flit_core.
+# ── Dépendances Python (cache BuildKit — les layers pip survivent entre builds) ─
+# Le cache /root/.cache/pip persiste sur le VPS entre les builds grâce à
+# --mount=type=cache. Si requirements.txt n'a pas changé, pip saute tout.
 COPY ia/requirements.txt ./ia/requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --break-system-packages \
     torch --extra-index-url https://pypi.org/simple/ \
-    && pip3 install --no-cache-dir --break-system-packages -r ./ia/requirements.txt
+    && pip3 install --break-system-packages -r ./ia/requirements.txt
 
-# Pré-télécharge le modèle d'embedding (évite la dépendance réseau au runtime)
-# Modèle léger et multilingue — 470MB, fonctionne sans GPU
-RUN python3 -c "\
+# Pré-télécharge le modèle d'embedding (cache HuggingFace persistant aussi)
+RUN --mount=type=cache,target=/root/.cache/huggingface \
+    python3 -c "\
 import os; os.environ['TRANSFORMERS_OFFLINE']='0'; \
 from sentence_transformers import SentenceTransformer; \
 SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'); \
@@ -43,7 +45,8 @@ print('Modèle embedding prêt.')"
 
 # ── Dépendances Node.js runtime ───────────────────────────────────────────────
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev --ignore-scripts
 
 # ── Code compilé et assets Node ───────────────────────────────────────────────
 COPY --from=node-builder /app/dist ./dist

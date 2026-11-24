@@ -8,7 +8,7 @@ jobs:
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - name: 📡 Connect & Deploy via SSH
@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          command_timeout: 40m
           script: |
             set -e
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -33,14 +34,14 @@ jobs:
 
             echo "🐳 Rebuild & restart backend container..."
             cd /var/www/convessa
-            docker compose up -d --build backend
+            DOCKER_BUILDKIT=1 docker compose up -d --build backend
 
             echo "🩺 Health check..."
-            sleep 5
+            sleep 8
             if docker inspect convessa_backend | grep -q '"Running": true'; then
               echo "✅ Backend opérationnel !"
             else
               echo "❌ Backend en échec — voir logs :"
-              docker logs convessa_backend --tail 20
+              docker logs convessa_backend --tail 30
               exit 1
             fi

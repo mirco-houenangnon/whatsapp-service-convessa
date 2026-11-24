@@ -54,7 +54,7 @@ COPY scripts ./scripts
 COPY ia ./ia
 
 # ── Credentials Firebase ──────────────────────────────────────────────────────
-COPY whatsappservice-50e51-firebase-adminsdk-fbsvc-d35a2c107b.json ./
+COPY convessa-1da63-firebase-adminsdk.json ./
 
 RUN mkdir -p /app/sessions
 

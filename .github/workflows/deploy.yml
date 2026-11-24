@@ -29,7 +29,7 @@ jobs:
             echo "📥 Pull branch diegue..."
             git fetch origin
             git checkout diegue
-            git pull origin diegue
+            git reset --hard origin/diegue
 
             echo "🐳 Rebuild & restart backend container..."
             cd /var/www/convessa

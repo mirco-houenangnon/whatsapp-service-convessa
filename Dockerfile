@@ -11,13 +11,11 @@ COPY src ./src
 RUN npm run build
 
 # ── Stage 2 : Runtime final (Debian slim — compatible Python 3.11 + Node) ─────
-# On utilise node:22-slim (Debian) et non Alpine pour que les wheels Python
-# compilés (torch, chromadb) fonctionnent sans recompilation.
 FROM node:22-slim AS runtime
 
 WORKDIR /app
 
-# Python 3.11, pip, outils de build pour chromadb, curl/wget pour healthcheck
+# Python 3.11, pip, outils de build, curl/wget pour healthcheck
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -28,16 +26,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Dépendances Python ────────────────────────────────────────────────────────
-# torch CPU en premier — couche stable, ne se réinstalle pas si requirements.txt
-# change pour une autre raison.
-RUN pip3 install --no-cache-dir --break-system-packages \
-    torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
-
+# On installe torch SANS l'index PyTorch — la version standard PyPI supporte CPU.
+# torch 2.3+ est disponible directement sur PyPI sans flit_core.
 COPY ia/requirements.txt ./ia/requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages -r ./ia/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages \
+    torch --extra-index-url https://pypi.org/simple/ \
+    && pip3 install --no-cache-dir --break-system-packages -r ./ia/requirements.txt
 
-# Pré-télécharge le modèle d'embedding dans l'image (évite la dépendance réseau au runtime)
-RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
+# Pré-télécharge le modèle d'embedding (évite la dépendance réseau au runtime)
+# Modèle léger et multilingue — 470MB, fonctionne sans GPU
+RUN python3 -c "\
+import os; os.environ['TRANSFORMERS_OFFLINE']='0'; \
+from sentence_transformers import SentenceTransformer; \
+SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'); \
+print('Modèle embedding prêt.')"
 
 # ── Dépendances Node.js runtime ───────────────────────────────────────────────
 COPY package*.json ./
